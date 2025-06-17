@@ -1,6 +1,6 @@
 import ast
 from ast import _Unparser  # type: ignore
-from typing import Literal
+from typing import Iterable, Iterator, Literal
 
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,
@@ -23,9 +23,6 @@ class MinifyUnparser(_Unparser):
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
         """Overrides super fill to use tabs over spaces and different line splitters"""
-        if text == "" and (splitter == "" or not self._source):
-            return
-
         match splitter:
             case "\n":
                 self.maybe_newline()
@@ -37,10 +34,10 @@ class MinifyUnparser(_Unparser):
 
     def write(self, *text: str) -> None:
         """Write text, with some mapping replacements"""
+        text = tuple(self._yield_updated_text(text))
+
         if len(text) == 0:
             return
-
-        text = tuple(map(self._update_text_to_write, text))
 
         first_letter_to_write: str = text[0][:1]
         if (
@@ -51,15 +48,18 @@ class MinifyUnparser(_Unparser):
 
         self._source.extend(text)
 
-    def _update_text_to_write(self, text: str) -> str:
-        """Give text to be written, replace some specific occurrences"""
-        if text in operators_and_separators:
-            return text.strip()
+    def _yield_updated_text(self, text_iter: Iterable[str]) -> Iterator[str]:
+        """Give text to be written, replace some specific occurrences
+        and yield new results if not empty strings"""
+        for text in text_iter:
+            if text in operators_and_separators:
+                yield text.strip()
 
-        if text in comparison_and_conjunctions:
-            return self._get_space_before_write() + text[1:]
+            if text in comparison_and_conjunctions:
+                yield self._get_space_before_write() + text[1:]
 
-        return text
+            if text:
+                yield text
 
     def maybe_newline(self) -> None:
         if self._source and self._source[-1] != "\n":

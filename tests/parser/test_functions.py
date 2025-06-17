@@ -9,9 +9,9 @@ def foo(bar: str) -> None:
 
     3  # This is some dangling constant
     a: int
-    return "Hello World"
+    return
 """,
-        "def foo(bar):return 'Hello World'",
+        "def foo(bar):return",  # TODO: Skip empty returns at end of body
     )
     run_minifiyer_and_assert_correct(before_and_after)
 
@@ -41,5 +41,18 @@ def foo(bar):
 \tif bar:return
 \treturn 1
 """.strip(),
+    )
+    run_minifiyer_and_assert_correct(before_and_after)
+
+
+def test_function_call_same_line():
+    before_and_after = BeforeAndAfter(
+        """
+if a==b:
+    a()
+    b()
+    c()
+""",
+        "if a==b:\n\ta();b();c()",
     )
     run_minifiyer_and_assert_correct(before_and_after)

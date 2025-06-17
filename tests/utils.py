@@ -48,7 +48,7 @@ def run_minifiyer_and_assert_correct_multiple_versions(
 
 
 def run_minifiyer_and_assert_correct(
-    source: BeforeAndAfter,
+    before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
     constant_vars_to_fold: dict[str, int | str] | None = None,
     sections_to_skip_config: SectionsToSkipConfig = SectionsToSkipConfig(),
@@ -58,7 +58,7 @@ def run_minifiyer_and_assert_correct(
 
     minified_code: str = run_minify_parser(
         unparser,
-        source.before,
+        before_and_after.before,
         SkipConfig(
             "",
             target_python_version,
@@ -69,7 +69,9 @@ def run_minifiyer_and_assert_correct(
         ),
     )
     assert python_code_is_valid(minified_code)
-    assert source.after == minified_code
+    assert (
+        before_and_after.after == minified_code
+    ), f"{before_and_after.after} != {minified_code}"
 
 
 def python_code_is_valid(python_code: str) -> bool:

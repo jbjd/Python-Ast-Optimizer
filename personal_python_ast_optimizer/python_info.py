@@ -11,6 +11,8 @@ comparison_and_conjunctions: list[str] = [
     " not in ",
     " for ",
     " async for ",
+    " from ",
+    " as ",
 ]
 
 operators_and_separators: list[str] = [
@@ -48,3 +50,5 @@ operators_and_separators: list[str] = [
     " & ",
     " ^ ",
 ]
+
+chars_that_dont_need_whitespace: list[str] = ["'", '"', "(", ")", "[", "]", "{", "}"]

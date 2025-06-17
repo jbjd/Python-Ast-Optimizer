@@ -19,7 +19,7 @@ a if True else b
 """,
         """
 a if True else b
-'a'if 'True'=='False'else 'b'
+'a'if'True'=='False'else'b'
 """.strip(),
     )
     run_minifiyer_and_assert_correct(before_and_after)

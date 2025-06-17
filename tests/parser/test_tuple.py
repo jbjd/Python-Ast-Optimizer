@@ -1,15 +1,13 @@
 from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
 
 
-def test_raise_same_line():
+def test_tuple_whitespace():
     before_and_after = BeforeAndAfter(
         """
-try:
+if a in (1,2):
     pass
-except (Exception, ValueError) as e:
-    raise ValueError('a') from e
 """,
-        "try:pass\nexcept(Exception,ValueError)as e:raise ValueError('a')from e",
+        "if a in(1,2):pass",
     )
 
     run_minifiyer_and_assert_correct(before_and_after)

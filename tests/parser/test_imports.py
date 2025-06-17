@@ -1,5 +1,7 @@
 from tests.utils import (
+    BeforeAndAfter,
     BeforeAndAfterBasedOnVersion,
+    run_minifiyer_and_assert_correct,
     run_minifiyer_and_assert_correct_multiple_versions,
 )
 
@@ -19,3 +21,17 @@ from __future__ import with_statement
     )
 
     run_minifiyer_and_assert_correct_multiple_versions(before_and_after)
+
+
+def test_import_same_line():
+
+    before_and_after = BeforeAndAfter(
+        """
+def i():
+    import a
+    from b import c
+    import d
+""",
+        "def i():\n\timport a;from b import c;import d",
+    )
+    run_minifiyer_and_assert_correct(before_and_after)

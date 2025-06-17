@@ -106,6 +106,10 @@ class MinifyUnparser(_Unparser):
             self.write(", ")
             self.traverse(node.msg)
 
+    def visit_Delete(self, node: ast.Delete) -> None:
+        self.fill("del ", splitter=self._get_line_splitter())
+        self._write_comma_delimitated_body(node.targets)
+
     def visit_Return(self, node: ast.Return) -> None:
         self.fill("return", splitter=self._get_line_splitter())
         if node.value:
@@ -134,7 +138,7 @@ class MinifyUnparser(_Unparser):
 
     def visit_Import(self, node: ast.Import) -> None:
         self.fill("import ", splitter=self._get_line_splitter())
-        self.interleave(lambda: self.write(","), self.traverse, node.names)
+        self._write_comma_delimitated_body(node.names)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         self.fill("from ", splitter=self._get_line_splitter())
@@ -142,7 +146,7 @@ class MinifyUnparser(_Unparser):
         if node.module:
             self.write(node.module)
         self.write(" import ")
-        self.interleave(lambda: self.write(","), self.traverse, node.names)
+        self._write_comma_delimitated_body(node.names)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.fill(splitter=self._get_line_splitter())
@@ -182,6 +186,7 @@ class MinifyUnparser(_Unparser):
             "Assert",
             "Assign",
             "AugAssign",
+            "Delete",
             "Expr",
             "Import",
             "ImportFrom",
@@ -189,3 +194,7 @@ class MinifyUnparser(_Unparser):
             return ";"
 
         return "\n"
+
+    def _write_comma_delimitated_body(self, body: list[ast.expr]) -> None:
+        """Writes ast expr objects with comma delimination"""
+        self.interleave(lambda: self.write(","), self.traverse, body)

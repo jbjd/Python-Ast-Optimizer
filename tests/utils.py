@@ -69,7 +69,9 @@ def run_minifiyer_and_assert_correct(
         ),
     )
     assert python_code_is_valid(minified_code)
-    assert before_and_after.after == minified_code
+    assert (
+        before_and_after.after == minified_code
+    ), f"{before_and_after.after} != {minified_code}"
 
 
 def python_code_is_valid(python_code: str) -> bool:

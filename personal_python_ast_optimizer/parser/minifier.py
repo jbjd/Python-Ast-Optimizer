@@ -129,7 +129,7 @@ class MinifyUnparser(_Unparser):
 
     def visit_Expr(self, node: ast.Expr) -> None:
         self.fill(splitter=self._get_line_splitter())
-        self.set_precedence(ast._Precedence.YIELD, node.value)
+        self.set_precedence(ast._Precedence.YIELD, node.value)  # type: ignore
         self.traverse(node.value)
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -159,9 +159,7 @@ class MinifyUnparser(_Unparser):
         self.traverse(node.value)
 
     def _last_char_is(self, char_to_check: str) -> bool:
-        return (
-            self._source and self._source[-1] and self._source[-1][-1] == char_to_check
-        )
+        return len(self._source) > 0 and self._source[-1][-1:] == char_to_check
 
     def _get_space_before_write(self) -> str:
         if not self._source:

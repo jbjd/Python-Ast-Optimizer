@@ -25,7 +25,7 @@ from __future__ import with_statement
 
 def test_import_same_line():
 
-    before_and_after: str = BeforeAndAfter(
+    before_and_after = BeforeAndAfter(
         """
 def i():
     import a

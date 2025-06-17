@@ -54,11 +54,9 @@ class MinifyUnparser(_Unparser):
         for text in text_iter:
             if text in operators_and_separators:
                 yield text.strip()
-
-            if text in comparison_and_conjunctions:
+            elif text in comparison_and_conjunctions:
                 yield self._get_space_before_write() + text[1:]
-
-            if text:
+            elif text:
                 yield text
 
     def maybe_newline(self) -> None:

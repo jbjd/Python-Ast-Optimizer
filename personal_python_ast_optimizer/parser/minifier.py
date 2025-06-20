@@ -196,5 +196,5 @@ class MinifyUnparser(_Unparser):
     def _write_comma_delimitated_body(
         self, body: list[ast.alias] | list[ast.expr]
     ) -> None:
-        """Writes ast expr objects with comma delimination"""
+        """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self.write(","), self.traverse, body)

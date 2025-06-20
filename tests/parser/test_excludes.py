@@ -4,7 +4,7 @@ from personal_python_ast_optimizer.parser.config import (
     TokensToSkipConfig,
 )
 
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_exclude_name_equals_main():
@@ -17,7 +17,7 @@ if __name__ == "__main__":
         "",
     )
 
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         sections_to_skip_config=SectionsToSkipConfig(skip_name_equals_main=True),
     )
@@ -34,7 +34,7 @@ class B:
 """,
         "class A:pass",
     )
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(classes={"ABC", "B"}),
     )
@@ -45,7 +45,7 @@ def test_exclude_dict_keys():
         "a = {'a': 1, 'b': 2}",
         "a={'a':1}",
     )
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(dict_keys={"b"}),
     )
@@ -87,7 +87,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_assign_cases)
 def test_exclude_assign(before_and_after: BeforeAndAfter):
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(variables={"foo"}),
     )
@@ -114,7 +114,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_def_cases)
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(functions={"foo"}),
     )
@@ -141,7 +141,7 @@ test=1
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_call_cases)
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(functions={"foo"}),
     )
@@ -166,7 +166,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_assign_cases)
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(functions={"foo"}),
     )
@@ -181,7 +181,7 @@ from . import asdf
 """,
         "",
     )
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(
             module_imports={"numpy", "numpy._core", ""}
@@ -202,7 +202,7 @@ is_cid = re.compile('').match
 """,
         "from ._util import DeferredError\nis_cid=re.compile('').match",
     )
-    run_minifiyer_and_assert_correct(
+    run_minifier_and_assert_correct(
         before_and_after,
         tokens_to_skip_config=TokensToSkipConfig(
             functions={"getLogger"}, variables={"TYPE_CHECKING"}

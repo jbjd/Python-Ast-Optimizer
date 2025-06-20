@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_function_dangling_constants():
@@ -13,7 +13,7 @@ def foo(bar: str) -> None:
 """,
         "def foo(bar):return",  # TODO: Skip empty returns at end of body
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)
 
 
 def test_function_with_many_args():
@@ -25,7 +25,7 @@ def foo(bar, spam, eggs):
 """,
         "def foo(bar,spam,eggs):\n\ta=1;return a",
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)
 
 
 def test_function_with_many_returns():
@@ -42,7 +42,7 @@ def foo(bar):
 \treturn 1
 """.strip(),
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)
 
 
 def test_function_call_same_line():
@@ -55,4 +55,4 @@ if a==b:
 """,
         "if a==b:\n\ta();b();c()",
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

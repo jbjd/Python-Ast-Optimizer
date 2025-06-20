@@ -37,21 +37,13 @@ def is_return_none(node: ast.Return) -> bool:
 def skip_dangling_expressions(
     node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> None:
-    """Removes constant daggling expression like doc strings"""
+    """Removes constant dangling expression like doc strings"""
     node.body = [
         element
         for element in node.body
         if not (
             isinstance(element, ast.Expr) and isinstance(element.value, ast.Constant)
         )
-    ]
-
-
-def remove_empty_annotations(node: ast.FunctionDef) -> None:
-    node.body = [
-        element
-        for element in node.body
-        if not (isinstance(element, ast.AnnAssign) and not element.value)
     ]
 
 

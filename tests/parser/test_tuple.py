@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_tuple_whitespace():
@@ -10,4 +10,4 @@ if a in (1,2):
         "if a in(1,2):pass",
     )
 
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

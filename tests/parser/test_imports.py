@@ -1,7 +1,7 @@
 from tests.utils import (
     BeforeAndAfter,
     BeforeAndAfterBasedOnVersion,
-    run_minifiyer_and_assert_correct,
+    run_minifier_and_assert_correct,
     run_minifiyer_and_assert_correct_multiple_versions,
 )
 
@@ -34,4 +34,4 @@ def i():
 """,
         "def i():\n\timport a;from b import c;import d",
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

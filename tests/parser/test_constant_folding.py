@@ -66,5 +66,5 @@ FAVORITE_NUMBER,TEST=4,5
 def test_exclude_name_equals_main(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        constant_vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test"},
+        vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test"},
     )

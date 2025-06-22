@@ -26,7 +26,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         "_within_class",
         "_within_function",
         "module_name",
-        "constant_vars_to_fold",
+        "vars_to_fold",
         "target_python_version",
         "extras_to_skip_config",
         "sections_to_skip_config",
@@ -35,7 +35,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def __init__(self, config: SkipConfig) -> None:
         self.module_name: str = config.module_name
-        self.constant_vars_to_fold: dict[str, int | str] = config.constant_vars_to_fold
+        self.vars_to_fold: dict[str, int | str] = config.vars_to_fold
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
@@ -277,11 +277,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                 alias for alias in node.names if alias.name not in skippable_futures
             ]
 
-        if self.constant_vars_to_fold:
+        if self.vars_to_fold:
             node.names = [
-                alias
-                for alias in node.names
-                if alias.name not in self.constant_vars_to_fold
+                alias for alias in node.names if alias.name not in self.vars_to_fold
             ]
 
         if not node.names:
@@ -291,8 +289,8 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
-        if node.id in self.constant_vars_to_fold:
-            constant_value = self.constant_vars_to_fold[node.id]
+        if node.id in self.vars_to_fold:
+            constant_value = self.vars_to_fold[node.id]
             return ast.Constant(constant_value)
         else:
             return self.generic_visit(node)
@@ -351,7 +349,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return (
             isinstance(target, ast.Name)
-            and target.id in self.constant_vars_to_fold
+            and target.id in self.vars_to_fold
             and isinstance(value, ast.Constant)
         )
 
@@ -364,7 +362,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def _has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
-            or len(self.constant_vars_to_fold) > 0
+            or len(self.vars_to_fold) > 0
             or self.extras_to_skip_config.has_code_to_skip()
             or self.tokens_to_skip_config.has_code_to_skip()
             or self.sections_to_skip_config.has_code_to_skip()

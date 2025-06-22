@@ -50,7 +50,7 @@ def run_minifier_and_assert_correct_multiple_versions(
 def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
-    constant_vars_to_fold: dict[str, int | str] | None = None,
+    vars_to_fold: dict[str, int | str] | None = None,
     sections_to_skip_config: SectionsToSkipConfig = SectionsToSkipConfig(),
     tokens_to_skip_config: TokensToSkipConfig = TokensToSkipConfig(),
 ):
@@ -62,7 +62,7 @@ def run_minifier_and_assert_correct(
         SkipConfig(
             "",
             target_python_version,
-            constant_vars_to_fold,
+            vars_to_fold,
             sections_to_skip_config,
             tokens_to_skip_config,
             ExtrasToSkipConfig(),  # TODO: test

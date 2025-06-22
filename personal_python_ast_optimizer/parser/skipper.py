@@ -333,7 +333,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         parsed_node: ast.AST = self.generic_visit(node)
 
         if (
-            isinstance(parsed_node, ast.BinOp)
+            self.extras_config.fold_constants
+            and isinstance(parsed_node, ast.BinOp)
             and isinstance(parsed_node.left, ast.Constant)
             and isinstance(parsed_node.right, ast.Constant)
         ):

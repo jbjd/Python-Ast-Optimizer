@@ -182,7 +182,11 @@ class MinifyUnparser(_Unparser):
         ):
             return ""
 
-        if self._indent > 0 and node_inlineable(self.previous_node_in_body):
+        if (
+            self._indent > 0
+            and self.previous_node_in_body is not None
+            and node_inlineable(self.previous_node_in_body)
+        ):
             return ";"
 
         return "\n"

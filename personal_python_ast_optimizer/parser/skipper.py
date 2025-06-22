@@ -135,7 +135,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         skip_decorators(node, self.tokens_to_skip_config.decorators)
 
-        last_body_node: ast.Return = node.body[-1]
+        last_body_node: ast.stmt = node.body[-1]
         if isinstance(last_body_node, ast.Return) and (
             is_return_none(last_body_node) or last_body_node.value is None
         ):

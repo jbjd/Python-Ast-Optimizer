@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_continue_same_line():
@@ -10,4 +10,4 @@ if a > 6:
         "if a>6:continue",
     )
 
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

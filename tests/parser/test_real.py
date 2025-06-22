@@ -1,7 +1,7 @@
-"""Real cases of minfied code that broken at some point.
+"""Real cases of minified code that broken at some point.
 They are added here to ensure regression does not occur."""
 
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_image_viewer_constants():
@@ -26,4 +26,4 @@ class ImageFormats(StrEnum):
 class ImageFormats(StrEnum):
 \tDDS='DDS';GIF='GIF';JPEG='JPEG';PNG='PNG';WEBP='WebP'""",
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

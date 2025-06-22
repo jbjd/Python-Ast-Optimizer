@@ -2,7 +2,7 @@
 
 from tests.utils import (
     BeforeAndAfterBasedOnVersion,
-    run_minifiyer_and_assert_correct_multiple_versions,
+    run_minifier_and_assert_correct_multiple_versions,
 )
 
 
@@ -15,4 +15,4 @@ class Foo(object):
         {"3.0": "class Foo:pass", None: "class Foo(object):pass"},
     )
 
-    run_minifiyer_and_assert_correct_multiple_versions(before_and_after)
+    run_minifier_and_assert_correct_multiple_versions(before_and_after)

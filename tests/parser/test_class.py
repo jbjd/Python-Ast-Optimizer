@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_class_only_docstring():
@@ -9,7 +9,7 @@ class Foo():
 """,
         "class Foo:pass",
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)
 
 
 def test_tuple_class():
@@ -26,4 +26,4 @@ class SomeTuple:
 \tthing2:'Any'
 """.strip(),
     )
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

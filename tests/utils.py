@@ -11,7 +11,7 @@ from personal_python_ast_optimizer.parser.run import run_minify_parser
 
 
 class BeforeAndAfter:
-    """Input and output after minifiying it"""
+    """Input and output after minifying it"""
 
     __slots__ = ("before", "after")
 
@@ -30,7 +30,7 @@ class BeforeAndAfterBasedOnVersion:
         self.after: dict[str | None, str] = after
 
 
-def run_minifiyer_and_assert_correct_multiple_versions(
+def run_minifier_and_assert_correct_multiple_versions(
     source: BeforeAndAfterBasedOnVersion,
 ):
     target_python_version: tuple[int, int] | None
@@ -42,12 +42,12 @@ def run_minifiyer_and_assert_correct_multiple_versions(
 
         version_specific_source = BeforeAndAfter(source.before, expected)
 
-        run_minifiyer_and_assert_correct(
+        run_minifier_and_assert_correct(
             version_specific_source, target_python_version=target_python_version
         )
 
 
-def run_minifiyer_and_assert_correct(
+def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
     constant_vars_to_fold: dict[str, int | str] | None = None,

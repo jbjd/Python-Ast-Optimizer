@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifiyer_and_assert_correct
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_assert_same_line():
@@ -12,4 +12,4 @@ def test_foo():
         "def test_foo():\n\tassert 1;assert 2,'bar';assert 3",
     )
 
-    run_minifiyer_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(before_and_after)

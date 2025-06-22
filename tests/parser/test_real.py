@@ -23,7 +23,6 @@ class ImageFormats(StrEnum):
     PNG = "PNG"
     WEBP = "WebP\"""",
         """from enum import IntEnum,StrEnum
-class ImageFormats(StrEnum):
-\tDDS='DDS';GIF='GIF';JPEG='JPEG';PNG='PNG';WEBP='WebP'""",
+class ImageFormats(StrEnum):DDS='DDS';GIF='GIF';JPEG='JPEG';PNG='PNG';WEBP='WebP'""",
     )
     run_minifier_and_assert_correct(before_and_after)

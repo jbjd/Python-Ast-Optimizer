@@ -32,6 +32,6 @@ def i():
     from b import c
     import d
 """,
-        "def i():\n\timport a;from b import c;import d",
+        "def i():import a;from b import c;import d",
     )
     run_minifier_and_assert_correct(before_and_after)

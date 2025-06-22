@@ -2,6 +2,7 @@ import ast
 from ast import _Unparser  # type: ignore
 from typing import Iterable, Iterator, Literal
 
+from personal_python_ast_optimizer.parser.utils import node_inlineable
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,
     comparison_and_conjunctions,
@@ -11,7 +12,7 @@ from personal_python_ast_optimizer.python_info import (
 
 class MinifyUnparser(_Unparser):
 
-    __slots__ = ("is_last_node_in_body", "previous_node_in_body")
+    __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:
         self._source: list[str]  # type: ignore
@@ -19,7 +20,7 @@ class MinifyUnparser(_Unparser):
         super().__init__()
 
         self.previous_node_in_body: ast.stmt | None = None
-        self.is_last_node_in_body: bool = False
+        self.can_write_body_in_one_line: bool = False
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
         """Overrides super fill to use tabs over spaces and different line splitters"""
@@ -66,13 +67,13 @@ class MinifyUnparser(_Unparser):
     def visit_node(
         self,
         node: ast.AST,
-        is_last_node_in_body: bool = False,
+        can_write_body_in_one_line: bool = False,
         last_visited_node: ast.stmt | None = None,
     ) -> None:
         method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
 
-        self.is_last_node_in_body = is_last_node_in_body
+        self.can_write_body_in_one_line = can_write_body_in_one_line
         self.previous_node_in_body = last_visited_node
 
         return visitor(node)  # type: ignore
@@ -80,11 +81,13 @@ class MinifyUnparser(_Unparser):
     def traverse(self, node: list[ast.stmt] | ast.AST) -> None:
         if isinstance(node, list):
             last_visited_node: ast.stmt | None = None
-            last_index = len(node) - 1
-            for index, item in enumerate(node):
-                is_last_node_in_body: bool = index == last_index
-                self.visit_node(item, is_last_node_in_body, last_visited_node)
-                last_visited_node = item
+            can_write_body_in_one_line = (
+                all(node_inlineable(sub_node) for sub_node in node) or len(node) == 1
+            )
+
+            for sub_node in node:
+                self.visit_node(sub_node, can_write_body_in_one_line, last_visited_node)
+                last_visited_node = sub_node
         else:
             self.visit_node(node)
 
@@ -175,20 +178,11 @@ class MinifyUnparser(_Unparser):
         if (
             len(self._source) > 0
             and self._source[-1] == ":"
-            and self.is_last_node_in_body
+            and self.can_write_body_in_one_line
         ):
             return ""
 
-        previous_node_class: str = self.previous_node_in_body.__class__.__name__
-        if self._indent > 0 and previous_node_class in [
-            "Assert",
-            "Assign",
-            "AugAssign",
-            "Delete",
-            "Expr",
-            "Import",
-            "ImportFrom",
-        ]:
+        if self._indent > 0 and node_inlineable(self.previous_node_in_body):
             return ";"
 
         return "\n"

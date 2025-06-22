@@ -53,6 +53,6 @@ if a==b:
     b()
     c()
 """,
-        "if a==b:\n\ta();b();c()",
+        "if a==b:a();b();c()",
     )
     run_minifier_and_assert_correct(before_and_after)

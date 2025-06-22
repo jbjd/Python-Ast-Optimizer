@@ -9,7 +9,7 @@ def test_foo(a,b,c):
     del b
     del c
 """,
-        "def test_foo(a,b,c):\n\tdel a;del b;del c",
+        "def test_foo(a,b,c):del a;del b;del c",
     )
 
     run_minifier_and_assert_correct(before_and_after)

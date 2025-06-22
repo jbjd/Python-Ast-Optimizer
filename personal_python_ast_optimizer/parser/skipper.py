@@ -110,12 +110,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if node.name in self.tokens_to_skip_config.functions:
             return None
 
-        if self.extras_to_skip_config.skip_type_hints:
-            node.returns = None
-
-        if self.extras_to_skip_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
-        skip_decorators(node, self.tokens_to_skip_config.decorators)
+        self._handle_function_node(node)
 
         return self.generic_visit(node)
 
@@ -124,11 +119,27 @@ class AstNodeSkipper(ast.NodeTransformer):
         if node.name in self.tokens_to_skip_config.functions:
             return None
 
-        if self.extras_to_skip_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
-        skip_decorators(node, self.tokens_to_skip_config.decorators)
+        self._handle_function_node(node)
 
         return self.generic_visit(node)
+
+    def _handle_function_node(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        """Handles skips for both async/regular functions"""
+        if self.extras_to_skip_config.skip_type_hints:
+            node.returns = None
+
+        if self.extras_to_skip_config.skip_dangling_expressions:
+            skip_dangling_expressions(node)
+
+        skip_decorators(node, self.tokens_to_skip_config.decorators)
+
+        last_body_node: ast.stmt = node.body[-1]
+        if isinstance(last_body_node, ast.Return) and (
+            is_return_none(last_body_node) or last_body_node.value is None
+        ):
+            node.body = node.body[:-1]
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""
@@ -304,7 +315,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
-        if self.extras_to_skip_config.skip_return_none and is_return_none(node):
+        if is_return_none(node):
             node.value = None
 
         return self.generic_visit(node)

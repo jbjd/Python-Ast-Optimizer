@@ -33,3 +33,28 @@ foo = 5
         "foo=5",
     )
     run_minifier_and_assert_correct(before_and_after)
+
+
+def test_inline_all():
+    before_and_after = BeforeAndAfter(
+        """
+if b==1:
+    assert True
+    a = 1
+    a += 1
+    break
+    continue
+    del a
+    c()
+    import foo
+    from spam import eggs
+    pass
+    raise Exception
+    return 0
+""",
+        (
+            "if b==1:assert True;a=1;a+=1;break;continue;del a;c();import foo;"
+            "from spam import eggs;pass;raise Exception;return 0"
+        ),
+    )
+    run_minifier_and_assert_correct(before_and_after)

@@ -34,6 +34,23 @@ def is_return_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
+def node_inlineable(node: ast.AST) -> bool:
+    return node.__class__.__name__ in [
+        "Assert",
+        "Assign",
+        "AugAssign",
+        "Break",
+        "Continue",
+        "Delete",
+        "Expr",
+        "Import",
+        "ImportFrom",
+        "Pass",
+        "Raise",
+        "Return",
+    ]
+
+
 def skip_dangling_expressions(
     node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> None:

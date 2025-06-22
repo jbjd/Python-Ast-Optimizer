@@ -104,16 +104,14 @@ class SectionsToSkipConfig(Config):
 
 
 class ExtrasToSkipConfig(Config):
-    __slots__ = ("skip_dangling_expressions", "skip_return_none", "skip_type_hints")
+    __slots__ = ("skip_dangling_expressions", "skip_type_hints")
 
     def __init__(
         self,
         skip_dangling_expressions: bool = True,
-        skip_return_none: bool = True,
         skip_type_hints: bool = True,
     ) -> None:
         self.skip_dangling_expressions: bool = skip_dangling_expressions
-        self.skip_return_none: bool = skip_return_none
         self.skip_type_hints: bool = skip_type_hints
 
 

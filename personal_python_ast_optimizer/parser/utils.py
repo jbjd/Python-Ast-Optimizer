@@ -39,10 +39,15 @@ def node_inlineable(node: ast.AST) -> bool:
         "Assert",
         "Assign",
         "AugAssign",
+        "Break",
+        "Continue",
         "Delete",
         "Expr",
         "Import",
         "ImportFrom",
+        "Pass",
+        "Raise",
+        "Return",
     ]
 
 

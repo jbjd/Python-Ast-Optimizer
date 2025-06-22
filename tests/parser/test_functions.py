@@ -23,7 +23,7 @@ def foo(bar, spam, eggs):
     a: int = 1
     return a
 """,
-        "def foo(bar,spam,eggs):\n\ta=1;return a",
+        "def foo(bar,spam,eggs):a=1;return a",
     )
     run_minifier_and_assert_correct(before_and_after)
 

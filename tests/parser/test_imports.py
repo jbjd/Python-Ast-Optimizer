@@ -35,3 +35,12 @@ def i():
         "def i():import a;from b import c;import d",
     )
     run_minifier_and_assert_correct(before_and_after)
+
+
+def test_import_star():
+
+    before_and_after = BeforeAndAfter(
+        "from ctypes import *",
+        "from ctypes import*",
+    )
+    run_minifier_and_assert_correct(before_and_after)

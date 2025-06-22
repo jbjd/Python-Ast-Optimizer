@@ -327,6 +327,46 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
+    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
+        # Need to visit first since a BinOp might contain a Binop
+        # and constants need to be folded depth first
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.BinOp)
+            and isinstance(parsed_node.left, ast.Constant)
+            and isinstance(parsed_node.right, ast.Constant)
+        ):
+            left = parsed_node.left.value
+            right = parsed_node.right.value
+            match parsed_node.op.__class__.__name__:
+                case "Add":
+                    return ast.Constant(left + right)
+                case "Sub":
+                    return ast.Constant(left - right)
+                case "Mult":
+                    return ast.Constant(left * right)
+                case "Div":
+                    return ast.Constant(left / right)
+                case "FloorDiv":
+                    return ast.Constant(left // right)
+                case "Mod":
+                    return ast.Constant(left % right)
+                case "Pow":
+                    return ast.Constant(left**right)
+                case "LShift":
+                    return ast.Constant(left << right)
+                case "RShift":
+                    return ast.Constant(left >> right)
+                case "BitOr":
+                    return ast.Constant(left | right)
+                case "BitXor":
+                    return ast.Constant(left ^ right)
+                case "BitAnd":
+                    return ast.Constant(left & right)
+
+        return parsed_node
+
     def visit_arg(self, node: ast.arg) -> ast.AST:
         if self.extras_config.skip_type_hints:
             node.annotation = None
@@ -375,17 +415,11 @@ class AstNodeSkipper(ast.NodeTransformer):
         )
 
     def _warn_unused_skips(self):
-        for tokens_to_skip in self.tokens_config:
-            not_found_tokens: list[str] = [
-                t
-                for t in tokens_to_skip.get_not_found_tokens()
-                if t not in self.tokens_config.no_warn
-            ]
-            if not_found_tokens:
-                warnings.warn(
-                    (
-                        f"{self.module_name}: requested to skip "
-                        f"{tokens_to_skip.token_type} {', '.join(not_found_tokens)}"
-                        " but was not found"
-                    )
-                )
+        for (
+            token_type,
+            not_found_tokens,
+        ) in self.tokens_config.get_missing_tokens_iter():
+            warnings.warn(
+                f"{self.module_name}: requested to skip {token_type} "
+                f"{not_found_tokens} but was not found"
+            )

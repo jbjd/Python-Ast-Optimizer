@@ -48,6 +48,7 @@ class Config(ABC):
 class TokensConfig(Config):
 
     __slots__ = (
+        "_no_warn",
         "from_imports_to_skip",
         "functions_to_skip",
         "variables_to_skip",
@@ -55,7 +56,6 @@ class TokensConfig(Config):
         "dict_keys_to_skip",
         "decorators_to_skip",
         "module_imports_to_skip",
-        "no_warn",
     )
 
     def __init__(
@@ -78,15 +78,25 @@ class TokensConfig(Config):
         self.module_imports_to_skip = TokensToSkip(
             module_imports_to_skip, "module imports"
         )
-        self.no_warn: set[str] = no_warn if no_warn is not None else set()
+        self._no_warn: set[str] = no_warn if no_warn is not None else set()
 
     def __iter__(self) -> Iterator[TokensToSkip]:
         for attr in self.__slots__:
-            if attr != "no_warn":
+            if attr != "_no_warn":
                 yield getattr(self, attr)
 
     def has_code_to_skip(self) -> bool:
         return any(self)  # type: ignore
+
+    def get_missing_tokens_iter(self) -> Iterator[tuple[str, str]]:
+        for tokens_to_skip in self:
+            not_found_tokens: list[str] = [
+                t
+                for t in tokens_to_skip.get_not_found_tokens()
+                if t not in self._no_warn
+            ]
+            if not_found_tokens:
+                yield (tokens_to_skip.token_type, ",".join(not_found_tokens))
 
 
 class SectionsConfig(Config):

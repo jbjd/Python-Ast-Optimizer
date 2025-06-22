@@ -45,71 +45,62 @@ class Config(ABC):
         return any(getattr(self, attr) for attr in self.__slots__)  # type: ignore
 
 
-class TokensToSkipConfig(Config):
+class TokensConfig(Config):
 
     __slots__ = (
-        "from_imports",
-        "functions",
-        "variables",
-        "classes",
-        "dict_keys",
-        "decorators",
-        "module_imports",
+        "from_imports_to_skip",
+        "functions_to_skip",
+        "variables_to_skip",
+        "classes_to_skip",
+        "dict_keys_to_skip",
+        "decorators_to_skip",
+        "module_imports_to_skip",
         "no_warn",
-    )
-
-    TOKEN_ATTRS = (
-        "from_imports",
-        "functions",
-        "variables",
-        "classes",
-        "dict_keys",
-        "decorators",
-        "module_imports",
     )
 
     def __init__(
         self,
-        from_imports: set[str] | None = None,
-        functions: set[str] | None = None,
-        variables: set[str] | None = None,
-        classes: set[str] | None = None,
-        dict_keys: set[str] | None = None,
-        decorators: set[str] | None = None,
-        module_imports: set[str] | None = None,
+        from_imports_to_skip: set[str] | None = None,
+        functions_to_skip: set[str] | None = None,
+        variables_to_skip: set[str] | None = None,
+        classes_to_skip: set[str] | None = None,
+        dict_keys_to_skip: set[str] | None = None,
+        decorators_to_skip: set[str] | None = None,
+        module_imports_to_skip: set[str] | None = None,
         no_warn: set[str] | None = None,
     ):
-        self.from_imports = TokensToSkip(from_imports, "from imports")
-        self.functions = TokensToSkip(functions, "functions")
-        self.variables = TokensToSkip(variables, "variables")
-        self.classes = TokensToSkip(classes, "classes")
-        self.dict_keys = TokensToSkip(dict_keys, "dict keys")
-        self.decorators = TokensToSkip(decorators, "decorators")
-        self.module_imports = TokensToSkip(module_imports, "module imports")
+        self.from_imports_to_skip = TokensToSkip(from_imports_to_skip, "from imports")
+        self.functions_to_skip = TokensToSkip(functions_to_skip, "functions")
+        self.variables_to_skip = TokensToSkip(variables_to_skip, "variables")
+        self.classes_to_skip = TokensToSkip(classes_to_skip, "classes")
+        self.dict_keys_to_skip = TokensToSkip(dict_keys_to_skip, "dict keys")
+        self.decorators_to_skip = TokensToSkip(decorators_to_skip, "decorators")
+        self.module_imports_to_skip = TokensToSkip(
+            module_imports_to_skip, "module imports"
+        )
         self.no_warn: set[str] = no_warn if no_warn is not None else set()
 
     def __iter__(self) -> Iterator[TokensToSkip]:
-        for attr in self.TOKEN_ATTRS:
-            yield getattr(self, attr)
+        for attr in self.__slots__:
+            if attr != "no_warn":
+                yield getattr(self, attr)
 
     def has_code_to_skip(self) -> bool:
         return any(self)  # type: ignore
 
 
-class SectionsToSkipConfig(Config):
+class SectionsConfig(Config):
     __slots__ = ("skip_name_equals_main",)
 
     def __init__(self, skip_name_equals_main: bool = False) -> None:
         self.skip_name_equals_main: bool = skip_name_equals_main
 
 
-class ExtrasToSkipConfig(Config):
+class ExtrasConfig(Config):
     __slots__ = ("skip_dangling_expressions", "skip_type_hints")
 
     def __init__(
-        self,
-        skip_dangling_expressions: bool = True,
-        skip_type_hints: bool = True,
+        self, skip_dangling_expressions: bool = True, skip_type_hints: bool = True
     ) -> None:
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints
@@ -121,9 +112,9 @@ class SkipConfig(Config):
         "module_name",
         "target_python_version",
         "vars_to_fold",
-        "sections_to_skip_config",
-        "tokens_to_skip_config",
-        "extras_to_skip_config",
+        "sections_config",
+        "tokens_config",
+        "extras_config",
     )
 
     def __init__(
@@ -131,24 +122,24 @@ class SkipConfig(Config):
         module_name: str = "",
         target_python_version: tuple[int, int] | None = None,
         vars_to_fold: dict[str, int | str] | None = None,
-        sections_to_skip_config: SectionsToSkipConfig = SectionsToSkipConfig(),
-        tokens_to_skip_config: TokensToSkipConfig = TokensToSkipConfig(),
-        extras_to_skip_config: ExtrasToSkipConfig = ExtrasToSkipConfig(),
+        sections_config: SectionsConfig = SectionsConfig(),
+        tokens_config: TokensConfig = TokensConfig(),
+        extras_config: ExtrasConfig = ExtrasConfig(),
     ) -> None:
         self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = target_python_version
         self.vars_to_fold: dict[str, int | str] = (
             {} if vars_to_fold is None else vars_to_fold
         )
-        self.sections_to_skip_config: SectionsToSkipConfig = sections_to_skip_config
-        self.tokens_to_skip_config: TokensToSkipConfig = tokens_to_skip_config
-        self.extras_to_skip_config: ExtrasToSkipConfig = extras_to_skip_config
+        self.sections_config: SectionsConfig = sections_config
+        self.tokens_config: TokensConfig = tokens_config
+        self.extras_config: ExtrasConfig = extras_config
 
     def has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
             or len(self.vars_to_fold) > 0
-            or self.sections_to_skip_config.has_code_to_skip()
-            or self.tokens_to_skip_config.has_code_to_skip()
-            or self.extras_to_skip_config.has_code_to_skip()
+            or self.sections_config.has_code_to_skip()
+            or self.tokens_config.has_code_to_skip()
+            or self.extras_config.has_code_to_skip()
         )

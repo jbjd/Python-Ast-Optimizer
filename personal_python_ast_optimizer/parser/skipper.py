@@ -3,10 +3,10 @@ import warnings
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser.config import (
-    ExtrasToSkipConfig,
-    SectionsToSkipConfig,
+    ExtrasConfig,
+    SectionsConfig,
     SkipConfig,
-    TokensToSkipConfig,
+    TokensConfig,
 )
 from personal_python_ast_optimizer.parser.utils import (
     can_skip_annotation_assign,
@@ -28,9 +28,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         "module_name",
         "vars_to_fold",
         "target_python_version",
-        "extras_to_skip_config",
-        "sections_to_skip_config",
-        "tokens_to_skip_config",
+        "extras_config",
+        "sections_config",
+        "tokens_config",
     )
 
     def __init__(self, config: SkipConfig) -> None:
@@ -39,11 +39,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
-        self.extras_to_skip_config: ExtrasToSkipConfig = config.extras_to_skip_config
-        self.sections_to_skip_config: SectionsToSkipConfig = (
-            config.sections_to_skip_config
-        )
-        self.tokens_to_skip_config: TokensToSkipConfig = config.tokens_to_skip_config
+        self.extras_config: ExtrasConfig = config.extras_config
+        self.sections_config: SectionsConfig = config.sections_config
+        self.tokens_config: TokensConfig = config.tokens_config
 
         self._within_class: bool = False
         self._within_function: bool = False
@@ -82,7 +80,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if not self._has_code_to_skip():
             return node
 
-        if self.extras_to_skip_config.skip_dangling_expressions:
+        if self.extras_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
         try:
@@ -92,22 +90,22 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        if node.name in self.tokens_to_skip_config.classes:
+        if node.name in self.tokens_config.classes_to_skip:
             return None
 
         if self._use_version_optimization((3, 0)):
             skip_base_classes(node, ["object"])
 
-        if self.extras_to_skip_config.skip_dangling_expressions:
+        if self.extras_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
-        skip_base_classes(node, self.tokens_to_skip_config.classes)
-        skip_decorators(node, self.tokens_to_skip_config.decorators)
+        skip_base_classes(node, self.tokens_config.classes_to_skip)
+        skip_decorators(node, self.tokens_config.decorators_to_skip)
 
         return self.generic_visit(node)
 
     @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
-        if node.name in self.tokens_to_skip_config.functions:
+        if node.name in self.tokens_config.functions_to_skip:
             return None
 
         self._handle_function_node(node)
@@ -116,7 +114,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
-        if node.name in self.tokens_to_skip_config.functions:
+        if node.name in self.tokens_config.functions_to_skip:
             return None
 
         self._handle_function_node(node)
@@ -127,13 +125,13 @@ class AstNodeSkipper(ast.NodeTransformer):
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> None:
         """Handles skips for both async/regular functions"""
-        if self.extras_to_skip_config.skip_type_hints:
+        if self.extras_config.skip_type_hints:
             node.returns = None
 
-        if self.extras_to_skip_config.skip_dangling_expressions:
+        if self.extras_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
-        skip_decorators(node, self.tokens_to_skip_config.decorators)
+        skip_decorators(node, self.tokens_config.decorators_to_skip)
 
         last_body_node: ast.stmt = node.body[-1]
         if isinstance(last_body_node, ast.Return) and (
@@ -151,8 +149,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         parent_var_name: str = get_node_name(getattr(node.targets[0], "value", object))
 
         if (
-            var_name in self.tokens_to_skip_config.variables
-            or parent_var_name in self.tokens_to_skip_config.variables
+            var_name in self.tokens_config.variables_to_skip
+            or parent_var_name in self.tokens_config.variables_to_skip
         ):
             return None
 
@@ -207,10 +205,10 @@ class AstNodeSkipper(ast.NodeTransformer):
         """Skips assign if it is an assignment to a constant that is being folded"""
         if (
             self._should_skip_function_assign(node)
-            or get_node_name(node.target) in self.tokens_to_skip_config.variables
+            or get_node_name(node.target) in self.tokens_config.variables_to_skip
             or self._is_assign_of_folded_constant(node.target, node.value)
             or (
-                self.extras_to_skip_config.skip_type_hints
+                self.extras_config.skip_type_hints
                 and can_skip_annotation_assign(
                     node, self._within_class, self._within_function
                 )
@@ -220,7 +218,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
-        if self.extras_to_skip_config.skip_type_hints:
+        if self.extras_config.skip_type_hints:
             if (
                 not parsed_node.value
                 and self._within_class
@@ -236,7 +234,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         return parsed_node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST | None:
-        if get_node_name(node.target) in self.tokens_to_skip_config.variables:
+        if get_node_name(node.target) in self.tokens_config.variables_to_skip:
             return None
 
         return self.generic_visit(node)
@@ -247,7 +245,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         node.names = [
             alias
             for alias in node.names
-            if alias.name not in self.tokens_to_skip_config.module_imports
+            if alias.name not in self.tokens_config.module_imports_to_skip
         ]
 
         if not node.names:
@@ -257,20 +255,20 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
         normalized_module_name: str = node.module or ""
-        if normalized_module_name in self.tokens_to_skip_config.module_imports:
+        if normalized_module_name in self.tokens_config.module_imports_to_skip:
             return None
 
         node.names = [
             alias
             for alias in node.names
-            if alias.name not in self.tokens_to_skip_config.from_imports
+            if alias.name not in self.tokens_config.from_imports_to_skip
         ]
 
         if node.module == "__future__" and self.target_python_version is not None:
             skippable_futures: list[str] = get_unneeded_futures(
                 self.target_python_version
             )
-            if self.extras_to_skip_config.skip_type_hints:
+            if self.extras_config.skip_type_hints:
                 skippable_futures.append("annotations")
 
             node.names = [
@@ -299,7 +297,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         new_dict = {
             k: v
             for k, v in zip(node.keys, node.values)
-            if getattr(k, "value", "") not in self.tokens_to_skip_config.dict_keys
+            if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
         }
         node.keys = list(new_dict.keys())
         node.values = list(new_dict.values())
@@ -307,7 +305,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_If(self, node: ast.If) -> ast.AST | None:
-        if is_name_equals_main_node(node.test):
+        if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
+            node.test
+        ):
             return None
 
         return self.generic_visit(node)
@@ -321,19 +321,19 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (
             isinstance(node.value, ast.Call)
-            and get_node_name(node.value.func) in self.tokens_to_skip_config.functions
+            and get_node_name(node.value.func) in self.tokens_config.functions_to_skip
         ):
             return None
 
         return self.generic_visit(node)
 
     def visit_arg(self, node: ast.arg) -> ast.AST:
-        if self.extras_to_skip_config.skip_type_hints:
+        if self.extras_config.skip_type_hints:
             node.annotation = None
         return self.generic_visit(node)
 
     def visit_arguments(self, node: ast.arguments) -> ast.AST:
-        if self.extras_to_skip_config.skip_type_hints:
+        if self.extras_config.skip_type_hints:
             if node.kwarg is not None:
                 node.kwarg.annotation = None
             if node.vararg is not None:
@@ -363,23 +363,23 @@ class AstNodeSkipper(ast.NodeTransformer):
         return (
             self.target_python_version is not None
             or len(self.vars_to_fold) > 0
-            or self.extras_to_skip_config.has_code_to_skip()
-            or self.tokens_to_skip_config.has_code_to_skip()
-            or self.sections_to_skip_config.has_code_to_skip()
+            or self.extras_config.has_code_to_skip()
+            or self.tokens_config.has_code_to_skip()
+            or self.sections_config.has_code_to_skip()
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:
         return (
             isinstance(node.value, ast.Call)
-            and get_node_name(node.value.func) in self.tokens_to_skip_config.functions
+            and get_node_name(node.value.func) in self.tokens_config.functions_to_skip
         )
 
     def _warn_unused_skips(self):
-        for tokens_to_skip in self.tokens_to_skip_config:
+        for tokens_to_skip in self.tokens_config:
             not_found_tokens: list[str] = [
                 t
                 for t in tokens_to_skip.get_not_found_tokens()
-                if t not in self.tokens_to_skip_config.no_warn
+                if t not in self.tokens_config.no_warn
             ]
             if not_found_tokens:
                 warnings.warn(

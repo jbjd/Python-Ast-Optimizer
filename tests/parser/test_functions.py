@@ -11,7 +11,7 @@ def foo(bar: str) -> None:
     a: int
     return
 """,
-        "def foo(bar):return",  # TODO: Skip empty returns at end of body
+        "def foo(bar):pass",
     )
     run_minifier_and_assert_correct(before_and_after)
 

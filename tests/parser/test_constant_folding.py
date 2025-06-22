@@ -1,70 +1,30 @@
-import sys
-
 import pytest
 
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
-_exclude_name_equals_main_cases = [
-    BeforeAndAfter(
-        """
-from foo import FAVORITE_NUMBER
-
-a = FAVORITE_NUMBER
-""",
-        "a=6",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER = 6
-
-a = FAVORITE_NUMBER
-""",
-        "a=6",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER: int = 6
-
-a = FAVORITE_NUMBER
-""",
-        "a=6",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER=a=6
-""",
-        "a=6",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER,a=4,5
-""",
-        "a=5",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER,a,*_=4,5,6,7,8
-""",
-        ("a,*_=(5,6,7,8)" if sys.version_info[:2] > (3, 10) else "(a,*_)=(5,6,7,8)"),
-    ),
-    BeforeAndAfter(
-        """
-*_,FAVORITE_NUMBER,a=4,5,6,7,8
-""",
-        ("*_,a=(4,6,7,8)" if sys.version_info[:2] > (3, 10) else "(*_,a)=(4,6,7,8)"),
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER,TEST=4,5
-""",
-        "",
-    ),
+_binary_op_folding_cases = [
+    BeforeAndAfter("a=3+4*2", "a=11"),
+    BeforeAndAfter("a=(7-2)//2", "a=2"),
+    BeforeAndAfter("a=(7%4)/3", "a=1.0"),
+    BeforeAndAfter("a=(1<<3)>>2", "a=2"),
+    BeforeAndAfter("a=64|1", "a=65"),
+    BeforeAndAfter("a=7&3", "a=3"),
+    BeforeAndAfter("a=3^6", "a=5"),
 ]
 
 
-@pytest.mark.parametrize("before_and_after", _exclude_name_equals_main_cases)
-def test_exclude_name_equals_main(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(
-        before_and_after,
-        constant_vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test"},
+@pytest.mark.parametrize("before_and_after", _binary_op_folding_cases)
+def test_binary_op_folding(before_and_after: BeforeAndAfter):
+    run_minifier_and_assert_correct(before_and_after)
+
+
+def test_string_folding():
+    before_and_after = BeforeAndAfter(
+        """
+a = (
+    "a"
+    "b"
+)""",
+        "a='ab'",
     )
+    run_minifier_and_assert_correct(before_and_after)

@@ -1,10 +1,10 @@
 import ast
 
 from personal_python_ast_optimizer.parser.config import (
-    ExtrasToSkipConfig,
-    SectionsToSkipConfig,
+    ExtrasConfig,
+    SectionsConfig,
     SkipConfig,
-    TokensToSkipConfig,
+    TokensConfig,
 )
 from personal_python_ast_optimizer.parser.minifier import MinifyUnparser
 from personal_python_ast_optimizer.parser.run import run_minify_parser
@@ -50,9 +50,9 @@ def run_minifier_and_assert_correct_multiple_versions(
 def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
-    constant_vars_to_fold: dict[str, int | str] | None = None,
-    sections_to_skip_config: SectionsToSkipConfig = SectionsToSkipConfig(),
-    tokens_to_skip_config: TokensToSkipConfig = TokensToSkipConfig(),
+    vars_to_fold: dict[str, int | str] | None = None,
+    sections_to_skip_config: SectionsConfig = SectionsConfig(),
+    tokens_to_skip_config: TokensConfig = TokensConfig(),
 ):
     unparser: MinifyUnparser = MinifyUnparser()
 
@@ -62,10 +62,10 @@ def run_minifier_and_assert_correct(
         SkipConfig(
             "",
             target_python_version,
-            constant_vars_to_fold,
+            vars_to_fold,
             sections_to_skip_config,
             tokens_to_skip_config,
-            ExtrasToSkipConfig(),  # TODO: test
+            ExtrasConfig(),  # TODO: test
         ),
     )
     assert python_code_is_valid(minified_code)

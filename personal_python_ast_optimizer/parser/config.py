@@ -107,14 +107,21 @@ class SectionsConfig(Config):
 
 
 class ExtrasConfig(Config):
-    __slots__ = ("fold_constants", "skip_dangling_expressions", "skip_type_hints")
+    __slots__ = (
+        "condense_imports",
+        "fold_constants",
+        "skip_dangling_expressions",
+        "skip_type_hints",
+    )
 
     def __init__(
         self,
+        condense_imports: bool = True,
         fold_constants: bool = True,
         skip_dangling_expressions: bool = True,
         skip_type_hints: bool = True,
     ) -> None:
+        self.condense_imports: bool = condense_imports
         self.fold_constants: bool = fold_constants
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints

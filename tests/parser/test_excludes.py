@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     run_minifier_and_assert_correct(
         before_and_after,
-        sections_to_skip_config=SectionsConfig(skip_name_equals_main=True),
+        sections_config=SectionsConfig(skip_name_equals_main=True),
     )
 
 
@@ -33,7 +33,7 @@ class B:
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(classes_to_skip={"ABC", "B"}),
+        tokens_config=TokensConfig(classes_to_skip={"ABC", "B"}),
     )
 
 
@@ -44,7 +44,7 @@ def test_exclude_dict_keys():
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(dict_keys_to_skip={"b"}),
+        tokens_config=TokensConfig(dict_keys_to_skip={"b"}),
     )
 
 
@@ -86,7 +86,7 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(variables_to_skip={"foo"}),
+        tokens_config=TokensConfig(variables_to_skip={"foo"}),
     )
 
 
@@ -113,7 +113,7 @@ def bar():
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -140,7 +140,7 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -165,7 +165,7 @@ def bar():
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -180,9 +180,7 @@ from . import asdf
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(
-            module_imports_to_skip={"numpy", "numpy._core", ""}
-        ),
+        tokens_config=TokensConfig(module_imports_to_skip={"numpy", "numpy._core", ""}),
     )
 
 
@@ -201,7 +199,7 @@ is_cid = re.compile('').match
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(
+        tokens_config=TokensConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
     )

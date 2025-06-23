@@ -10,6 +10,7 @@ from personal_python_ast_optimizer.parser.config import (
 )
 from personal_python_ast_optimizer.parser.utils import (
     can_skip_annotation_assign,
+    condense_imports,
     first_occurrence_of_type,
     get_node_name,
     is_name_equals_main_node,
@@ -69,6 +70,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         return wrapper
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
+        if self.extras_config.condense_imports:
+            condense_imports(node)
+
+        if self.extras_config.skip_dangling_expressions:
+            skip_dangling_expressions(node)
+
         node_to_return: ast.AST = super().generic_visit(node)
 
         if not isinstance(node, ast.Module) and hasattr(node, "body") and not node.body:
@@ -80,13 +87,10 @@ class AstNodeSkipper(ast.NodeTransformer):
         if not self._has_code_to_skip():
             return node
 
-        if self.extras_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
+        parsed_node: ast.AST = self.generic_visit(node)
 
-        try:
-            return self.generic_visit(node)
-        finally:
-            self._warn_unused_skips()
+        self._warn_unused_skips()
+        return parsed_node
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
@@ -96,8 +100,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self._use_version_optimization((3, 0)):
             skip_base_classes(node, ["object"])
 
-        if self.extras_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
@@ -127,9 +129,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         """Handles skips for both async/regular functions"""
         if self.extras_config.skip_type_hints:
             node.returns = None
-
-        if self.extras_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
 
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 

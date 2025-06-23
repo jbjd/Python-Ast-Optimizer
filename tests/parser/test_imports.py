@@ -1,7 +1,7 @@
 import pytest
+from personal_python_ast_optimizer.parser.config import ExtrasConfig
 
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
-
 
 _all_futures_imports: str = """
 from __future__ import annotations
@@ -40,7 +40,9 @@ def i():
 """,
         "def i():import a;from b import c;import d",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after, extras_config=ExtrasConfig(condense_imports=False)
+    )
 
 
 def test_import_star():
@@ -48,5 +50,18 @@ def test_import_star():
     before_and_after = BeforeAndAfter(
         "from ctypes import *",
         "from ctypes import*",
+    )
+    run_minifier_and_assert_correct(before_and_after)
+
+
+def test_condense_imports():
+
+    before_and_after = BeforeAndAfter(
+        """
+import a
+from b import c
+import d
+""",
+        "import a,d\nfrom b import c",
     )
     run_minifier_and_assert_correct(before_and_after)

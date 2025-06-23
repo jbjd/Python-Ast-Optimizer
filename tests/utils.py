@@ -54,7 +54,3 @@ def python_code_is_valid(python_code: str) -> bool:
         return True
     except SyntaxError:
         return False
-
-
-def _python_version_str_to_int_tuple(python_version: str) -> tuple[int, int]:
-    return tuple(int(i) for i in python_version.split("."))[:2]  # type: ignore

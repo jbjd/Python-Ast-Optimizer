@@ -1,8 +1,6 @@
 import ast
 from typing import Iterable
 
-from personal_python_ast_optimizer.parser.config import TokensToSkip
-
 
 def can_skip_annotation_assign(
     node: ast.AnnAssign, within_class: bool, within_function: bool
@@ -10,6 +8,23 @@ def can_skip_annotation_assign(
     """Returns True if an annotation assign in unneeded in given context.
     Annotations are only needed when assigned in a class outside of a function"""
     return node.value is None and (not within_class or within_function)
+
+
+def condense_imports(node: ast.AST) -> None:
+    """Given a node body, condense imports that occur
+    one after another"""
+
+    if _has_iterable_body(node):
+        condense_to: ast.Import | None = None
+        for sub_node in node.body:  # type: ignore
+            if isinstance(sub_node, ast.Import):
+                if condense_to is None:
+                    condense_to = sub_node
+                else:
+                    condense_to.names.extend(sub_node.names)
+                    sub_node.names.clear()  # Node will get removed during visit
+            elif not isinstance(sub_node, ast.ImportFrom):
+                condense_to = None
 
 
 def get_node_name(node: object) -> str:
@@ -51,22 +66,20 @@ def node_inlineable(node: ast.AST) -> bool:
     ]
 
 
-def skip_dangling_expressions(
-    node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-) -> None:
+def skip_dangling_expressions(node: ast.AST) -> None:
     """Removes constant dangling expression like doc strings"""
-    node.body = [
-        element
-        for element in node.body
-        if not (
-            isinstance(element, ast.Expr) and isinstance(element.value, ast.Constant)
-        )
-    ]
+    if _has_iterable_body(node):
+        node.body = [  # type: ignore
+            element
+            for element in node.body  # type: ignore
+            if not (
+                isinstance(element, ast.Expr)
+                and isinstance(element.value, ast.Constant)
+            )
+        ]
 
 
-def skip_base_classes(
-    node: ast.ClassDef, classes_to_ignore: Iterable[str] | TokensToSkip
-) -> None:
+def skip_base_classes(node: ast.ClassDef, classes_to_ignore: Iterable[str]) -> None:
     node.bases = [
         base for base in node.bases if getattr(base, "id", "") not in classes_to_ignore
     ]
@@ -74,7 +87,7 @@ def skip_base_classes(
 
 def skip_decorators(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-    decorators_to_ignore: Iterable[str] | TokensToSkip,
+    decorators_to_ignore: Iterable[str],
 ) -> None:
     node.decorator_list = [
         n for n in node.decorator_list if get_node_name(n) not in decorators_to_ignore
@@ -86,3 +99,7 @@ def first_occurrence_of_type(data: list, target_type) -> int:
         if isinstance(element, target_type):
             return index
     return -1
+
+
+def _has_iterable_body(node: ast.AST) -> bool:
+    return isinstance(getattr(node, "body", None), Iterable)

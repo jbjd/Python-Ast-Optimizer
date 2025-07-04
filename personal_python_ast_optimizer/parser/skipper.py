@@ -12,6 +12,7 @@ from personal_python_ast_optimizer.parser.utils import (
     can_skip_annotation_assign,
     first_occurrence_of_type,
     get_node_name,
+    if_node_has_elif,
     is_name_equals_main_node,
     is_return_none,
     skip_base_classes,
@@ -86,7 +87,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
                 if (
                     field == "body"
-                    and len(new_values) == 0
+                    and not new_values
                     and not isinstance(node, ast.Module)
                 ):
                     old_value[:] = [ast.Pass()]
@@ -184,7 +185,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             for target in node.targets
             if not self._is_assign_of_folded_constant(target, node.value)
         ]
-        if len(new_targets) == 0:
+        if not new_targets:
             return None
 
         node.targets = new_targets
@@ -217,7 +218,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 if i not in bad_indexes
             ]
 
-            if len(node.targets[0].elts) == 0:
+            if not node.targets[0].elts:
                 return None
             if len(node.targets[0].elts) == 1:
                 node.targets = [node.targets[0].elts[0]]
@@ -342,9 +343,12 @@ class AstNodeSkipper(ast.NodeTransformer):
             and len(parsed_node.body) == 1
             and isinstance(parsed_node.body[0], ast.Pass)
         ):
-            return None if len(parsed_node.orelse) == 0 else parsed_node.orelse
-        else:
-            return parsed_node
+            if not parsed_node.orelse:
+                return None
+            if if_node_has_elif(parsed_node):
+                return parsed_node.orelse
+
+        return parsed_node
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):

@@ -68,13 +68,38 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return wrapper
 
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        node_to_return: ast.AST = super().generic_visit(node)
+    def generic_visit(self, node) -> ast.AST:
+        """Modified version of super class's generic_visit
+        to extend functionality"""
+        for field, old_value in ast.iter_fields(node):
+            if isinstance(old_value, list):
+                new_values = []
+                for value in old_value:
+                    if isinstance(value, ast.AST):
+                        value = self.visit(value)
+                        if value is None:
+                            continue
+                        elif not isinstance(value, ast.AST):
+                            new_values.extend(value)
+                            continue
+                    new_values.append(value)
 
-        if not isinstance(node, ast.Module) and hasattr(node, "body") and not node.body:
-            node.body.append(ast.Pass())
+                if (
+                    field == "body"
+                    and len(new_values) == 0
+                    and not isinstance(node, ast.Module)
+                ):
+                    old_value[:] = [ast.Pass()]
+                else:
+                    old_value[:] = new_values
 
-        return node_to_return
+            elif isinstance(old_value, ast.AST):
+                new_node = self.visit(old_value)
+                if new_node is None:
+                    delattr(node, field)
+                else:
+                    setattr(node, field, new_node)
+        return node
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         if not self._has_code_to_skip():
@@ -310,13 +335,27 @@ class AstNodeSkipper(ast.NodeTransformer):
         ):
             return None
 
-        return self.generic_visit(node)
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        return (  # Might be a better way to do this
+            None
+            if isinstance(parsed_node, ast.If)
+            and len(parsed_node.body) == 1
+            and isinstance(parsed_node.body[0], ast.Pass)
+            and len(parsed_node.orelse) == 0
+            else parsed_node
+        )
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
 
         return self.generic_visit(node)
+
+    def visit_Pass(self, node: ast.Pass) -> None:
+        """Always returns None. Caller responsible for ensuring empty bodies
+        are populated with a Pass node."""
+        return None  # This could be toggleable
 
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (

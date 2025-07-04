@@ -19,10 +19,6 @@ def get_node_name(node: object) -> str:
     return getattr(node, "id", "") or getattr(node, "attr", "")
 
 
-def if_node_has_elif(node: ast.If) -> bool:
-    return len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If)
-
-
 def is_name_equals_main_node(node: ast.expr) -> bool:
     if not isinstance(node, ast.Compare):
         return False

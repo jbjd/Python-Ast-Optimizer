@@ -12,7 +12,6 @@ from personal_python_ast_optimizer.parser.utils import (
     can_skip_annotation_assign,
     first_occurrence_of_type,
     get_node_name,
-    if_node_has_elif,
     is_name_equals_main_node,
     is_return_none,
     skip_base_classes,
@@ -331,7 +330,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    def visit_If(self, node: ast.If) -> ast.AST | None:
+    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
             node.test
         ):
@@ -344,10 +343,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             and len(parsed_node.body) == 1
             and isinstance(parsed_node.body[0], ast.Pass)
         ):
-            if not parsed_node.orelse:
-                return None
-            if if_node_has_elif(parsed_node):
-                return parsed_node.orelse
+            return parsed_node.orelse if parsed_node.orelse else None
 
         return parsed_node
 

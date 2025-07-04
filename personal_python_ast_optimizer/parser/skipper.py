@@ -338,14 +338,14 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         parsed_node: ast.AST = self.generic_visit(node)
 
-        return (  # Might be a better way to do this
-            None
-            if isinstance(parsed_node, ast.If)
+        if (
+            isinstance(parsed_node, ast.If)
             and len(parsed_node.body) == 1
             and isinstance(parsed_node.body[0], ast.Pass)
-            and len(parsed_node.orelse) == 0
-            else parsed_node
-        )
+        ):
+            return None if len(parsed_node.orelse) == 0 else parsed_node.orelse
+        else:
+            return parsed_node
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):

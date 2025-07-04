@@ -54,7 +54,7 @@ if b==1:
 """,
         (
             "if b==1:assert True;a=1;a+=1;break;continue;del a;c();import foo;"
-            "from spam import eggs;pass;raise Exception;return 0"
+            "from spam import eggs;raise Exception;return 0"
         ),
     )
     run_minifier_and_assert_correct(before_and_after)

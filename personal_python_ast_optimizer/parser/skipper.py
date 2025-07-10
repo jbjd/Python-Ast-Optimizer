@@ -133,11 +133,12 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
-        last_body_node: ast.stmt = node.body[-1]
-        if isinstance(last_body_node, ast.Return) and (
-            is_return_none(last_body_node) or last_body_node.value is None
-        ):
-            node.body = node.body[:-1]
+        if node.body:
+            last_body_node: ast.stmt = node.body[-1]
+            if isinstance(last_body_node, ast.Return) and (
+                is_return_none(last_body_node) or last_body_node.value is None
+            ):
+                node.body = node.body[:-1]
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""

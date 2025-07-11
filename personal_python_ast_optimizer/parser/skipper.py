@@ -342,8 +342,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             isinstance(parsed_node, ast.If)
             and len(parsed_node.body) == 1
             and isinstance(parsed_node.body[0], ast.Pass)
+            and not parsed_node.orelse
         ):
-            return parsed_node.orelse if parsed_node.orelse else None
+            return None
 
         return parsed_node
 

@@ -68,13 +68,38 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return wrapper
 
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        node_to_return: ast.AST = super().generic_visit(node)
+    def generic_visit(self, node) -> ast.AST:
+        """Modified version of super class's generic_visit
+        to extend functionality"""
+        for field, old_value in ast.iter_fields(node):
+            if isinstance(old_value, list):
+                new_values = []
+                for value in old_value:
+                    if isinstance(value, ast.AST):
+                        value = self.visit(value)
+                        if value is None:
+                            continue
+                        elif not isinstance(value, ast.AST):
+                            new_values.extend(value)
+                            continue
+                    new_values.append(value)
 
-        if not isinstance(node, ast.Module) and hasattr(node, "body") and not node.body:
-            node.body.append(ast.Pass())
+                if (
+                    field == "body"
+                    and not new_values
+                    and not isinstance(node, ast.Module)
+                ):
+                    old_value[:] = [ast.Pass()]
+                else:
+                    old_value[:] = new_values
 
-        return node_to_return
+            elif isinstance(old_value, ast.AST):
+                new_node = self.visit(old_value)
+                if new_node is None:
+                    delattr(node, field)
+                else:
+                    setattr(node, field, new_node)
+        return node
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         if not self._has_code_to_skip():
@@ -160,7 +185,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             for target in node.targets
             if not self._is_assign_of_folded_constant(target, node.value)
         ]
-        if len(new_targets) == 0:
+        if not new_targets:
             return None
 
         node.targets = new_targets
@@ -193,7 +218,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 if i not in bad_indexes
             ]
 
-            if len(node.targets[0].elts) == 0:
+            if not node.targets[0].elts:
                 return None
             if len(node.targets[0].elts) == 1:
                 node.targets = [node.targets[0].elts[0]]
@@ -305,19 +330,34 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    def visit_If(self, node: ast.If) -> ast.AST | None:
+    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
             node.test
         ):
             return None
 
-        return self.generic_visit(node)
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.If)
+            and len(parsed_node.body) == 1
+            and isinstance(parsed_node.body[0], ast.Pass)
+            and not parsed_node.orelse
+        ):
+            return None
+
+        return parsed_node
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
 
         return self.generic_visit(node)
+
+    def visit_Pass(self, node: ast.Pass) -> None:
+        """Always returns None. Caller responsible for ensuring empty bodies
+        are populated with a Pass node."""
+        return None  # This could be toggleable
 
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (

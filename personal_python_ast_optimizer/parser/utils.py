@@ -30,6 +30,13 @@ def is_name_equals_main_node(node: ast.expr) -> bool:
     )
 
 
+def is_overload_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return (
+        len(node.decorator_list) == 1
+        and get_node_name(node.decorator_list[0]) == "overload"
+    )
+
+
 def is_return_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 

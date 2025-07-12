@@ -56,3 +56,19 @@ if a==b:
         "if a==b:a();b();c()",
     )
     run_minifier_and_assert_correct(before_and_after)
+
+
+def test_function_overload():
+    before_and_after = BeforeAndAfter(
+        """
+@overload
+def test_overload(a: None) -> None: ...
+
+@overload
+def test_overload(a: int) -> int: ...
+
+def test_overload(a: float) -> int: do_something()
+""",
+        "def test_overload(a):do_something()",
+    )
+    run_minifier_and_assert_correct(before_and_after)

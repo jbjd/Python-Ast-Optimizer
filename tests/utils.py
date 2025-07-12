@@ -53,6 +53,7 @@ def run_minifier_and_assert_correct(
     vars_to_fold: dict[str, int | str] | None = None,
     sections_to_skip_config: SectionsConfig = SectionsConfig(),
     tokens_to_skip_config: TokensConfig = TokensConfig(),
+    extras_config: ExtrasConfig = ExtrasConfig(),
 ):
     unparser: MinifyUnparser = MinifyUnparser()
 
@@ -65,7 +66,7 @@ def run_minifier_and_assert_correct(
             vars_to_fold,
             sections_to_skip_config,
             tokens_to_skip_config,
-            ExtrasConfig(),  # TODO: test
+            extras_config,
         ),
     )
     assert python_code_is_valid(minified_code)

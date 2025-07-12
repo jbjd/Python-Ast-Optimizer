@@ -1,3 +1,5 @@
+from personal_python_ast_optimizer.parser.config import ExtrasConfig
+
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -71,4 +73,6 @@ def test_overload(a: float) -> int: do_something()
 """,
         "def test_overload(a):do_something()",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after, extras_config=ExtrasConfig(skip_overload_functions=True)
+    )

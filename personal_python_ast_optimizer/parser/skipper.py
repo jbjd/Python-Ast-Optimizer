@@ -13,6 +13,7 @@ from personal_python_ast_optimizer.parser.utils import (
     first_occurrence_of_type,
     get_node_name,
     is_name_equals_main_node,
+    is_overload_function,
     is_return_none,
     skip_base_classes,
     skip_dangling_expressions,
@@ -130,7 +131,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
-        if node.name in self.tokens_config.functions_to_skip:
+        if self._should_skip_function(node):
             return None
 
         self._handle_function_node(node)
@@ -139,12 +140,20 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
-        if node.name in self.tokens_config.functions_to_skip:
+        if self._should_skip_function(node):
             return None
 
         self._handle_function_node(node)
 
         return self.generic_visit(node)
+
+    def _should_skip_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> bool:
+        """If a function node should be skipped"""
+        return node.name in self.tokens_config.functions_to_skip or (
+            self.extras_config.skip_overload_functions and is_overload_function(node)
+        )
 
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef

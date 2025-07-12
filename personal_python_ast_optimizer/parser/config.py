@@ -107,17 +107,24 @@ class SectionsConfig(Config):
 
 
 class ExtrasConfig(Config):
-    __slots__ = ("fold_constants", "skip_dangling_expressions", "skip_type_hints")
+    __slots__ = (
+        "fold_constants",
+        "skip_dangling_expressions",
+        "skip_type_hints",
+        "skip_overload_functions",
+    )
 
     def __init__(
         self,
         fold_constants: bool = True,
         skip_dangling_expressions: bool = True,
         skip_type_hints: bool = True,
+        skip_overload_functions: bool = False,
     ) -> None:
         self.fold_constants: bool = fold_constants
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints
+        self.skip_overload_functions: bool = skip_overload_functions
 
 
 class SkipConfig(Config):

@@ -4,19 +4,21 @@ from personal_python_ast_optimizer.parser.config import SectionsConfig, TokensCo
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
-def test_exclude_name_equals_main():
+@pytest.mark.parametrize("skip_name_equals_main", [True, False])
+def test_exclude_name_equals_main(skip_name_equals_main: bool):
+    """Should exclude __name__==__main__ blocks
+    if skip_name_equals_main set to True"""
+
+    NAME_EQUALS_MAIN_EXAMPLE: str = "if __name__=='__main__':print()"
 
     before_and_after = BeforeAndAfter(
-        """
-if __name__ == "__main__":
-    a = 2
-""",
-        "",
+        NAME_EQUALS_MAIN_EXAMPLE,
+        "" if skip_name_equals_main else NAME_EQUALS_MAIN_EXAMPLE,
     )
 
     run_minifier_and_assert_correct(
         before_and_after,
-        sections_to_skip_config=SectionsConfig(skip_name_equals_main=True),
+        sections_config=SectionsConfig(skip_name_equals_main=skip_name_equals_main),
     )
 
 
@@ -33,7 +35,7 @@ class B:
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(classes_to_skip={"ABC", "B"}),
+        tokens_config=TokensConfig(classes_to_skip={"ABC", "B"}),
     )
 
 
@@ -44,7 +46,7 @@ def test_exclude_dict_keys():
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(dict_keys_to_skip={"b"}),
+        tokens_config=TokensConfig(dict_keys_to_skip={"b"}),
     )
 
 
@@ -86,7 +88,7 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(variables_to_skip={"foo"}),
+        tokens_config=TokensConfig(variables_to_skip={"foo"}),
     )
 
 
@@ -113,7 +115,7 @@ def bar():
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -140,7 +142,7 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -165,7 +167,7 @@ def bar():
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(functions_to_skip={"foo"}),
+        tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -180,9 +182,7 @@ from . import asdf
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(
-            module_imports_to_skip={"numpy", "numpy._core", ""}
-        ),
+        tokens_config=TokensConfig(module_imports_to_skip={"numpy", "numpy._core", ""}),
     )
 
 
@@ -201,7 +201,7 @@ is_cid = re.compile('').match
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_to_skip_config=TokensConfig(
+        tokens_config=TokensConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
     )

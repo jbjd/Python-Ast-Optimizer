@@ -51,8 +51,8 @@ def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
     vars_to_fold: dict[str, int | str] | None = None,
-    sections_to_skip_config: SectionsConfig = SectionsConfig(),
-    tokens_to_skip_config: TokensConfig = TokensConfig(),
+    sections_config: SectionsConfig = SectionsConfig(),
+    tokens_config: TokensConfig = TokensConfig(),
     extras_config: ExtrasConfig = ExtrasConfig(),
 ):
     unparser: MinifyUnparser = MinifyUnparser()
@@ -64,8 +64,8 @@ def run_minifier_and_assert_correct(
             "",
             target_python_version,
             vars_to_fold,
-            sections_to_skip_config,
-            tokens_to_skip_config,
+            sections_config,
+            tokens_config,
             extras_config,
         ),
     )

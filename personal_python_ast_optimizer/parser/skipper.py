@@ -329,31 +329,24 @@ class AstNodeSkipper(ast.NodeTransformer):
             return self.generic_visit(node)
 
     def visit_Dict(self, node: ast.Dict) -> ast.AST:
-        new_dict = {
-            k: v
-            for k, v in zip(node.keys, node.values)
-            if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
-        }
-        node.keys = list(new_dict.keys())
-        node.values = list(new_dict.values())
+        if self.tokens_config.dict_keys_to_skip:
+            new_dict = {
+                k: v
+                for k, v in zip(node.keys, node.values)
+                if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
+            }
+            node.keys = list(new_dict.keys())
+            node.values = list(new_dict.values())
 
         return self.generic_visit(node)
 
-    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
+    def visit_If(self, node: ast.If) -> ast.AST | None:
         if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
             node.test
         ):
             return None
 
         parsed_node: ast.AST = self.generic_visit(node)
-
-        if (
-            isinstance(parsed_node, ast.If)
-            and len(parsed_node.body) == 1
-            and isinstance(parsed_node.body[0], ast.Pass)
-            and not parsed_node.orelse
-        ):
-            return None
 
         return parsed_node
 

@@ -10,11 +10,13 @@ from personal_python_ast_optimizer.parser.config import (
 )
 from personal_python_ast_optimizer.parser.utils import (
     can_skip_annotation_assign,
+    can_skip_if,
     first_occurrence_of_type,
     get_node_name,
-    is_name_equals_main_node,
+    if_always_runs,
     is_overload_function,
     is_return_none,
+    list_or_none_if_only_pass,
     skip_base_classes,
     skip_dangling_expressions,
     skip_decorators,
@@ -340,15 +342,90 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    def visit_If(self, node: ast.If) -> ast.AST | None:
-        if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
-            node.test
-        ):
-            return None
+    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
+        parsed_node: ast.AST | list[ast.stmt] = self.generic_visit(node)
 
-        parsed_node: ast.AST = self.generic_visit(node)
+        if isinstance(parsed_node, ast.If):
+            if can_skip_if(parsed_node):
+                parsed_node = list_or_none_if_only_pass(parsed_node.orelse)
+            elif if_always_runs(parsed_node):
+                parsed_node = list_or_none_if_only_pass(parsed_node.body)
 
         return parsed_node
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        folded_bool_op: ast.Constant | None = self._fold_bool_op(parsed_node)
+        if folded_bool_op is not None:
+            return folded_bool_op
+
+        return parsed_node
+
+    @staticmethod
+    def _fold_bool_op(node: ast.BoolOp) -> ast.Constant | None:
+        """Returns ast.Constant with bool of folded comparison
+        or None if could not be determined"""
+
+        if not isinstance(node.values[0], ast.Constant):
+            return None
+
+        folded_value: bool = node.values[0].value
+
+        for value in node.values[1:]:
+            if not isinstance(value, ast.Constant):
+                return None
+
+            match node.op.__class__.__name__:
+                case "And":
+                    folded_value &= value.value
+                case "Or":
+                    folded_value |= value.value
+                case _:
+                    raise ValueError(f"Unknown bool op {node.op.__class__.__name__}")
+
+        return ast.Constant(folded_value)
+
+    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
+        if (
+            self.sections_config.skip_name_equals_main
+            and getattr(node.left, "id", "") == "__name__"
+            and isinstance(node.ops[0], ast.Eq)
+            and getattr(node.comparators[0], "value", "") == "__main__"
+        ):
+            return ast.Constant(False)
+
+        folded_compare: ast.Constant | None = self._fold_compare(node)
+        if folded_compare is not None:
+            return folded_compare
+
+        return self.generic_visit(node)
+
+    @staticmethod
+    def _fold_compare(node: ast.Compare) -> ast.Constant | None:
+        """Returns ast.Constant with bool of folded comparison
+        or None if could not be determined"""
+
+        if not isinstance(node.left, ast.Constant):
+            return None
+
+        folded_value: bool = True
+
+        for op, comparator in zip(node.ops, node.comparators):
+            if not isinstance(comparator, ast.Constant):
+                return None
+
+            match op.__class__.__name__:
+                case "Eq":
+                    folded_value &= node.left == comparator.value
+                case "NotEq":
+                    folded_value &= node.left != comparator.value
+                case _:
+                    # raise ValueError(f"Unknown op {op}")
+                    # TODO Handle all Lt, LtE, Gt, GtE, Is, IsNot, In, NotIn
+                    return None
+
+        return ast.Constant(folded_value)
 
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):

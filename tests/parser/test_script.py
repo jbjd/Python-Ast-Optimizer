@@ -15,11 +15,11 @@ def test_one_line_if():
     before_and_after = BeforeAndAfter(
         """
 a if True else b
-'a' if 'True' == 'False' else 'b'
+'a' if test == 'False' else 'b'
 """,
         """
 a if True else b
-'a'if'True'=='False'else'b'
+'a'if test=='False'else'b'
 """.strip(),
     )
     run_minifier_and_assert_correct(before_and_after)

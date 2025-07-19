@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import Iterator, Literal
 
 
 class TokensToSkip(dict[str, int]):
@@ -100,9 +100,14 @@ class TokensConfig(Config):
 
 
 class SectionsConfig(Config):
-    __slots__ = ("skip_name_equals_main",)
+    __slots__ = ("target_os", "skip_name_equals_main")
 
-    def __init__(self, skip_name_equals_main: bool = False) -> None:
+    def __init__(
+        self,
+        target_os: Literal["Windows", None] = None,
+        skip_name_equals_main: bool = False,
+    ) -> None:
+        self.target_os: Literal["Windows", None] = target_os
         self.skip_name_equals_main: bool = skip_name_equals_main
 
 

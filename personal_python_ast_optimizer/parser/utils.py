@@ -12,22 +12,28 @@ def can_skip_annotation_assign(
     return node.value is None and (not within_class or within_function)
 
 
+def can_skip_if(node: ast.If) -> bool:
+    """Returns True if the comparison in an If node cannot
+    ever be true"""
+    return isinstance(node.test, ast.Constant) and not node.test.value
+
+
+def if_always_runs(node: ast.If) -> bool:
+    """Returns True if the comparison in an If node is always true"""
+    return isinstance(node.test, ast.Constant) and node.test.value
+
+
+def list_or_none_if_only_pass(body: list[ast.stmt]) -> list[ast.stmt] | None:
+    """Returns the provided list or None if the list was empty or only
+    contained a single Pass node"""
+    return None if not body or isinstance(body[0], ast.Pass) else body
+
+
 def get_node_name(node: object) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):
         node = node.func
     return getattr(node, "id", "") or getattr(node, "attr", "")
-
-
-def is_name_equals_main_node(node: ast.expr) -> bool:
-    if not isinstance(node, ast.Compare):
-        return False
-
-    return (
-        getattr(node.left, "id", "") == "__name__"
-        and isinstance(node.ops[0], ast.Eq)
-        and getattr(node.comparators[0], "value", "") == "__main__"
-    )
 
 
 def is_overload_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

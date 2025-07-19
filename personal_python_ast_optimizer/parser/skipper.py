@@ -343,7 +343,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        parsed_node: ast.AST | list[ast.stmt] = self.generic_visit(node)
+        parsed_node: ast.AST | list[ast.stmt] | None = self.generic_visit(node)
 
         if isinstance(parsed_node, ast.If):
             if can_skip_if(parsed_node):
@@ -356,9 +356,10 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
         parsed_node: ast.AST = self.generic_visit(node)
 
-        folded_bool_op: ast.Constant | None = self._fold_bool_op(parsed_node)
-        if folded_bool_op is not None:
-            return folded_bool_op
+        if isinstance(parsed_node, ast.BoolOp):
+            folded_bool_op: ast.Constant | None = self._fold_bool_op(parsed_node)
+            if folded_bool_op is not None:
+                return folded_bool_op
 
         return parsed_node
 

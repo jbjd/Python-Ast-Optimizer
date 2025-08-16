@@ -259,7 +259,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 and self._within_class
                 and not self._within_function
             ):
-                parsed_node.annotation = ast.Constant("Any")
+                parsed_node.annotation = ast.Name("int")
             elif parsed_node.value is None:
                 # This should be unreachable
                 return None

@@ -44,6 +44,7 @@ def is_return_none(node: ast.Return) -> bool:
 def node_inlineable(node: ast.AST) -> bool:
     return node.__class__.__name__ in [
         "Assert",
+        "AnnAssign",
         "Assign",
         "AugAssign",
         "Break",

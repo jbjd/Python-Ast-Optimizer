@@ -20,10 +20,6 @@ class SomeTuple():
     thing1: str
     thing2: int
 """,
-        """
-class SomeTuple:
-\tthing1:'Any'
-\tthing2:'Any'
-""".strip(),
+        "class SomeTuple:thing1:int;thing2:int",
     )
     run_minifier_and_assert_correct(before_and_after)

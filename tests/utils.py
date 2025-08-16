@@ -69,18 +69,14 @@ def run_minifier_and_assert_correct(
             extras_config,
         ),
     )
-    assert python_code_is_valid(minified_code)
+    raise_if_python_code_invalid(minified_code)
     assert (
         before_and_after.after == minified_code
     ), f"{before_and_after.after} != {minified_code}"
 
 
-def python_code_is_valid(python_code: str) -> bool:
-    try:
-        ast.parse(python_code)
-        return True
-    except SyntaxError:
-        return False
+def raise_if_python_code_invalid(python_code: str) -> None:
+    ast.parse(python_code)
 
 
 def _python_version_str_to_int_tuple(python_version: str) -> tuple[int, int]:

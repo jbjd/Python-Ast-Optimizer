@@ -149,6 +149,18 @@ class MinifyUnparser(_Unparser):
         self.write(" import ")
         self._write_comma_delimitated_body(node.names)
 
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self.fill(splitter=self._get_line_splitter())
+        with self.delimit_if(
+            "(", ")", not node.simple and isinstance(node.target, ast.Name)
+        ):
+            self.traverse(node.target)
+        self.write(": ")
+        self.traverse(node.annotation)
+        if node.value:
+            self.write(" = ")
+            self.traverse(node.value)
+
     def visit_Assign(self, node: ast.Assign) -> None:
         self.fill(splitter=self._get_line_splitter())
         for target in node.targets:

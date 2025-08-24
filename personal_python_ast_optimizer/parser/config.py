@@ -112,10 +112,12 @@ class ExtrasConfig(Config):
         "skip_dangling_expressions",
         "skip_type_hints",
         "skip_overload_functions",
+        "warn_unusual_code",
     )
 
     def __init__(
         self,
+        warn_unusual_code: bool = True,
         fold_constants: bool = True,
         skip_dangling_expressions: bool = True,
         skip_type_hints: bool = True,
@@ -125,6 +127,7 @@ class ExtrasConfig(Config):
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints
         self.skip_overload_functions: bool = skip_overload_functions
+        self.warn_unusual_code: bool = warn_unusual_code
 
 
 class SkipConfig(Config):

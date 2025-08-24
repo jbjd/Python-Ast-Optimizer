@@ -131,21 +131,11 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
-        if self._should_skip_function(node):
-            return None
-
-        self._handle_function_node(node)
-
-        return self.generic_visit(node)
+        return self._handle_function_node(node)
 
     @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
-        if self._should_skip_function(node):
-            return None
-
-        self._handle_function_node(node)
-
-        return self.generic_visit(node)
+        return self._handle_function_node(node)
 
     def _should_skip_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
@@ -159,6 +149,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> None:
         """Handles skips for both async/regular functions"""
+        if self._should_skip_function(node):
+            return None
+
         if self.extras_config.skip_type_hints:
             node.returns = None
 
@@ -173,6 +166,8 @@ class AstNodeSkipper(ast.NodeTransformer):
                 is_return_none(last_body_node) or last_body_node.value is None
             ):
                 node.body = node.body[:-1]
+
+        return self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""

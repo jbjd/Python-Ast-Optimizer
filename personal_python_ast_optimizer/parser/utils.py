@@ -91,9 +91,11 @@ def remove_duplicate_slots(
         or isinstance(node.value, ast.Set)
     ):
         found_values: set[str] = set()
-        unique_objects: list[str] = []
+        unique_objects: list[ast.expr] = []
         for const_value in node.value.elts:
-            if not isinstance(const_value, ast.Constant):
+            if not isinstance(const_value, ast.Constant) or not isinstance(
+                const_value.value, str
+            ):
                 raise ValueError(
                     f"Invalid slots value {const_value.__class__.__name__}"
                 )

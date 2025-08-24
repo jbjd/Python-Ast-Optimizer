@@ -147,7 +147,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> None:
+    ) -> ast.AST | None:
         """Handles skips for both async/regular functions"""
         if self._should_skip_function(node):
             return None
@@ -383,29 +383,29 @@ class AstNodeSkipper(ast.NodeTransformer):
             right = parsed_node.right.value
             match parsed_node.op.__class__.__name__:
                 case "Add":
-                    return ast.Constant(left + right)
+                    return ast.Constant(left + right)  # type: ignore
                 case "Sub":
-                    return ast.Constant(left - right)
+                    return ast.Constant(left - right)  # type: ignore
                 case "Mult":
-                    return ast.Constant(left * right)
+                    return ast.Constant(left * right)  # type: ignore
                 case "Div":
-                    return ast.Constant(left / right)
+                    return ast.Constant(left / right)  # type: ignore
                 case "FloorDiv":
-                    return ast.Constant(left // right)
+                    return ast.Constant(left // right)  # type: ignore
                 case "Mod":
-                    return ast.Constant(left % right)
+                    return ast.Constant(left % right)  # type: ignore
                 case "Pow":
-                    return ast.Constant(left**right)
+                    return ast.Constant(left**right)  # type: ignore
                 case "LShift":
-                    return ast.Constant(left << right)
+                    return ast.Constant(left << right)  # type: ignore
                 case "RShift":
-                    return ast.Constant(left >> right)
+                    return ast.Constant(left >> right)  # type: ignore
                 case "BitOr":
-                    return ast.Constant(left | right)
+                    return ast.Constant(left | right)  # type: ignore
                 case "BitXor":
-                    return ast.Constant(left ^ right)
+                    return ast.Constant(left ^ right)  # type: ignore
                 case "BitAnd":
-                    return ast.Constant(left & right)
+                    return ast.Constant(left & right)  # type: ignore
 
         return parsed_node
 

@@ -9,12 +9,12 @@ from personal_python_ast_optimizer.parser.config import (
     TokensConfig,
 )
 from personal_python_ast_optimizer.parser.utils import (
-    can_skip_annotation_assign,
     first_occurrence_of_type,
     get_node_name,
     is_name_equals_main_node,
     is_overload_function,
     is_return_none,
+    remove_duplicate_slots,
     skip_base_classes,
     skip_dangling_expressions,
     skip_decorators,
@@ -131,21 +131,11 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
-        if self._should_skip_function(node):
-            return None
-
-        self._handle_function_node(node)
-
-        return self.generic_visit(node)
+        return self._handle_function_node(node)
 
     @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
-        if self._should_skip_function(node):
-            return None
-
-        self._handle_function_node(node)
-
-        return self.generic_visit(node)
+        return self._handle_function_node(node)
 
     def _should_skip_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
@@ -157,8 +147,11 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> None:
+    ) -> ast.AST | None:
         """Handles skips for both async/regular functions"""
+        if self._should_skip_function(node):
+            return None
+
         if self.extras_config.skip_type_hints:
             node.returns = None
 
@@ -173,6 +166,8 @@ class AstNodeSkipper(ast.NodeTransformer):
                 is_return_none(last_body_node) or last_body_node.value is None
             ):
                 node.body = node.body[:-1]
+
+        return self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""
@@ -196,6 +191,13 @@ class AstNodeSkipper(ast.NodeTransformer):
         ]
         if not new_targets:
             return None
+
+        if (
+            self._within_class
+            and len(node.targets) == 1
+            and get_node_name(node.targets[0]) == "__slots__"
+        ):
+            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
 
         node.targets = new_targets
 
@@ -242,14 +244,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             self._should_skip_function_assign(node)
             or get_node_name(node.target) in self.tokens_config.variables_to_skip
             or self._is_assign_of_folded_constant(node.target, node.value)
-            or (
-                self.extras_config.skip_type_hints
-                and can_skip_annotation_assign(
-                    node, self._within_class, self._within_function
-                )
-            )
         ):
             return None
+
+        if self._within_class and get_node_name(node.target) == "__slots__":
+            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
@@ -261,7 +260,6 @@ class AstNodeSkipper(ast.NodeTransformer):
             ):
                 parsed_node.annotation = ast.Name("int")
             elif parsed_node.value is None:
-                # This should be unreachable
                 return None
             else:
                 return ast.Assign([parsed_node.target], parsed_node.value)
@@ -385,29 +383,29 @@ class AstNodeSkipper(ast.NodeTransformer):
             right = parsed_node.right.value
             match parsed_node.op.__class__.__name__:
                 case "Add":
-                    return ast.Constant(left + right)
+                    return ast.Constant(left + right)  # type: ignore
                 case "Sub":
-                    return ast.Constant(left - right)
+                    return ast.Constant(left - right)  # type: ignore
                 case "Mult":
-                    return ast.Constant(left * right)
+                    return ast.Constant(left * right)  # type: ignore
                 case "Div":
-                    return ast.Constant(left / right)
+                    return ast.Constant(left / right)  # type: ignore
                 case "FloorDiv":
-                    return ast.Constant(left // right)
+                    return ast.Constant(left // right)  # type: ignore
                 case "Mod":
-                    return ast.Constant(left % right)
+                    return ast.Constant(left % right)  # type: ignore
                 case "Pow":
-                    return ast.Constant(left**right)
+                    return ast.Constant(left**right)  # type: ignore
                 case "LShift":
-                    return ast.Constant(left << right)
+                    return ast.Constant(left << right)  # type: ignore
                 case "RShift":
-                    return ast.Constant(left >> right)
+                    return ast.Constant(left >> right)  # type: ignore
                 case "BitOr":
-                    return ast.Constant(left | right)
+                    return ast.Constant(left | right)  # type: ignore
                 case "BitXor":
-                    return ast.Constant(left ^ right)
+                    return ast.Constant(left ^ right)  # type: ignore
                 case "BitAnd":
-                    return ast.Constant(left & right)
+                    return ast.Constant(left & right)  # type: ignore
 
         return parsed_node
 

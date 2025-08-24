@@ -1,15 +1,8 @@
 import ast
+import warnings
 from typing import Iterable
 
 from personal_python_ast_optimizer.parser.config import TokensToSkip
-
-
-def can_skip_annotation_assign(
-    node: ast.AnnAssign, within_class: bool, within_function: bool
-) -> bool:
-    """Returns True if an annotation assign in unneeded in given context.
-    Annotations are only needed when assigned in a class outside of a function"""
-    return node.value is None and (not within_class or within_function)
 
 
 def get_node_name(node: object) -> str:
@@ -87,6 +80,33 @@ def skip_decorators(
     node.decorator_list = [
         n for n in node.decorator_list if get_node_name(n) not in decorators_to_ignore
     ]
+
+
+def remove_duplicate_slots(
+    node: ast.Assign | ast.AnnAssign, warn_duplicates: bool = True
+) -> None:
+    if (
+        isinstance(node.value, ast.Tuple)
+        or isinstance(node.value, ast.List)
+        or isinstance(node.value, ast.Set)
+    ):
+        found_values: set[str] = set()
+        unique_objects: list[ast.expr] = []
+        for const_value in node.value.elts:
+            if not isinstance(const_value, ast.Constant) or not isinstance(
+                const_value.value, str
+            ):
+                raise ValueError(
+                    f"Invalid slots value {const_value.__class__.__name__}"
+                )
+            if const_value.value not in found_values:
+                unique_objects.append(const_value)
+                found_values.add(const_value.value)
+
+        if len(node.value.elts) != len(unique_objects):
+            if warn_duplicates:
+                warnings.warn(f"Duplicate entries found in __slots__: {found_values}")
+            node.value.elts = unique_objects
 
 
 def first_occurrence_of_type(data: list, target_type) -> int:

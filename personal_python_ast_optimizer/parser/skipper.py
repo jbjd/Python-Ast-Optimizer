@@ -14,6 +14,7 @@ from personal_python_ast_optimizer.parser.utils import (
     is_name_equals_main_node,
     is_overload_function,
     is_return_none,
+    remove_duplicate_slots,
     skip_base_classes,
     skip_dangling_expressions,
     skip_decorators,
@@ -191,6 +192,13 @@ class AstNodeSkipper(ast.NodeTransformer):
         if not new_targets:
             return None
 
+        if (
+            self._within_class
+            and len(node.targets) == 1
+            and get_node_name(node.targets[0]) == "__slots__"
+        ):
+            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
+
         node.targets = new_targets
 
         if isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple):
@@ -238,6 +246,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             or self._is_assign_of_folded_constant(node.target, node.value)
         ):
             return None
+
+        if self._within_class and get_node_name(node.target) == "__slots__":
+            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 

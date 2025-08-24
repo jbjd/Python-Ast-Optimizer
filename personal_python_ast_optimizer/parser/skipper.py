@@ -9,7 +9,6 @@ from personal_python_ast_optimizer.parser.config import (
     TokensConfig,
 )
 from personal_python_ast_optimizer.parser.utils import (
-    can_skip_annotation_assign,
     first_occurrence_of_type,
     get_node_name,
     is_name_equals_main_node,
@@ -237,12 +236,6 @@ class AstNodeSkipper(ast.NodeTransformer):
             self._should_skip_function_assign(node)
             or get_node_name(node.target) in self.tokens_config.variables_to_skip
             or self._is_assign_of_folded_constant(node.target, node.value)
-            or (
-                self.extras_config.skip_type_hints
-                and can_skip_annotation_assign(
-                    node, self._within_class, self._within_function
-                )
-            )
         ):
             return None
 
@@ -256,7 +249,6 @@ class AstNodeSkipper(ast.NodeTransformer):
             ):
                 parsed_node.annotation = ast.Name("int")
             elif parsed_node.value is None:
-                # This should be unreachable
                 return None
             else:
                 return ast.Assign([parsed_node.target], parsed_node.value)

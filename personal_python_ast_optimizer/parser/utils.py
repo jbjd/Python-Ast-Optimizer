@@ -4,14 +4,6 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
-def can_skip_annotation_assign(
-    node: ast.AnnAssign, within_class: bool, within_function: bool
-) -> bool:
-    """Returns True if an annotation assign in unneeded in given context.
-    Annotations are only needed when assigned in a class outside of a function"""
-    return node.value is None and (not within_class or within_function)
-
-
 def get_node_name(node: object) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):

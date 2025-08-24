@@ -1,6 +1,6 @@
 import ast
-from typing import Iterable
 import warnings
+from typing import Iterable
 
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 

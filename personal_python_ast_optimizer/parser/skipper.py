@@ -1,4 +1,6 @@
 import ast
+from enum import Enum, EnumMeta
+from typing import Iterable
 import warnings
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
@@ -28,6 +30,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         "_within_function",
         "module_name",
         "vars_to_fold",
+        "enums_to_fold",
         "target_python_version",
         "extras_config",
         "sections_config",
@@ -37,6 +40,9 @@ class AstNodeSkipper(ast.NodeTransformer):
     def __init__(self, config: SkipConfig) -> None:
         self.module_name: str = config.module_name
         self.vars_to_fold: dict[str, int | str] = config.vars_to_fold
+        self.enums_to_fold: dict[str, dict[str, Enum]] = (
+            self._format_enums_to_fold_as_dict(config.enums_to_fold)
+        )
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
@@ -46,6 +52,15 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         self._within_class: bool = False
         self._within_function: bool = False
+
+    @staticmethod
+    def _format_enums_to_fold_as_dict(
+        enums: Iterable[EnumMeta],
+    ) -> dict[str, dict[str, Enum]]:
+        """Given an Iterable of EnumMetas, turn them into a dict for quick lookup
+        Where key is the Enum's class name and it points to a dict of strings
+        mapping member name to value."""
+        return {enum.__name__: enum._member_map_ for enum in enums}
 
     @staticmethod
     def _within_class_node(function):
@@ -116,7 +131,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        if node.name in self.tokens_config.classes_to_skip:
+        if (
+            node.name in self.tokens_config.classes_to_skip
+            or node.name in self.enums_to_fold
+        ):
             return None
 
         if self._use_version_optimization((3, 0)):
@@ -166,6 +184,14 @@ class AstNodeSkipper(ast.NodeTransformer):
                 is_return_none(last_body_node) or last_body_node.value is None
             ):
                 node.body = node.body[:-1]
+
+        return self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
+        if isinstance(node.value, ast.Name) and node.attr in self.enums_to_fold.get(
+            node.value.id, []
+        ):
+            return ast.Constant(self.enums_to_fold[node.value.id][node.attr].value)
 
         return self.generic_visit(node)
 
@@ -295,6 +321,8 @@ class AstNodeSkipper(ast.NodeTransformer):
             alias
             for alias in node.names
             if alias.name not in self.tokens_config.from_imports_to_skip
+            and alias.name not in self.vars_to_fold
+            and alias.name not in self.enums_to_fold
         ]
 
         if node.module == "__future__" and self.target_python_version is not None:
@@ -306,11 +334,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
             node.names = [
                 alias for alias in node.names if alias.name not in skippable_futures
-            ]
-
-        if self.vars_to_fold:
-            node.names = [
-                alias for alias in node.names if alias.name not in self.vars_to_fold
             ]
 
         if not node.names:

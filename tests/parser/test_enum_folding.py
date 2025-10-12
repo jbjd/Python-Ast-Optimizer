@@ -32,6 +32,15 @@ from somewhere import _SomeStrEnum
 print(_SomeStrEnum.C)""",
         "print('C')",
     ),
+    BeforeAndAfter(
+        """
+import somewhere
+
+print(somewhere.someModule._SomeStrEnum.C)""",
+        """
+import somewhere
+print('C')""".strip(),
+    ),
 ]
 
 

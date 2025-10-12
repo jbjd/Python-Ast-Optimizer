@@ -191,9 +191,17 @@ class AstNodeSkipper(ast.NodeTransformer):
         if isinstance(node.value, ast.Name) and node.attr in self.enums_to_fold.get(
             node.value.id, []
         ):
-            return ast.Constant(self.enums_to_fold[node.value.id][node.attr].value)
+            return self._get_enum_value_as_AST(node.value.id, node.attr)
+
+        if isinstance(
+            node.value, ast.Attribute
+        ) and node.attr in self.enums_to_fold.get(node.value.attr, []):
+            return self._get_enum_value_as_AST(node.value.attr, node.attr)
 
         return self.generic_visit(node)
+
+    def _get_enum_value_as_AST(self, class_name: str, value_name: str) -> ast.Constant:
+        return ast.Constant(self.enums_to_fold[class_name][value_name].value)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""

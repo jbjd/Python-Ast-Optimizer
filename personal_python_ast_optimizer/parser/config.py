@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from enum import EnumMeta
+from enum import EnumType
 from typing import Iterator
 
 
@@ -148,7 +148,7 @@ class SkipConfig(Config):
         module_name: str = "",
         target_python_version: tuple[int, int] | None = None,
         vars_to_fold: dict[str, int | str] | None = None,
-        enums_to_fold: set[EnumMeta] | None = None,
+        enums_to_fold: set[EnumType] | None = None,
         sections_config: SectionsConfig = SectionsConfig(),
         tokens_config: TokensConfig = TokensConfig(),
         extras_config: ExtrasConfig = ExtrasConfig(),
@@ -158,7 +158,7 @@ class SkipConfig(Config):
         self.vars_to_fold: dict[str, int | str] = (
             {} if vars_to_fold is None else vars_to_fold
         )
-        self.enums_to_fold: set[EnumMeta] = (
+        self.enums_to_fold: set[EnumType] = (
             set() if enums_to_fold is None else enums_to_fold
         )
         self.sections_config: SectionsConfig = sections_config

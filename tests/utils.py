@@ -1,5 +1,5 @@
 import ast
-from enum import EnumMeta
+from enum import EnumType
 
 from personal_python_ast_optimizer.parser.config import (
     ExtrasConfig,
@@ -52,7 +52,7 @@ def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
     vars_to_fold: dict[str, int | str] | None = None,
-    enums_to_fold: set[EnumMeta] | None = None,
+    enums_to_fold: set[EnumType] | None = None,
     sections_config: SectionsConfig = SectionsConfig(),
     tokens_config: TokensConfig = TokensConfig(),
     extras_config: ExtrasConfig = ExtrasConfig(),

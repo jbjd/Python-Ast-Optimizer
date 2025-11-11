@@ -1,6 +1,6 @@
 import ast
 import warnings
-from enum import Enum, EnumMeta
+from enum import Enum, EnumType
 from typing import Iterable
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
@@ -55,9 +55,9 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @staticmethod
     def _format_enums_to_fold_as_dict(
-        enums: Iterable[EnumMeta],
+        enums: Iterable[EnumType],
     ) -> dict[str, dict[str, Enum]]:
-        """Given an Iterable of EnumMetas, turn them into a dict for quick lookup
+        """Given an Iterable of EnumTypes, turn them into a dict for quick lookup
         Where key is the Enum's class name and it points to a dict of strings
         mapping member name to value."""
         return {enum.__name__: enum._member_map_ for enum in enums}

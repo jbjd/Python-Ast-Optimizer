@@ -1,7 +1,7 @@
 import ast
+import warnings
 from enum import Enum, EnumMeta
 from typing import Iterable
-import warnings
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser.config import (

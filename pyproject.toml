@@ -4,11 +4,9 @@ authors         = [
 ]
 name            = "personal-python-ast-optimizer"
 readme          = "README.md"
-requires-python = ">=3.10"
-dependencies    = [
-  "autoflake==2.3.1"
-]
-dynamic         = ["version"]
+requires-python = ">=3.11"
+dynamic         = ["dependencies", "version"]
 
 [tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 version         = {file = "version.txt"}

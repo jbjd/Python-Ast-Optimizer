@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Iterator
+from enum import EnumType
+from typing import Iterable, Iterator
 
 
 class TokensToSkip(dict[str, int]):
@@ -136,6 +137,7 @@ class SkipConfig(Config):
         "module_name",
         "target_python_version",
         "vars_to_fold",
+        "enums_to_fold",
         "sections_config",
         "tokens_config",
         "extras_config",
@@ -146,6 +148,7 @@ class SkipConfig(Config):
         module_name: str = "",
         target_python_version: tuple[int, int] | None = None,
         vars_to_fold: dict[str, int | str] | None = None,
+        enums_to_fold: Iterable[EnumType] | None = None,
         sections_config: SectionsConfig = SectionsConfig(),
         tokens_config: TokensConfig = TokensConfig(),
         extras_config: ExtrasConfig = ExtrasConfig(),
@@ -154,6 +157,9 @@ class SkipConfig(Config):
         self.target_python_version: tuple[int, int] | None = target_python_version
         self.vars_to_fold: dict[str, int | str] = (
             {} if vars_to_fold is None else vars_to_fold
+        )
+        self.enums_to_fold: Iterable[EnumType] = (
+            [] if enums_to_fold is None else enums_to_fold
         )
         self.sections_config: SectionsConfig = sections_config
         self.tokens_config: TokensConfig = tokens_config

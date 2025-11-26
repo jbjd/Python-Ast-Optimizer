@@ -454,6 +454,36 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
+    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
+        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore
+
+        if isinstance(parsed_node.op, ast.Or):
+            self._left_remove_constants(parsed_node, False)
+            left: ast.AST = parsed_node.values[0]
+            if isinstance(left, ast.Constant) and left.value:
+                return left
+        elif isinstance(parsed_node.op, ast.And):
+            self._left_remove_constants(parsed_node, True)
+            left: ast.AST = parsed_node.values[0]
+            if isinstance(left, ast.Constant) and not left.value:
+                return left
+
+        return parsed_node
+
+    @staticmethod
+    def _left_remove_constants(node: ast.BoolOp, remove_if: bool) -> None:
+        index: int = 0
+        end: int = len(node.values) - 1
+        while index < end:
+            left: ast.expr = node.values[index]
+            if isinstance(left, ast.Constant) and bool(left.value) is remove_if:
+                index += 1
+            else:
+                break
+
+        if index > 0:
+            node.values = node.values[index:]
+
     def _is_assign_of_folded_constant(
         self, target: ast.expr, value: ast.expr | None
     ) -> bool:

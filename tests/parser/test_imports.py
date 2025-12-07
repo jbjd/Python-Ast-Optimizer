@@ -1,26 +1,23 @@
-from tests.utils import (
-    BeforeAndAfter,
-    BeforeAndAfterBasedOnVersion,
-    run_minifier_and_assert_correct,
-    run_minifier_and_assert_correct_multiple_versions,
-)
+import pytest
 
+from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
-def test_futures_imports():
-
-    many_futures_imports: str = """
+_futures_imports: str = """
 from __future__ import annotations
 from __future__ import generator_stop
 from __future__ import unicode_literals
 from __future__ import with_statement
 """
 
-    before_and_after = BeforeAndAfterBasedOnVersion(
-        many_futures_imports,
-        {"3.7": "", None: many_futures_imports.strip()},
-    )
 
-    run_minifier_and_assert_correct_multiple_versions(before_and_after)
+@pytest.mark.parametrize(
+    "version,after", [(None, _futures_imports.strip()), ((3, 7), "")]
+)
+def test_futures_imports(version: tuple[int, int] | None, after: str):
+
+    before_and_after = BeforeAndAfter(_futures_imports, after)
+
+    run_minifier_and_assert_correct(before_and_after, target_python_version=version)
 
 
 def test_import_same_line():

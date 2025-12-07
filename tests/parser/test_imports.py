@@ -1,5 +1,6 @@
 import pytest
 
+from personal_python_ast_optimizer.parser.config import ExtrasConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 _futures_imports: str = """
@@ -11,13 +12,24 @@ from __future__ import with_statement
 
 
 @pytest.mark.parametrize(
-    "version,after", [(None, _futures_imports.strip()), ((3, 7), "")]
+    "version,skip_type_hints,after",
+    [
+        (None, False, _futures_imports.strip()),
+        ((3, 7), False, "from __future__ import annotations"),
+        ((3, 7), True, ""),
+    ],
 )
-def test_futures_imports(version: tuple[int, int] | None, after: str):
+def test_futures_imports(
+    version: tuple[int, int] | None, skip_type_hints: bool, after: str
+):
 
     before_and_after = BeforeAndAfter(_futures_imports, after)
 
-    run_minifier_and_assert_correct(before_and_after, target_python_version=version)
+    run_minifier_and_assert_correct(
+        before_and_after,
+        target_python_version=version,
+        extras_config=ExtrasConfig(skip_type_hints=skip_type_hints),
+    )
 
 
 def test_import_same_line():

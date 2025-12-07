@@ -10,6 +10,10 @@ from personal_python_ast_optimizer.parser.config import (
     SkipConfig,
     TokensConfig,
 )
+from personal_python_ast_optimizer.parser.machine_info import (
+    machine_dependent_attributes,
+    machine_dependent_functions,
+)
 from personal_python_ast_optimizer.parser.utils import (
     first_occurrence_of_type,
     get_node_name,
@@ -26,6 +30,7 @@ from personal_python_ast_optimizer.parser.utils import (
 class AstNodeSkipper(ast.NodeTransformer):
 
     __slots__ = (
+        "_skippable_futures",
         "_within_class",
         "_within_function",
         "module_name",
@@ -52,6 +57,15 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         self._within_class: bool = False
         self._within_function: bool = False
+
+        self._skippable_futures: list[str] = (
+            get_unneeded_futures(self.target_python_version)
+            if self.target_python_version is not None
+            else []
+        )
+
+        if self.extras_config.skip_type_hints:
+            self._skippable_futures.append("annotations")
 
     @staticmethod
     def _format_enums_to_fold_as_dict(
@@ -189,10 +203,14 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
-        if isinstance(node.value, ast.Name) and node.attr in self.enums_to_fold.get(
-            node.value.id, []
-        ):
-            return self._get_enum_value_as_AST(node.value.id, node.attr)
+        if isinstance(node.value, ast.Name):
+            if node.attr in self.enums_to_fold.get(node.value.id, []):
+                return self._get_enum_value_as_AST(node.value.id, node.attr)
+
+            if self.extras_config.assume_this_machine:
+                attribute_key: str = f"{node.value.id}.{node.attr}"
+                if attribute_key in machine_dependent_attributes:
+                    return ast.Constant(machine_dependent_attributes[attribute_key])
 
         if isinstance(
             node.value, ast.Attribute
@@ -334,15 +352,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             and alias.name not in self.enums_to_fold
         ]
 
-        if node.module == "__future__" and self.target_python_version is not None:
-            skippable_futures: list[str] = get_unneeded_futures(
-                self.target_python_version
-            )
-            if self.extras_config.skip_type_hints:
-                skippable_futures.append("annotations")
-
+        if node.module == "__future__" and self._skippable_futures:
             node.names = [
-                alias for alias in node.names if alias.name not in skippable_futures
+                alias
+                for alias in node.names
+                if alias.name not in self._skippable_futures
             ]
 
         if not node.names:
@@ -380,6 +394,16 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return parsed_node
 
+    def visit_IfExp(self, node: ast.IfExp) -> ast.AST | None:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.IfExp) and isinstance(
+            parsed_node.test, ast.Constant
+        ):
+            return parsed_node.body if parsed_node.test.value else parsed_node.orelse
+
+        return parsed_node
+
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
@@ -391,6 +415,19 @@ class AstNodeSkipper(ast.NodeTransformer):
         are populated with a Pass node."""
         return None  # This could be toggleable
 
+    def visit_Call(self, node: ast.Call) -> ast.AST | None:
+        if (
+            self.extras_config.assume_this_machine
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+        ):
+            function_call_key: str = f"{node.func.value.id}.{node.func.attr}"
+
+            if function_call_key in machine_dependent_functions:
+                return ast.Constant(machine_dependent_functions[function_call_key])
+
+        return self.generic_visit(node)
+
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (
             isinstance(node.value, ast.Call)
@@ -399,6 +436,23 @@ class AstNodeSkipper(ast.NodeTransformer):
             return None
 
         return self.generic_visit(node)
+
+    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
+        parsed_node = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.Compare)
+            and isinstance(parsed_node.left, ast.Constant)
+            and len(parsed_node.comparators) == 1
+            and isinstance(parsed_node.comparators[0], ast.Constant)
+        ):
+            # TODO: match here
+            if isinstance(parsed_node.ops[0], ast.Eq):
+                return ast.Constant(
+                    parsed_node.left.value == parsed_node.comparators[0].value
+                )
+
+        return parsed_node
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         # Need to visit first since a BinOp might contain a Binop

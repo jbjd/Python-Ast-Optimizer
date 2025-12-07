@@ -1,5 +1,4 @@
 from personal_python_ast_optimizer.parser.config import ExtrasConfig
-
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 

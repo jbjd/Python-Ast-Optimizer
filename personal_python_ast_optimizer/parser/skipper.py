@@ -142,6 +142,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if self.extras_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
+
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
@@ -496,10 +497,11 @@ class AstNodeSkipper(ast.NodeTransformer):
         )
 
     def _use_version_optimization(self, min_version: tuple[int, int]) -> bool:
-        if self.target_python_version is None:
-            return False
-
-        return self.target_python_version >= min_version
+        return (
+            False
+            if self.target_python_version is None
+            else self.target_python_version >= min_version
+        )
 
     def _has_code_to_skip(self) -> bool:
         return (

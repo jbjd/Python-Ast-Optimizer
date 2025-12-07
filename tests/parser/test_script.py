@@ -16,10 +16,14 @@ def test_one_line_if():
         """
 'a' if 'True' == b else 'b'
 'a' if b == 'True' else 'b'
+'a' if 1==1 else 'b'
+'a' if 1==2 else 'b'
 """,
         """
 'a'if'True'==b else'b'
 'a'if b=='True'else'b'
+'a'
+'b'
 """.strip(),
     )
     run_minifier_and_assert_correct(before_and_after)

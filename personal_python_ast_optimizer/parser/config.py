@@ -109,6 +109,7 @@ class SectionsConfig(Config):
 
 class ExtrasConfig(Config):
     __slots__ = (
+        "assume_this_machine",
         "fold_constants",
         "skip_dangling_expressions",
         "skip_type_hints",
@@ -123,7 +124,9 @@ class ExtrasConfig(Config):
         skip_dangling_expressions: bool = True,
         skip_type_hints: bool = True,
         skip_overload_functions: bool = False,
+        assume_this_machine: bool = False,
     ) -> None:
+        self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints

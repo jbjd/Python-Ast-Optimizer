@@ -53,6 +53,15 @@ class AstNodeSkipper(ast.NodeTransformer):
         self._within_class: bool = False
         self._within_function: bool = False
 
+        self._skippable_futures: list[str] = (
+            get_unneeded_futures(self.target_python_version)
+            if self.target_python_version is not None
+            else []
+        )
+
+        if self.extras_config.skip_type_hints:
+            self._skippable_futures.append("annotations")
+
     @staticmethod
     def _format_enums_to_fold_as_dict(
         enums: Iterable[EnumType],
@@ -334,15 +343,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             and alias.name not in self.enums_to_fold
         ]
 
-        if node.module == "__future__" and self.target_python_version is not None:
-            skippable_futures: list[str] = get_unneeded_futures(
-                self.target_python_version
-            )
-            if self.extras_config.skip_type_hints:
-                skippable_futures.append("annotations")
-
+        if node.module == "__future__" and self._skippable_futures:
             node.names = [
-                alias for alias in node.names if alias.name not in skippable_futures
+                alias
+                for alias in node.names
+                if alias.name not in self._skippable_futures
             ]
 
         if not node.names:

@@ -11,7 +11,7 @@ def get_cpu_count():
     return os.cpu_count() or 1
 """
 
-_sys_example: str = "print(sys.byteorder)"
+_sys_example: str = f"N = '<' if sys.byteorder == '{sys.byteorder}' else '>'"
 
 
 @pytest.mark.parametrize(
@@ -23,8 +23,8 @@ _sys_example: str = "print(sys.byteorder)"
             f"def get_cpu_count():return {os.cpu_count()}",
         ),
         (False, _cpu_count_example, "def get_cpu_count():return os.cpu_count()or 1"),
-        (True, _sys_example, f"print('{sys.byteorder}')"),
-        (False, _sys_example, _sys_example),
+        (True, _sys_example, "N='<'if True else'>'"),
+        (False, _sys_example, f"N='<'if sys.byteorder=='{sys.byteorder}'else'>'"),
     ],
 )
 def test_assume_this_machine(assume_this_machine: bool, before: str, after: str):

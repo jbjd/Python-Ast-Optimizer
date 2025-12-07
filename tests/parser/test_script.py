@@ -14,12 +14,12 @@ def test_script_with_annotations():
 def test_one_line_if():
     before_and_after = BeforeAndAfter(
         """
-a if True else b
-'a' if 'True' == 'False' else 'b'
+'a' if 'True' == b else 'b'
+'a' if b == 'True' else 'b'
 """,
         """
-a if True else b
-'a'if'True'=='False'else'b'
+'a'if'True'==b else'b'
+'a'if b=='True'else'b'
 """.strip(),
     )
     run_minifier_and_assert_correct(before_and_after)

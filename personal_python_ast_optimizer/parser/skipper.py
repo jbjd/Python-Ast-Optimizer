@@ -427,6 +427,23 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
+    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
+        parsed_node = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.Compare)
+            and isinstance(parsed_node.left, ast.Constant)
+            and len(parsed_node.comparators) == 1
+            and isinstance(parsed_node.comparators[0], ast.Constant)
+        ):
+            # TODO: match here
+            if isinstance(parsed_node.ops[0], ast.Eq):
+                return ast.Constant(
+                    parsed_node.left.value == parsed_node.comparators[0].value
+                )
+
+        return parsed_node
+
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         # Need to visit first since a BinOp might contain a Binop
         # and constants need to be folded depth first

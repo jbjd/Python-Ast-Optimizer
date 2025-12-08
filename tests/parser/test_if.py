@@ -2,7 +2,6 @@ import pytest
 
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
-
 _if_cases = [
     BeforeAndAfter(
         """

@@ -11,6 +11,8 @@ def get_cpu_count():
     return os.cpu_count() or 1
 """
 
+_os_name_example: str = "print(os.name)"
+
 _sys_example: str = f"N = '<' if sys.byteorder == '{sys.byteorder}' else '>'"
 
 
@@ -25,6 +27,8 @@ _sys_example: str = f"N = '<' if sys.byteorder == '{sys.byteorder}' else '>'"
         (False, _cpu_count_example, "def get_cpu_count():return os.cpu_count()or 1"),
         (True, _sys_example, "N='<'"),
         (False, _sys_example, f"N='<'if sys.byteorder=='{sys.byteorder}'else'>'"),
+        (True, _os_name_example, f"print('{os.name}')"),
+        (False, _os_name_example, _os_name_example),
     ],
 )
 def test_assume_this_machine(assume_this_machine: bool, before: str, after: str):

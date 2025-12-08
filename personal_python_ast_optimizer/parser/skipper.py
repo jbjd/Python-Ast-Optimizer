@@ -384,13 +384,21 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    def visit_If(self, node: ast.If) -> ast.AST | None:
+    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
             node.test
         ):
             return None
 
         parsed_node: ast.AST = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.If) and isinstance(
+            parsed_node.test, ast.Constant
+        ):
+            if_body: list[ast.stmt] = (
+                parsed_node.body if parsed_node.test.value else parsed_node.orelse
+            )
+            return if_body or None
 
         return parsed_node
 

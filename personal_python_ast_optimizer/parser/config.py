@@ -132,12 +132,12 @@ class OptimizationsConfig(_Config):
 
     def __init__(
         self,
-        vars_to_fold: dict[str, int | str] | None = None,
+        vars_to_fold: dict[str, int | str | bool] | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
-        self.vars_to_fold: dict[str, int | str] = (
+        self.vars_to_fold: dict[str, int | str | bool] = (
             {} if vars_to_fold is None else vars_to_fold
         )
         self.enums_to_fold: dict[str, dict[str, Enum]] = (

@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import SectionsConfig, TokensConfig
+from personal_python_ast_optimizer.parser.config import (
+    TokenTypesConfig,
+    TokensConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -18,7 +21,9 @@ def test_exclude_name_equals_main(skip_name_equals_main: bool):
 
     run_minifier_and_assert_correct(
         before_and_after,
-        sections_config=SectionsConfig(skip_name_equals_main=skip_name_equals_main),
+        token_types_config=TokenTypesConfig(
+            skip_name_equals_main=skip_name_equals_main
+        ),
     )
 
 

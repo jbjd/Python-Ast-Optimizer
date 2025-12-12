@@ -1,4 +1,4 @@
-from personal_python_ast_optimizer.parser.config import ExtrasConfig
+from personal_python_ast_optimizer.parser.config import TokenTypesConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -73,5 +73,6 @@ def test_overload(a: float) -> int: do_something()
         "def test_overload(a):do_something()",
     )
     run_minifier_and_assert_correct(
-        before_and_after, extras_config=ExtrasConfig(skip_overload_functions=True)
+        before_and_after,
+        token_types_config=TokenTypesConfig(skip_overload_functions=True),
     )

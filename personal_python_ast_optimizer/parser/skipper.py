@@ -5,8 +5,8 @@ from typing import Iterable
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser.config import (
-    ExtrasConfig,
-    SectionsConfig,
+    OptimizationsConfig,
+    TokenTypesConfig,
     SkipConfig,
     TokensConfig,
 )
@@ -37,8 +37,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         "vars_to_fold",
         "enums_to_fold",
         "target_python_version",
-        "extras_config",
-        "sections_config",
+        "optimizations_config",
+        "token_types_config",
         "tokens_config",
     )
 
@@ -51,8 +51,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
-        self.extras_config: ExtrasConfig = config.extras_config
-        self.sections_config: SectionsConfig = config.sections_config
+        self.optimizations_config: OptimizationsConfig = config.optimizations_config
+        self.token_types_config: TokenTypesConfig = config.token_types_config
         self.tokens_config: TokensConfig = config.tokens_config
 
         self._within_class: bool = False
@@ -64,7 +64,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             else []
         )
 
-        if self.extras_config.skip_type_hints:
+        if self.token_types_config.skip_type_hints:
             self._skippable_futures.append("annotations")
 
     @staticmethod
@@ -135,7 +135,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if not self._has_code_to_skip():
             return node
 
-        if self.extras_config.skip_dangling_expressions:
+        if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
         try:
@@ -154,7 +154,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self._use_version_optimization((3, 0)):
             skip_base_classes(node, ["object"])
 
-        if self.extras_config.skip_dangling_expressions:
+        if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
         skip_base_classes(node, self.tokens_config.classes_to_skip)
@@ -175,7 +175,8 @@ class AstNodeSkipper(ast.NodeTransformer):
     ) -> bool:
         """If a function node should be skipped"""
         return node.name in self.tokens_config.functions_to_skip or (
-            self.extras_config.skip_overload_functions and is_overload_function(node)
+            self.token_types_config.skip_overload_functions
+            and is_overload_function(node)
         )
 
     def _handle_function_node(
@@ -185,10 +186,10 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self._should_skip_function(node):
             return None
 
-        if self.extras_config.skip_type_hints:
+        if self.token_types_config.skip_type_hints:
             node.returns = None
 
-        if self.extras_config.skip_dangling_expressions:
+        if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
         skip_decorators(node, self.tokens_config.decorators_to_skip)
@@ -207,7 +208,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             if node.attr in self.enums_to_fold.get(node.value.id, []):
                 return self._get_enum_value_as_AST(node.value.id, node.attr)
 
-            if self.extras_config.assume_this_machine:
+            if self.optimizations_config.assume_this_machine:
                 attribute_key: str = f"{node.value.id}.{node.attr}"
                 if attribute_key in machine_dependent_attributes:
                     return ast.Constant(machine_dependent_attributes[attribute_key])
@@ -250,7 +251,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             and len(node.targets) == 1
             and get_node_name(node.targets[0]) == "__slots__"
         ):
-            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
+            remove_duplicate_slots(node, self.optimizations_config.warn_unusual_code)
 
         node.targets = new_targets
 
@@ -301,11 +302,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             return None
 
         if self._within_class and get_node_name(node.target) == "__slots__":
-            remove_duplicate_slots(node, self.extras_config.warn_unusual_code)
+            remove_duplicate_slots(node, self.optimizations_config.warn_unusual_code)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
-        if self.extras_config.skip_type_hints:
+        if self.token_types_config.skip_type_hints:
             if (
                 not parsed_node.value
                 and self._within_class
@@ -385,7 +386,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        if self.sections_config.skip_name_equals_main and is_name_equals_main_node(
+        if self.token_types_config.skip_name_equals_main and is_name_equals_main_node(
             node.test
         ):
             return None
@@ -425,7 +426,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
-            self.extras_config.assume_this_machine
+            self.optimizations_config.assume_this_machine
             and isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)
         ):
@@ -468,7 +469,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         parsed_node: ast.AST = self.generic_visit(node)
 
         if (
-            self.extras_config.fold_constants
+            self.optimizations_config.fold_constants
             and isinstance(parsed_node, ast.BinOp)
             and isinstance(parsed_node.left, ast.Constant)
             and isinstance(parsed_node.right, ast.Constant)
@@ -504,12 +505,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         return parsed_node
 
     def visit_arg(self, node: ast.arg) -> ast.AST:
-        if self.extras_config.skip_type_hints:
+        if self.token_types_config.skip_type_hints:
             node.annotation = None
         return self.generic_visit(node)
 
     def visit_arguments(self, node: ast.arguments) -> ast.AST:
-        if self.extras_config.skip_type_hints:
+        if self.token_types_config.skip_type_hints:
             if node.kwarg is not None:
                 node.kwarg.annotation = None
             if node.vararg is not None:
@@ -569,9 +570,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         return (
             self.target_python_version is not None
             or len(self.vars_to_fold) > 0
-            or self.extras_config.has_code_to_skip()
+            or self.optimizations_config.has_code_to_skip()
             or self.tokens_config.has_code_to_skip()
-            or self.sections_config.has_code_to_skip()
+            or self.token_types_config.has_code_to_skip()
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:

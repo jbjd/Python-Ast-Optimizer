@@ -34,7 +34,7 @@ class TokensToSkip(dict[str, int]):
         return {key: 0 for key in input_set}
 
 
-class Config(ABC):
+class _Config(ABC):
 
     __slots__ = ()
 
@@ -46,8 +46,7 @@ class Config(ABC):
         return any(getattr(self, attr) for attr in self.__slots__)  # type: ignore
 
 
-class TokensConfig(Config):
-
+class TokensConfig(_Config):
     __slots__ = (
         "_no_warn",
         "from_imports_to_skip",
@@ -61,6 +60,7 @@ class TokensConfig(Config):
 
     def __init__(
         self,
+        *,
         from_imports_to_skip: set[str] | None = None,
         functions_to_skip: set[str] | None = None,
         variables_to_skip: set[str] | None = None,
@@ -100,61 +100,67 @@ class TokensConfig(Config):
                 yield (tokens_to_skip.token_type, ",".join(not_found_tokens))
 
 
-class SectionsConfig(Config):
-    __slots__ = ("skip_name_equals_main",)
-
-    def __init__(self, skip_name_equals_main: bool = False) -> None:
-        self.skip_name_equals_main: bool = skip_name_equals_main
-
-
-class ExtrasConfig(Config):
+class TokenTypesConfig(_Config):
     __slots__ = (
-        "assume_this_machine",
-        "fold_constants",
         "skip_dangling_expressions",
         "skip_type_hints",
+        "skip_name_equals_main",
         "skip_overload_functions",
+    )
+
+    def __init__(
+        self,
+        *,
+        skip_dangling_expressions: bool = True,
+        skip_type_hints: bool = True,
+        skip_name_equals_main: bool = False,
+        skip_overload_functions: bool = False,
+    ) -> None:
+        self.skip_name_equals_main: bool = skip_name_equals_main
+        self.skip_dangling_expressions: bool = skip_dangling_expressions
+        self.skip_type_hints: bool = skip_type_hints
+        self.skip_overload_functions: bool = skip_overload_functions
+
+
+class OptimizationsConfig(_Config):
+    __slots__ = (
         "warn_unusual_code",
+        "fold_constants",
+        "assume_this_machine",
     )
 
     def __init__(
         self,
         warn_unusual_code: bool = True,
         fold_constants: bool = True,
-        skip_dangling_expressions: bool = True,
-        skip_type_hints: bool = True,
-        skip_overload_functions: bool = False,
         assume_this_machine: bool = False,
     ) -> None:
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
-        self.skip_dangling_expressions: bool = skip_dangling_expressions
-        self.skip_type_hints: bool = skip_type_hints
-        self.skip_overload_functions: bool = skip_overload_functions
         self.warn_unusual_code: bool = warn_unusual_code
 
 
-class SkipConfig(Config):
-
+class SkipConfig(_Config):
     __slots__ = (
         "module_name",
         "target_python_version",
         "vars_to_fold",
         "enums_to_fold",
-        "sections_config",
+        "token_types_config",
         "tokens_config",
-        "extras_config",
+        "optimizations_config",
     )
 
     def __init__(
         self,
-        module_name: str = "",
+        module_name: str,
+        *,
         target_python_version: tuple[int, int] | None = None,
         vars_to_fold: dict[str, int | str] | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
-        sections_config: SectionsConfig = SectionsConfig(),
         tokens_config: TokensConfig = TokensConfig(),
-        extras_config: ExtrasConfig = ExtrasConfig(),
+        token_types_config: TokenTypesConfig = TokenTypesConfig(),
+        optimizations_config: OptimizationsConfig = OptimizationsConfig(),
     ) -> None:
         self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = target_python_version
@@ -164,15 +170,15 @@ class SkipConfig(Config):
         self.enums_to_fold: Iterable[EnumType] = (
             [] if enums_to_fold is None else enums_to_fold
         )
-        self.sections_config: SectionsConfig = sections_config
         self.tokens_config: TokensConfig = tokens_config
-        self.extras_config: ExtrasConfig = extras_config
+        self.token_types_config: TokenTypesConfig = token_types_config
+        self.optimizations_config: OptimizationsConfig = optimizations_config
 
     def has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
             or len(self.vars_to_fold) > 0
-            or self.sections_config.has_code_to_skip()
             or self.tokens_config.has_code_to_skip()
-            or self.extras_config.has_code_to_skip()
+            or self.token_types_config.has_code_to_skip()
+            or self.optimizations_config.has_code_to_skip()
         )

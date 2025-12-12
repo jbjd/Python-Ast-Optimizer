@@ -2,8 +2,8 @@ import ast
 from enum import EnumType
 
 from personal_python_ast_optimizer.parser.config import (
-    ExtrasConfig,
-    SectionsConfig,
+    OptimizationsConfig,
+    TokenTypesConfig,
     SkipConfig,
     TokensConfig,
 )
@@ -26,9 +26,9 @@ def run_minifier_and_assert_correct(
     target_python_version: tuple[int, int] | None = None,
     vars_to_fold: dict[str, int | str] | None = None,
     enums_to_fold: set[EnumType] | None = None,
-    sections_config: SectionsConfig = SectionsConfig(),
+    token_types_config: TokenTypesConfig = TokenTypesConfig(),
     tokens_config: TokensConfig = TokensConfig(),
-    extras_config: ExtrasConfig = ExtrasConfig(),
+    optimizations_config: OptimizationsConfig = OptimizationsConfig(),
 ):
     unparser: MinifyUnparser = MinifyUnparser()
 
@@ -37,12 +37,12 @@ def run_minifier_and_assert_correct(
         before_and_after.before,
         SkipConfig(
             "",
-            target_python_version,
-            vars_to_fold,
-            enums_to_fold,
-            sections_config,
-            tokens_config,
-            extras_config,
+            target_python_version=target_python_version,
+            vars_to_fold=vars_to_fold,
+            enums_to_fold=enums_to_fold,
+            token_types_config=token_types_config,
+            tokens_config=tokens_config,
+            optimizations_config=optimizations_config,
         ),
     )
     raise_if_python_code_invalid(minified_code)

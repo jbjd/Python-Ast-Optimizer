@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import ExtrasConfig
+from personal_python_ast_optimizer.parser.config import TokenTypesConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 _futures_imports: str = """
@@ -28,7 +28,7 @@ def test_futures_imports(
     run_minifier_and_assert_correct(
         before_and_after,
         target_python_version=version,
-        extras_config=ExtrasConfig(skip_type_hints=skip_type_hints),
+        token_types_config=TokenTypesConfig(skip_type_hints=skip_type_hints),
     )
 
 

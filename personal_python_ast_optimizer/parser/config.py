@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from enum import EnumType
+from enum import Enum, EnumType
 from typing import Iterable, Iterator
 
 
@@ -124,28 +124,45 @@ class TokenTypesConfig(_Config):
 
 class OptimizationsConfig(_Config):
     __slots__ = (
-        "warn_unusual_code",
+        "vars_to_fold",
+        "enums_to_fold",
         "fold_constants",
         "assume_this_machine",
     )
 
     def __init__(
         self,
-        warn_unusual_code: bool = True,
+        vars_to_fold: dict[str, int | str] | None = None,
+        enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
+        self.vars_to_fold: dict[str, int | str] = (
+            {} if vars_to_fold is None else vars_to_fold
+        )
+        self.enums_to_fold: dict[str, dict[str, Enum]] = (
+            {}
+            if enums_to_fold is None
+            else self._format_enums_to_fold_as_dict(enums_to_fold)
+        )
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
-        self.warn_unusual_code: bool = warn_unusual_code
+
+    @staticmethod
+    def _format_enums_to_fold_as_dict(
+        enums: Iterable[EnumType],
+    ) -> dict[str, dict[str, Enum]]:
+        """Given an Iterable of type Enum, turn them into a dict for quick lookup
+        Where key is the Enum's class name and it points to a dict of strings
+        mapping member name to value."""
+        return {enum.__name__: enum._member_map_ for enum in enums}
 
 
 class SkipConfig(_Config):
     __slots__ = (
         "module_name",
+        "warn_unusual_code",
         "target_python_version",
-        "vars_to_fold",
-        "enums_to_fold",
         "token_types_config",
         "tokens_config",
         "optimizations_config",
@@ -155,21 +172,15 @@ class SkipConfig(_Config):
         self,
         module_name: str,
         *,
+        warn_unusual_code: bool = True,
         target_python_version: tuple[int, int] | None = None,
-        vars_to_fold: dict[str, int | str] | None = None,
-        enums_to_fold: Iterable[EnumType] | None = None,
         tokens_config: TokensConfig = TokensConfig(),
         token_types_config: TokenTypesConfig = TokenTypesConfig(),
         optimizations_config: OptimizationsConfig = OptimizationsConfig(),
     ) -> None:
         self.module_name: str = module_name
+        self.warn_unusual_code: bool = warn_unusual_code
         self.target_python_version: tuple[int, int] | None = target_python_version
-        self.vars_to_fold: dict[str, int | str] = (
-            {} if vars_to_fold is None else vars_to_fold
-        )
-        self.enums_to_fold: Iterable[EnumType] = (
-            [] if enums_to_fold is None else enums_to_fold
-        )
         self.tokens_config: TokensConfig = tokens_config
         self.token_types_config: TokenTypesConfig = token_types_config
         self.optimizations_config: OptimizationsConfig = optimizations_config

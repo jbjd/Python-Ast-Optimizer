@@ -1,9 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import (
-    TokenTypesConfig,
-    TokensConfig,
-)
+from personal_python_ast_optimizer.parser.config import TokensConfig, TokenTypesConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 

@@ -1,11 +1,10 @@
 import ast
-from enum import EnumType
 
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
-    TokenTypesConfig,
     SkipConfig,
     TokensConfig,
+    TokenTypesConfig,
 )
 from personal_python_ast_optimizer.parser.minifier import MinifyUnparser
 from personal_python_ast_optimizer.parser.run import run_minify_parser
@@ -23,9 +22,8 @@ class BeforeAndAfter:
 
 def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
+    warn_unusual_code: bool = False,
     target_python_version: tuple[int, int] | None = None,
-    vars_to_fold: dict[str, int | str] | None = None,
-    enums_to_fold: set[EnumType] | None = None,
     token_types_config: TokenTypesConfig = TokenTypesConfig(),
     tokens_config: TokensConfig = TokensConfig(),
     optimizations_config: OptimizationsConfig = OptimizationsConfig(),
@@ -37,11 +35,10 @@ def run_minifier_and_assert_correct(
         before_and_after.before,
         SkipConfig(
             "",
+            warn_unusual_code=warn_unusual_code,
             target_python_version=target_python_version,
-            vars_to_fold=vars_to_fold,
-            enums_to_fold=enums_to_fold,
-            token_types_config=token_types_config,
             tokens_config=tokens_config,
+            token_types_config=token_types_config,
             optimizations_config=optimizations_config,
         ),
     )

@@ -2,6 +2,7 @@ from enum import IntEnum, StrEnum
 
 import pytest
 
+from personal_python_ast_optimizer.parser.config import OptimizationsConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -48,5 +49,7 @@ print('C')""".strip(),
 def test_fold_enum(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
-        enums_to_fold={_SomeIntEnum, _SomeStrEnum},
+        optimizations_config=OptimizationsConfig(
+            enums_to_fold={_SomeIntEnum, _SomeStrEnum}
+        ),
     )

@@ -188,7 +188,6 @@ class SkipConfig(_Config):
     def has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
-            or len(self.vars_to_fold) > 0
             or self.tokens_config.has_code_to_skip()
             or self.token_types_config.has_code_to_skip()
             or self.optimizations_config.has_code_to_skip()

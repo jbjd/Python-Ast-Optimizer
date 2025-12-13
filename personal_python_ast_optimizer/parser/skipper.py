@@ -454,6 +454,21 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return parsed_node
 
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.UnaryOp) and isinstance(
+            parsed_node.operand, ast.Constant
+        ):
+            if isinstance(parsed_node.op, ast.Not):
+                return ast.Constant(not parsed_node.operand.value)
+            if isinstance(parsed_node.op, ast.Invert):
+                return ast.Constant(~parsed_node.operand.value)  # type: ignore
+            if isinstance(parsed_node.op, ast.UAdd):
+                return parsed_node.operand
+
+        return parsed_node
+
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         # Need to visit first since a BinOp might contain a Binop
         # and constants need to be folded depth first
@@ -467,30 +482,30 @@ class AstNodeSkipper(ast.NodeTransformer):
         ):
             left = parsed_node.left.value
             right = parsed_node.right.value
-            match parsed_node.op.__class__.__name__:
-                case "Add":
+            match parsed_node.op:
+                case ast.Add():
                     return ast.Constant(left + right)  # type: ignore
-                case "Sub":
+                case ast.Sub():
                     return ast.Constant(left - right)  # type: ignore
-                case "Mult":
+                case ast.Mult():
                     return ast.Constant(left * right)  # type: ignore
-                case "Div":
+                case ast.Div():
                     return ast.Constant(left / right)  # type: ignore
-                case "FloorDiv":
+                case ast.FloorDiv():
                     return ast.Constant(left // right)  # type: ignore
-                case "Mod":
+                case ast.Mod():
                     return ast.Constant(left % right)  # type: ignore
-                case "Pow":
+                case ast.Pow():
                     return ast.Constant(left**right)  # type: ignore
-                case "LShift":
+                case ast.LShift():
                     return ast.Constant(left << right)  # type: ignore
-                case "RShift":
+                case ast.RShift():
                     return ast.Constant(left >> right)  # type: ignore
-                case "BitOr":
+                case ast.BitOr():
                     return ast.Constant(left | right)  # type: ignore
-                case "BitXor":
+                case ast.BitXor():
                     return ast.Constant(left ^ right)  # type: ignore
-                case "BitAnd":
+                case ast.BitAnd():
                     return ast.Constant(left & right)  # type: ignore
 
         return parsed_node

@@ -455,15 +455,19 @@ class AstNodeSkipper(ast.NodeTransformer):
         return parsed_node
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
-        if isinstance(node.operand, ast.Constant):
-            if isinstance(node.op, ast.Not):
-                return ast.Constant(not node.operand.value)
-            if isinstance(node.op, ast.Invert):
-                return ast.Constant(~node.operand.value)
-            if isinstance(node.op, ast.UAdd):
-                return node.operand
+        parsed_node = self.generic_visit(node)
 
-        return self.generic_visit(node)
+        if isinstance(parsed_node, ast.UnaryOp) and isinstance(
+            parsed_node.operand, ast.Constant
+        ):
+            if isinstance(parsed_node.op, ast.Not):
+                return ast.Constant(not parsed_node.operand.value)
+            if isinstance(parsed_node.op, ast.Invert):
+                return ast.Constant(~parsed_node.operand.value)
+            if isinstance(parsed_node.op, ast.UAdd):
+                return parsed_node.operand
+
+        return parsed_node
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         # Need to visit first since a BinOp might contain a Binop

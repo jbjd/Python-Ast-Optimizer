@@ -440,11 +440,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             and len(parsed_node.comparators) == 1
             and isinstance(parsed_node.comparators[0], ast.Constant)
         ):
-            # TODO: match here
-            if isinstance(parsed_node.ops[0], ast.Eq):
-                return ast.Constant(
-                    parsed_node.left.value == parsed_node.comparators[0].value
-                )
+            return self._ast_constants_operation(
+                parsed_node.left, parsed_node.comparators[0], parsed_node.ops[0]
+            )
 
         return parsed_node
 
@@ -474,33 +472,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             and isinstance(parsed_node.left, ast.Constant)
             and isinstance(parsed_node.right, ast.Constant)
         ):
-            left = parsed_node.left.value
-            right = parsed_node.right.value
-            match parsed_node.op:
-                case ast.Add():
-                    return ast.Constant(left + right)  # type: ignore
-                case ast.Sub():
-                    return ast.Constant(left - right)  # type: ignore
-                case ast.Mult():
-                    return ast.Constant(left * right)  # type: ignore
-                case ast.Div():
-                    return ast.Constant(left / right)  # type: ignore
-                case ast.FloorDiv():
-                    return ast.Constant(left // right)  # type: ignore
-                case ast.Mod():
-                    return ast.Constant(left % right)  # type: ignore
-                case ast.Pow():
-                    return ast.Constant(left**right)  # type: ignore
-                case ast.LShift():
-                    return ast.Constant(left << right)  # type: ignore
-                case ast.RShift():
-                    return ast.Constant(left >> right)  # type: ignore
-                case ast.BitOr():
-                    return ast.Constant(left | right)  # type: ignore
-                case ast.BitXor():
-                    return ast.Constant(left ^ right)  # type: ignore
-                case ast.BitAnd():
-                    return ast.Constant(left & right)  # type: ignore
+            return self._ast_constants_operation(
+                parsed_node.left, parsed_node.right, parsed_node.op
+            )
 
         return parsed_node
 
@@ -590,3 +564,62 @@ class AstNodeSkipper(ast.NodeTransformer):
                 f"{self.module_name}: requested to skip {token_type} "
                 f"{not_found_tokens} but was not found"
             )
+
+    @staticmethod
+    def _ast_constants_operation(
+        left: ast.Constant,
+        right: ast.Constant,
+        operation: ast.operator | ast.cmpop,
+    ) -> ast.Constant:
+        """Given two ast.Constant values, performs an operation on their underlying
+        values and returns a new ast.Constant of the new value.
+
+        :param left: ast.Constant in the left of the operation.
+        :param right: ast.Constant in the right of the operation.
+        :param operation: One of the ast classes representing an operation."""
+
+        left_value: ast._ConstantValue = left.value
+        right_value: ast._ConstantValue = right.value
+        result: ast._ConstantValue
+
+        match operation:
+            case ast.Add():
+                result = left_value + right_value  # type: ignore
+            case ast.Sub():
+                result = left_value - right_value  # type: ignore
+            case ast.Mult():
+                result = left_value * right_value  # type: ignore
+            case ast.Div():
+                result = left_value / right_value  # type: ignore
+            case ast.FloorDiv():
+                result = left_value // right_value  # type: ignore
+            case ast.Mod():
+                result = left_value % right_value  # type: ignore
+            case ast.Pow():
+                result = left_value**right_value  # type: ignore
+            case ast.LShift():
+                result = left_value << right_value  # type: ignore
+            case ast.RShift():
+                result = left_value >> right_value  # type: ignore
+            case ast.BitOr():
+                result = left_value | right_value  # type: ignore
+            case ast.BitXor():
+                result = left_value ^ right_value  # type: ignore
+            case ast.BitAnd():
+                result = left_value & right_value  # type: ignore
+            case ast.Eq():
+                result = left_value == right_value
+            case ast.NotEq():
+                result = left_value != right_value
+            case ast.Lt():
+                result = left_value < right_value  # type: ignore
+            case ast.LtE():
+                result = left_value <= right_value  # type: ignore
+            case ast.Gt():
+                result = left_value > right_value  # type: ignore
+            case ast.GtE():
+                result = left_value >= right_value  # type: ignore
+            case _:
+                raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
+
+        return ast.Constant(result)

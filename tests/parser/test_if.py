@@ -50,6 +50,12 @@ if func_with_side_effect():foo()
 elif func_with_side_effect2():test()
 else:test2()""".strip(),
     ),
+    BeforeAndAfter(
+        """
+if 1 != 2:foo()
+else:bar()""",
+        "foo()",
+    ),
 ]
 
 

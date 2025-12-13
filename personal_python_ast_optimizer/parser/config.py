@@ -104,7 +104,6 @@ class TokenTypesConfig(_Config):
     __slots__ = (
         "skip_dangling_expressions",
         "skip_type_hints",
-        "skip_name_equals_main",
         "skip_overload_functions",
     )
 
@@ -113,10 +112,8 @@ class TokenTypesConfig(_Config):
         *,
         skip_dangling_expressions: bool = True,
         skip_type_hints: bool = True,
-        skip_name_equals_main: bool = False,
         skip_overload_functions: bool = False,
     ) -> None:
-        self.skip_name_equals_main: bool = skip_name_equals_main
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: bool = skip_type_hints
         self.skip_overload_functions: bool = skip_overload_functions

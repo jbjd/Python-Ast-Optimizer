@@ -15,7 +15,6 @@ from personal_python_ast_optimizer.parser.machine_info import (
 from personal_python_ast_optimizer.parser.utils import (
     first_occurrence_of_type,
     get_node_name,
-    is_name_equals_main_node,
     is_overload_function,
     is_return_none,
     remove_duplicate_slots,
@@ -377,11 +376,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        if self.token_types_config.skip_name_equals_main and is_name_equals_main_node(
-            node.test
-        ):
-            return None
-
         parsed_node: ast.AST = self.generic_visit(node)
 
         if isinstance(parsed_node, ast.If) and isinstance(

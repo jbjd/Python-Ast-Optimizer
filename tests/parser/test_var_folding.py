@@ -58,6 +58,10 @@ FAVORITE_NUMBER,TEST=4,5
 """,
         "",
     ),
+    BeforeAndAfter(
+        "if __name__=='__main__':print()",
+        "print()",
+    ),
 ]
 
 
@@ -66,6 +70,6 @@ def test_fold_var(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(
-            vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test"}
+            vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test", "__name__": "__main__"}
         ),
     )

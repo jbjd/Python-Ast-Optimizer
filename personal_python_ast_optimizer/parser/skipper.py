@@ -484,29 +484,29 @@ class AstNodeSkipper(ast.NodeTransformer):
             right = parsed_node.right.value
             match parsed_node.op:
                 case ast.Add():
-                    return ast.Constant(left + right)
+                    return ast.Constant(left + right)  # type: ignore
                 case ast.Sub():
-                    return ast.Constant(left - right)
+                    return ast.Constant(left - right)  # type: ignore
                 case ast.Mult():
-                    return ast.Constant(left * right)
+                    return ast.Constant(left * right)  # type: ignore
                 case ast.Div():
-                    return ast.Constant(left / right)
+                    return ast.Constant(left / right)  # type: ignore
                 case ast.FloorDiv():
-                    return ast.Constant(left // right)
+                    return ast.Constant(left // right)  # type: ignore
                 case ast.Mod():
-                    return ast.Constant(left % right)
+                    return ast.Constant(left % right)  # type: ignore
                 case ast.Pow():
-                    return ast.Constant(left**right)
+                    return ast.Constant(left**right)  # type: ignore
                 case ast.LShift():
-                    return ast.Constant(left << right)
+                    return ast.Constant(left << right)  # type: ignore
                 case ast.RShift():
-                    return ast.Constant(left >> right)
+                    return ast.Constant(left >> right)  # type: ignore
                 case ast.BitOr():
-                    return ast.Constant(left | right)
+                    return ast.Constant(left | right)  # type: ignore
                 case ast.BitXor():
-                    return ast.Constant(left ^ right)
+                    return ast.Constant(left ^ right)  # type: ignore
                 case ast.BitAnd():
-                    return ast.Constant(left & right)
+                    return ast.Constant(left & right)  # type: ignore
 
         return parsed_node
 

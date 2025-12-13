@@ -5,7 +5,7 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
-def get_node_name(node: ast.AST) -> str:
+def get_node_name(node: object) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):
         node = node.func

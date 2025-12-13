@@ -454,7 +454,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return parsed_node
 
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         parsed_node = self.generic_visit(node)
 
         if isinstance(parsed_node, ast.UnaryOp) and isinstance(
@@ -463,7 +463,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             if isinstance(parsed_node.op, ast.Not):
                 return ast.Constant(not parsed_node.operand.value)
             if isinstance(parsed_node.op, ast.Invert):
-                return ast.Constant(~parsed_node.operand.value)
+                return ast.Constant(~parsed_node.operand.value)  # type: ignore
             if isinstance(parsed_node.op, ast.UAdd):
                 return parsed_node.operand
 

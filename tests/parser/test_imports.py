@@ -39,8 +39,8 @@ def test_import_same_line():
 import test
 def i():
     import a
-    from b import c
     import d
+    from b import c
     print()
     import e
 """,

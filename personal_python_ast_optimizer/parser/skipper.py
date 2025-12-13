@@ -92,15 +92,12 @@ class AstNodeSkipper(ast.NodeTransformer):
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value)
-                        if isinstance(value, ast.Import) or isinstance(
-                            value, ast.ImportFrom
-                        ):
-                            if isinstance(value, ast.Import):
-                                if combined_import is None:
-                                    combined_import = value
-                                else:
-                                    self._ast_import_combine(combined_import, value)
-                                    continue
+                        if isinstance(value, ast.Import):
+                            if combined_import is None:
+                                combined_import = value
+                            else:
+                                self._ast_import_combine(combined_import, value)
+                                continue
                         else:
                             combined_import = None
                         if value is None:

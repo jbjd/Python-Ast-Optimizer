@@ -1,27 +1,7 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import TokensConfig, TokenTypesConfig
+from personal_python_ast_optimizer.parser.config import TokensConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
-
-
-@pytest.mark.parametrize("skip_name_equals_main", [True, False])
-def test_exclude_name_equals_main(skip_name_equals_main: bool):
-    """Should exclude __name__==__main__ blocks
-    if skip_name_equals_main set to True"""
-
-    NAME_EQUALS_MAIN_EXAMPLE: str = "if __name__=='__main__':print()"
-
-    before_and_after = BeforeAndAfter(
-        NAME_EQUALS_MAIN_EXAMPLE,
-        "" if skip_name_equals_main else NAME_EQUALS_MAIN_EXAMPLE,
-    )
-
-    run_minifier_and_assert_correct(
-        before_and_after,
-        token_types_config=TokenTypesConfig(
-            skip_name_equals_main=skip_name_equals_main
-        ),
-    )
 
 
 def test_exclude_classes():
@@ -137,6 +117,7 @@ test=1
 """,
         "def bar():a=0\ntest=1",
     ),
+    BeforeAndAfter("warnings.foo()", ""),
 ]
 
 

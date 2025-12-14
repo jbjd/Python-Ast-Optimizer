@@ -104,9 +104,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                     and not new_values
                     and not isinstance(node, ast.Module)
                 ):
-                    old_value[:] = [ast.Pass()]
-                else:
-                    old_value[:] = new_values
+                    new_values = [ast.Pass()]
+
+                old_value[:] = new_values
 
             elif isinstance(old_value, ast.AST):
                 new_node = self.visit(old_value)
@@ -124,10 +124,20 @@ class AstNodeSkipper(ast.NodeTransformer):
         new_body = [body[0]]
 
         for i in range(1, len(body)):
-            if isinstance(body[i], ast.Import) and isinstance(new_body[-1], ast.Import):
-                new_body[-1].names += body[i].names
+            this_node = body[i]
+            last_node = new_body[-1]
+
+            if isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import):
+                last_node.names += this_node.names
+            elif (
+                isinstance(this_node, ast.ImportFrom)
+                and isinstance(last_node, ast.ImportFrom)
+                and this_node.module == last_node.module
+                and this_node.level == last_node.level
+            ):
+                last_node.names += this_node.names
             else:
-                new_body.append(body[i])
+                new_body.append(this_node)
 
         body[:] = new_body
 

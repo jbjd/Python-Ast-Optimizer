@@ -88,18 +88,10 @@ class AstNodeSkipper(ast.NodeTransformer):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
-                combined_import: ast.Import | None = None
+                self._combine_imports(old_value)
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value)
-                        if isinstance(value, ast.Import):
-                            if combined_import is None:
-                                combined_import = value
-                            else:
-                                self._ast_import_combine(combined_import, value)
-                                continue
-                        else:
-                            combined_import = None
                         if value is None:
                             continue
                         elif not isinstance(value, ast.AST):
@@ -123,6 +115,21 @@ class AstNodeSkipper(ast.NodeTransformer):
                 else:
                     setattr(node, field, new_node)
         return node
+
+    @staticmethod
+    def _combine_imports(body: list) -> None:
+        if not body:
+            return
+
+        new_body = [body[0]]
+
+        for i in range(1, len(body)):
+            if isinstance(body[i], ast.Import) and isinstance(new_body[-1], ast.Import):
+                new_body[-1].names += body[i].names
+            else:
+                new_body.append(body[i])
+
+        body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         if not self._has_code_to_skip():
@@ -632,7 +639,3 @@ class AstNodeSkipper(ast.NodeTransformer):
                 raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
 
         return ast.Constant(result)
-
-    @staticmethod
-    def _ast_import_combine(target: ast.Import, to_be_combined: ast.Import) -> None:
-        target.names += to_be_combined.names

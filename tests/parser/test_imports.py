@@ -37,6 +37,7 @@ def test_import_same_line():
     before_and_after = BeforeAndAfter(
         """
 import test
+import test2
 def i():
     import a
     import d
@@ -44,7 +45,7 @@ def i():
     print()
     import e
 """,
-        """import test
+        """import test,test2
 def i():import a,d;from b import c;print();import e""",
     )
     run_minifier_and_assert_correct(before_and_after)

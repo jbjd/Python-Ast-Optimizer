@@ -521,7 +521,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
         parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore
 
-        if isinstance(parsed_node.op, ast.Or) or isinstance(parsed_node.op, ast.And):
+        if isinstance(parsed_node.op, (ast.Or, ast.And)):
             # For And nodes left values that are Truthy and const can be removed
             # and vice versa
             remove_if: bool = isinstance(parsed_node.op, ast.And)

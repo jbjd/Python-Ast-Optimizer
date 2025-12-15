@@ -127,9 +127,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             this_node = body[i]
             last_node = new_body[-1]
 
-            if isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import):
-                last_node.names += this_node.names
-            elif (
+            if (
+                isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import)
+            ) or (
                 isinstance(this_node, ast.ImportFrom)
                 and isinstance(last_node, ast.ImportFrom)
                 and this_node.module == last_node.module
@@ -246,7 +246,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         # TODO: Currently if a.b.c.d only "c" and "d" are checked
         var_name: str = get_node_name(node.targets[0])
-        parent_var_name: str = get_node_name(getattr(node.targets[0], "value", object))
+        parent_var_name: str = get_node_name(getattr(node.targets[0], "value", None))
 
         if (
             var_name in self.tokens_config.variables_to_skip

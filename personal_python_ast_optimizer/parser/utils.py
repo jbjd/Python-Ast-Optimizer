@@ -5,7 +5,7 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
-def get_node_name(node: object) -> str:
+def get_node_name(node: ast.AST | None) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):
         node = node.func
@@ -98,8 +98,9 @@ def remove_duplicate_slots(
             node.value.elts = unique_objects
 
 
-def first_occurrence_of_type(data: list, target_type) -> int:
+def first_occurrence_of_type(data: list, target_type: object) -> int:
     for index, element in enumerate(data):
         if isinstance(element, target_type):
             return index
+
     return -1

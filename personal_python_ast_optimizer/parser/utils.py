@@ -5,7 +5,7 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
-def get_node_name(node: object) -> str:
+def get_node_name(node: ast.AST | None) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):
         node = node.func
@@ -74,11 +74,7 @@ def skip_decorators(
 def remove_duplicate_slots(
     node: ast.Assign | ast.AnnAssign, warn_duplicates: bool = True
 ) -> None:
-    if (
-        isinstance(node.value, ast.Tuple)
-        or isinstance(node.value, ast.List)
-        or isinstance(node.value, ast.Set)
-    ):
+    if isinstance(node.value, (ast.Tuple, ast.List, ast.Set)):
         found_values: set[str] = set()
         unique_objects: list[ast.expr] = []
         for const_value in node.value.elts:
@@ -98,8 +94,9 @@ def remove_duplicate_slots(
             node.value.elts = unique_objects
 
 
-def first_occurrence_of_type(data: list, target_type) -> int:
+def first_occurrence_of_type(data: list, target_type: type) -> int:
     for index, element in enumerate(data):
         if isinstance(element, target_type):
             return index
+
     return -1

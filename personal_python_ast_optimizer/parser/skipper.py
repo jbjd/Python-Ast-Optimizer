@@ -88,18 +88,10 @@ class AstNodeSkipper(ast.NodeTransformer):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
-                combined_import: ast.Import | None = None
+                self._combine_imports(old_value)
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value)
-                        if isinstance(value, ast.Import):
-                            if combined_import is None:
-                                combined_import = value
-                            else:
-                                self._ast_import_combine(combined_import, value)
-                                continue
-                        else:
-                            combined_import = None
                         if value is None:
                             continue
                         elif not isinstance(value, ast.AST):
@@ -112,9 +104,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                     and not new_values
                     and not isinstance(node, ast.Module)
                 ):
-                    old_value[:] = [ast.Pass()]
-                else:
-                    old_value[:] = new_values
+                    new_values = [ast.Pass()]
+
+                old_value[:] = new_values
 
             elif isinstance(old_value, ast.AST):
                 new_node = self.visit(old_value)
@@ -123,6 +115,31 @@ class AstNodeSkipper(ast.NodeTransformer):
                 else:
                     setattr(node, field, new_node)
         return node
+
+    @staticmethod
+    def _combine_imports(body: list) -> None:
+        if not body:
+            return
+
+        new_body = [body[0]]
+
+        for i in range(1, len(body)):
+            this_node = body[i]
+            last_node = new_body[-1]
+
+            if (
+                isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import)
+            ) or (
+                isinstance(this_node, ast.ImportFrom)
+                and isinstance(last_node, ast.ImportFrom)
+                and this_node.module == last_node.module
+                and this_node.level == last_node.level
+            ):
+                last_node.names += this_node.names
+            else:
+                new_body.append(this_node)
+
+        body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         if not self._has_code_to_skip():
@@ -229,7 +246,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         # TODO: Currently if a.b.c.d only "c" and "d" are checked
         var_name: str = get_node_name(node.targets[0])
-        parent_var_name: str = get_node_name(getattr(node.targets[0], "value", object))
+        parent_var_name: str = get_node_name(getattr(node.targets[0], "value", None))
 
         if (
             var_name in self.tokens_config.variables_to_skip
@@ -504,7 +521,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
         parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore
 
-        if isinstance(parsed_node.op, ast.Or) or isinstance(parsed_node.op, ast.And):
+        if isinstance(parsed_node.op, (ast.Or, ast.And)):
             # For And nodes left values that are Truthy and const can be removed
             # and vice versa
             remove_if: bool = isinstance(parsed_node.op, ast.And)
@@ -632,7 +649,3 @@ class AstNodeSkipper(ast.NodeTransformer):
                 raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
 
         return ast.Constant(result)
-
-    @staticmethod
-    def _ast_import_combine(target: ast.Import, to_be_combined: ast.Import) -> None:
-        target.names += to_be_combined.names

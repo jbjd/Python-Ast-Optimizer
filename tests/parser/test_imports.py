@@ -113,7 +113,7 @@ def test_remove_unused_import_from_type_annotation():
         """
 from .typing import foo
 
-a: foo = bar()
+a: foo | None = bar()
 
 def asdf(a: foo) -> foo:
     return a""",

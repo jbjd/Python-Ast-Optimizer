@@ -28,6 +28,7 @@ from personal_python_ast_optimizer.parser.utils import (
 class AstNodeSkipper(ast.NodeTransformer):
 
     __slots__ = (
+        "_possibly_unused_imports",
         "_skippable_futures",
         "_within_class",
         "_within_function",
@@ -60,6 +61,8 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if self.token_types_config.skip_type_hints:
             self._skippable_futures.append("annotations")
+
+        self._possibly_unused_imports: set[str] = set()
 
     @staticmethod
     def _within_class_node(function):
@@ -101,9 +104,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                     new_values.append(value)
 
                 if (
-                    field == "body"
+                    not isinstance(node, ast.Module)
                     and not new_values
-                    and not isinstance(node, ast.Module)
+                    and field == "body"
                 ):
                     new_values = [ast.Pass()]
 
@@ -115,6 +118,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                     delattr(node, field)
                 else:
                     setattr(node, field, new_node)
+
         return node
 
     @staticmethod
@@ -146,13 +150,19 @@ class AstNodeSkipper(ast.NodeTransformer):
         if not self._has_code_to_skip():
             return node
 
+        self._possibly_unused_imports = set()
+
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
-        try:
-            return self.generic_visit(node)
-        finally:
-            self._warn_unused_skips()
+        module: ast.Module = self.generic_visit(node)  # type:ignore
+
+        if self._possibly_unused_imports:
+            import_skipper = ImportSkipper(self._possibly_unused_imports)
+            import_skipper.generic_visit(module)
+
+        self._warn_unused_skips()
+        return module
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
@@ -232,6 +242,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             node.value.attr, []
         ):
             return self._get_enum_value_as_AST(node.value.attr, node.attr)
+
+        if node.attr in self._possibly_unused_imports:
+            self._possibly_unused_imports.remove(node.attr)
 
         return self.generic_visit(node)
 
@@ -344,11 +357,15 @@ class AstNodeSkipper(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Import(self, node: ast.Import) -> ast.AST | None:
-        """Removes imports provided in config, deleting the whole
-        node if no imports are left"""
         exclude_imports(node, self.tokens_config.module_imports_to_skip)
 
-        return self.generic_visit(node) if node.names else None
+        if not node.names:
+            return None
+
+        if self.optimizations_config.remove_unused_imports:
+            self._possibly_unused_imports.update(n.asname or n.name for n in node.names)
+
+        return self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
         normalized_module_name: str = node.module or ""
@@ -359,6 +376,12 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if node.module == "__future__" and self._skippable_futures:
             exclude_imports(node, self._skippable_futures)
+        elif (
+            node.module != "__future__"
+            and node.names
+            and self.optimizations_config.remove_unused_imports
+        ):
+            self._possibly_unused_imports.update(n.asname or n.name for n in node.names)
 
         return self.generic_visit(node) if node.names else None
 
@@ -366,8 +389,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         """Extends super's implementation by adding constant folding"""
         if node.id in self.optimizations_config.vars_to_fold:
             constant_value = self.optimizations_config.vars_to_fold[node.id]
+
             return ast.Constant(constant_value)
         else:
+            if node.id in self._possibly_unused_imports:
+                self._possibly_unused_imports.remove(node.id)
+
             return self.generic_visit(node)
 
     def visit_Dict(self, node: ast.Dict) -> ast.AST:
@@ -632,38 +659,43 @@ class AstNodeSkipper(ast.NodeTransformer):
         return ast.Constant(result)
 
 
-class ImportSkipper:
+class ImportSkipper(ast.NodeVisitor):
 
-    def __init__(self, module_imports_to_skip, from_imports_to_skip):
-        self.module_imports_to_skip = module_imports_to_skip
-        self.from_imports_to_skip = from_imports_to_skip
+    __slots__ = ("unused_imports",)
+
+    def __init__(self, unused_imports: set[str]) -> None:
+        self.unused_imports = unused_imports
 
     def generic_visit(self, node):
         for _, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
+                ast_removed: bool = False
                 for value in old_value:
-                    if isinstance(value, (ast.Import, ast.ImportFrom)):
-                        value = self.visit_ImportOrImportFrom(value)
+                    if isinstance(value, ast.AST):
+                        value = self.visit(value)
+                        if value is None:
+                            ast_removed = True
+                            continue
+                        elif not isinstance(value, ast.AST):
+                            new_values.extend(value)
+                            continue
 
-                    if value is not None:
-                        new_values.append(value)
+                    new_values.append(value)
+
+                if not isinstance(node, ast.Module) and not new_values and ast_removed:
+                    new_values = [ast.Pass()]
 
                 old_value[:] = new_values
 
-            # I think below is unneeded?
-
-            # elif isinstance(old_value, ast.AST):
-            #     new_node = self.visit(old_value)
-            #     if new_node is None:
-            #         delattr(node, field)
-            #     else:
-            #         setattr(node, field, new_node)
         return node
 
-    def visit_ImportOrImportFrom(
-        self, node: ast.Import | ast.ImportFrom
-    ) -> ast.Import | ast.ImportFrom | None:
-        exclude_imports(node, self.module_imports_to_skip)
+    def visit_Import(self, node: ast.Import) -> ast.Import | None:
+        exclude_imports(node, self.unused_imports)
+
+        return node if node.names else None
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
+        exclude_imports(node, self.unused_imports)
 
         return node if node.names else None

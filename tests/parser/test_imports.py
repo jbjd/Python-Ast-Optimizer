@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import TokenTypesConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokenTypesConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 _futures_imports: str = """
@@ -54,7 +57,10 @@ def i():
         """import test,test2
 def i():import a,d;from b import c,d as e;from .b import f;print();import e""",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+    )
 
 
 def test_import_star():
@@ -62,5 +68,22 @@ def test_import_star():
     before_and_after = BeforeAndAfter(
         "from ctypes import *",
         "from ctypes import*",
+    )
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+    )
+
+
+def test_remove_unused_imports():
+
+    before_and_after = BeforeAndAfter(
+        """
+if a == b:
+    import foo
+    import bar
+    
+print(a)""",
+        "if a==b:pass\nprint(a)",
     )
     run_minifier_and_assert_correct(before_and_after)

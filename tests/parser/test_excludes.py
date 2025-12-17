@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import TokensConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokensConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -171,6 +174,7 @@ import a as c
         tokens_config=TokensConfig(
             module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
         ),
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )
 
 
@@ -192,4 +196,5 @@ is_cid = re.compile('').match
         tokens_config=TokensConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )

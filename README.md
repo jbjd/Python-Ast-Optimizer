@@ -1,6 +1,6 @@
 # Personal Python AST Optimizer
 
-This is a project related to minifying or otherwise statically optimizing Python code. It can parse python to output a much smaller output with optionally excluded sections of code. It also includes wrappers for calling autoflake.
+This is a project related to minifying or otherwise statically optimizing Python code. It can parse python to output a much smaller output with optionally excluded sections of code.
 
 This project is an extension of the builtin ast module.
 

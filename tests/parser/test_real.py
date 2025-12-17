@@ -11,7 +11,7 @@ def test_image_viewer_constants():
 File with constants needed in multiple spots of the codebase
 \"\"\"
 
-from enum import IntEnum, StrEnum
+from enum import StrEnum
 
 
 class ImageFormats(StrEnum):
@@ -22,7 +22,7 @@ class ImageFormats(StrEnum):
     JPEG = "JPEG"
     PNG = "PNG"
     WEBP = "WebP\"""",
-        """from enum import IntEnum,StrEnum
+        """from enum import StrEnum
 class ImageFormats(StrEnum):DDS='DDS';GIF='GIF';JPEG='JPEG';PNG='PNG';WEBP='WebP'""",
     )
     run_minifier_and_assert_correct(before_and_after)

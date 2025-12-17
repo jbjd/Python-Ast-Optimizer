@@ -37,9 +37,6 @@ jobs:
           chmod +x ./validate.sh
           ./validate.sh
 
-      - name: Install Dependencies
-        run: pip install -r requirements.txt
-
       - name: Unit Tests
         run: |
           chmod +x ./test.sh

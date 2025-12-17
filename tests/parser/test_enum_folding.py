@@ -38,9 +38,7 @@ print(_SomeStrEnum.C)""",
 import somewhere
 
 print(somewhere.someModule._SomeStrEnum.C)""",
-        """
-import somewhere
-print('C')""".strip(),
+        "print('C')",
     ),
 ]
 

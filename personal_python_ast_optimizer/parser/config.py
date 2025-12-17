@@ -123,6 +123,7 @@ class OptimizationsConfig(_Config):
     __slots__ = (
         "vars_to_fold",
         "enums_to_fold",
+        "remove_unused_imports",
         "fold_constants",
         "assume_this_machine",
     )
@@ -132,6 +133,7 @@ class OptimizationsConfig(_Config):
         vars_to_fold: dict[str, int | str | bool] | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
+        remove_unused_imports: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
         self.vars_to_fold: dict[str, int | str | bool] = (
@@ -142,6 +144,7 @@ class OptimizationsConfig(_Config):
             if enums_to_fold is None
             else self._format_enums_to_fold_as_dict(enums_to_fold)
         )
+        self.remove_unused_imports: bool = remove_unused_imports
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
 

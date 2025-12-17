@@ -5,6 +5,12 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
+def exclude_imports(node: ast.Import | ast.ImportFrom, exlcudes: Iterable[str]) -> None:
+    node.names = [
+        alias for alias in node.names if (alias.asname or alias.name) not in exlcudes
+    ]
+
+
 def get_node_name(node: ast.AST | None) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):

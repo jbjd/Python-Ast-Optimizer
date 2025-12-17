@@ -1,3 +1,4 @@
+from personal_python_ast_optimizer.parser.config import OptimizationsConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -61,4 +62,7 @@ if b==1:
             "from spam import eggs;raise Exception;return 0"
         ),
     )
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+    )

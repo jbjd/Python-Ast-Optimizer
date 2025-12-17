@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import TokensConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokensConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -160,12 +163,18 @@ def test_exclude_module_imports():
 import numpy
 from numpy._core import uint8
 from . import asdf
+import a
+import a as b
+import a as c
 """,
-        "",
+        "import a as c",
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_config=TokensConfig(module_imports_to_skip={"numpy", "numpy._core", ""}),
+        tokens_config=TokensConfig(
+            module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
+        ),
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )
 
 
@@ -187,4 +196,5 @@ is_cid = re.compile('').match
         tokens_config=TokensConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
+        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )

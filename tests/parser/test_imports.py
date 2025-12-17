@@ -82,7 +82,7 @@ def test_remove_unused_imports():
 if a == b:
     import foo
     import bar
-    
+
 print(a)""",
         "if a==b:pass\nprint(a)",
     )

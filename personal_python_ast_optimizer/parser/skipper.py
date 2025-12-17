@@ -13,6 +13,7 @@ from personal_python_ast_optimizer.parser.machine_info import (
     machine_dependent_functions,
 )
 from personal_python_ast_optimizer.parser.utils import (
+    exclude_imports,
     first_occurrence_of_type,
     get_node_name,
     is_overload_function,
@@ -345,41 +346,21 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Import(self, node: ast.Import) -> ast.AST | None:
         """Removes imports provided in config, deleting the whole
         node if no imports are left"""
-        node.names = [
-            alias
-            for alias in node.names
-            if alias.name not in self.tokens_config.module_imports_to_skip
-        ]
+        exclude_imports(node, self.tokens_config.module_imports_to_skip)
 
-        if not node.names:
-            return None
-
-        return self.generic_visit(node)
+        return self.generic_visit(node) if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
         normalized_module_name: str = node.module or ""
         if normalized_module_name in self.tokens_config.module_imports_to_skip:
             return None
 
-        node.names = [
-            alias
-            for alias in node.names
-            if alias.name not in self.tokens_config.from_imports_to_skip
-            and alias.name not in self.optimizations_config.vars_to_fold
-            and alias.name not in self.optimizations_config.enums_to_fold
-        ]
+        exclude_imports(node, self.tokens_config.from_imports_to_skip)
 
         if node.module == "__future__" and self._skippable_futures:
-            node.names = [
-                alias
-                for alias in node.names
-                if alias.name not in self._skippable_futures
-            ]
+            exclude_imports(node, self._skippable_futures)
 
-        if not node.names:
-            return None
-
-        return self.generic_visit(node)
+        return self.generic_visit(node) if node.names else None
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
@@ -649,3 +630,40 @@ class AstNodeSkipper(ast.NodeTransformer):
                 raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
 
         return ast.Constant(result)
+
+
+class ImportSkipper:
+
+    def __init__(self, module_imports_to_skip, from_imports_to_skip):
+        self.module_imports_to_skip = module_imports_to_skip
+        self.from_imports_to_skip = from_imports_to_skip
+
+    def generic_visit(self, node):
+        for _, old_value in ast.iter_fields(node):
+            if isinstance(old_value, list):
+                new_values = []
+                for value in old_value:
+                    if isinstance(value, (ast.Import, ast.ImportFrom)):
+                        value = self.visit_ImportOrImportFrom(value)
+
+                    if value is not None:
+                        new_values.append(value)
+
+                old_value[:] = new_values
+
+            # I think below is unneeded?
+
+            # elif isinstance(old_value, ast.AST):
+            #     new_node = self.visit(old_value)
+            #     if new_node is None:
+            #         delattr(node, field)
+            #     else:
+            #         setattr(node, field, new_node)
+        return node
+
+    def visit_ImportOrImportFrom(
+        self, node: ast.Import | ast.ImportFrom
+    ) -> ast.Import | ast.ImportFrom | None:
+        exclude_imports(node, self.module_imports_to_skip)
+
+        return node if node.names else None

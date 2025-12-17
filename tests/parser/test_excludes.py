@@ -160,12 +160,17 @@ def test_exclude_module_imports():
 import numpy
 from numpy._core import uint8
 from . import asdf
+import a
+import a as b
+import a as c
 """,
-        "",
+        "import a as c",
     )
     run_minifier_and_assert_correct(
         before_and_after,
-        tokens_config=TokensConfig(module_imports_to_skip={"numpy", "numpy._core", ""}),
+        tokens_config=TokensConfig(
+            module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
+        ),
     )
 
 

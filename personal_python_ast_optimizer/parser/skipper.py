@@ -334,9 +334,17 @@ class AstNodeSkipper(ast.NodeVisitor):
         if self._within_class and get_node_name(node.target) == "__slots__":
             remove_duplicate_slots(node, self.warn_unusual_code)
 
+        annotation_name: str = get_node_name(node.annotation)
+        readd_annotation_to_unused_imports: bool = (
+            annotation_name in self._possibly_unused_imports
+        )
+
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
         if self.token_types_config.skip_type_hints:
+            if readd_annotation_to_unused_imports:
+                self._possibly_unused_imports.add(annotation_name)
+
             if (
                 not parsed_node.value
                 and self._within_class

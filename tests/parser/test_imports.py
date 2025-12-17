@@ -87,3 +87,15 @@ print(a)""",
         "if a==b:pass\nprint(a)",
     )
     run_minifier_and_assert_correct(before_and_after)
+
+
+def test_remove_unused_imports_type_annotation():
+
+    before_and_after = BeforeAndAfter(
+        """
+import foo
+
+a: foo = bar()""",
+        "a=bar()",
+    )
+    run_minifier_and_assert_correct(before_and_after)

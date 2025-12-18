@@ -335,7 +335,7 @@ class AstNodeSkipper(ast.NodeVisitor):
             remove_duplicate_slots(node, self.warn_unusual_code)
 
         if self.token_types_config.skip_type_hints:
-            node.annotation = None
+            node.annotation = None  # type: ignore
             parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
             if (

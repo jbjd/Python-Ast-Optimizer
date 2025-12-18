@@ -339,7 +339,6 @@ class AstNodeSkipper(ast.NodeTransformer):
                 and not self._within_function
             ):
                 parsed_node.annotation = ast.Name("int")
-                return parsed_node
             elif parsed_node.value is None:
                 return None
             else:

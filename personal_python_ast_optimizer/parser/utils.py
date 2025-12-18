@@ -11,6 +11,12 @@ def exclude_imports(node: ast.Import | ast.ImportFrom, exlcudes: Iterable[str]) 
     ]
 
 
+def filter_imports(node: ast.Import | ast.ImportFrom, filter: Iterable[str]) -> None:
+    node.names = [
+        alias for alias in node.names if (alias.asname or alias.name) in filter
+    ]
+
+
 def get_node_name(node: ast.AST | None) -> str:
     """Gets id or attr which both can represent var names"""
     if isinstance(node, ast.Call):

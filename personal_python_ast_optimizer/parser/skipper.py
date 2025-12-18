@@ -14,6 +14,7 @@ from personal_python_ast_optimizer.parser.machine_info import (
 )
 from personal_python_ast_optimizer.parser.utils import (
     exclude_imports,
+    filter_imports,
     first_occurrence_of_type,
     get_node_name,
     is_overload_function,
@@ -25,10 +26,9 @@ from personal_python_ast_optimizer.parser.utils import (
 )
 
 
-class AstNodeSkipper(ast.NodeVisitor):
+class AstNodeSkipper(ast.NodeTransformer):
 
     __slots__ = (
-        "_possibly_unused_imports",
         "_skippable_futures",
         "_within_class",
         "_within_function",
@@ -61,8 +61,6 @@ class AstNodeSkipper(ast.NodeVisitor):
 
         if self.token_types_config.skip_type_hints:
             self._skippable_futures.append("annotations")
-
-        self._possibly_unused_imports: set[str] = set()
 
     @staticmethod
     def _within_class_node(function):
@@ -150,16 +148,17 @@ class AstNodeSkipper(ast.NodeVisitor):
         if not self._has_code_to_skip():
             return node
 
-        self._possibly_unused_imports = set()
-
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
         module: ast.Module = self.generic_visit(node)  # type:ignore
 
-        if self._possibly_unused_imports:
-            import_skipper = ImportSkipper(self._possibly_unused_imports)
-            import_skipper.generic_visit(module)
+        if self.optimizations_config.remove_unused_imports:
+            names_and_attrs_finder = NamesAndAttersDetector()
+            names_and_attrs_finder.visit(module)
+
+            import_filter = ImportFilter(names_and_attrs_finder.names_and_attrs)
+            import_filter.visit(module)
 
         self._warn_unused_skips()
         return module
@@ -242,9 +241,6 @@ class AstNodeSkipper(ast.NodeVisitor):
             node.value.attr, []
         ):
             return self._get_enum_value_as_AST(node.value.attr, node.attr)
-
-        if node.attr in self._possibly_unused_imports:
-            self._possibly_unused_imports.remove(node.attr)
 
         return self.generic_visit(node)
 
@@ -334,10 +330,9 @@ class AstNodeSkipper(ast.NodeVisitor):
         if self._within_class and get_node_name(node.target) == "__slots__":
             remove_duplicate_slots(node, self.warn_unusual_code)
 
-        if self.token_types_config.skip_type_hints:
-            node.annotation = None  # type: ignore
-            parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
+        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
+        if self.token_types_config.skip_type_hints:
             if (
                 not parsed_node.value
                 and self._within_class
@@ -349,8 +344,8 @@ class AstNodeSkipper(ast.NodeVisitor):
                 return None
             else:
                 return ast.Assign([parsed_node.target], parsed_node.value)
-        else:
-            return self.generic_visit(node)
+
+        return parsed_node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST | None:
         if get_node_name(node.target) in self.tokens_config.variables_to_skip:
@@ -364,9 +359,6 @@ class AstNodeSkipper(ast.NodeVisitor):
         if not node.names:
             return None
 
-        if self.optimizations_config.remove_unused_imports:
-            self._possibly_unused_imports.update(n.asname or n.name for n in node.names)
-
         return self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
@@ -378,12 +370,6 @@ class AstNodeSkipper(ast.NodeVisitor):
 
         if node.module == "__future__" and self._skippable_futures:
             exclude_imports(node, self._skippable_futures)
-        elif (
-            node.module != "__future__"
-            and node.names
-            and self.optimizations_config.remove_unused_imports
-        ):
-            self._possibly_unused_imports.update(n.asname or n.name for n in node.names)
 
         return self.generic_visit(node) if node.names else None
 
@@ -393,11 +379,8 @@ class AstNodeSkipper(ast.NodeVisitor):
             constant_value = self.optimizations_config.vars_to_fold[node.id]
 
             return ast.Constant(constant_value)
-        else:
-            if node.id in self._possibly_unused_imports:
-                self._possibly_unused_imports.remove(node.id)
 
-            return self.generic_visit(node)
+        return node
 
     def visit_Dict(self, node: ast.Dict) -> ast.AST:
         if self.tokens_config.dict_keys_to_skip:
@@ -661,12 +644,28 @@ class AstNodeSkipper(ast.NodeVisitor):
         return ast.Constant(result)
 
 
-class ImportSkipper(ast.NodeVisitor):
+class NamesAndAttersDetector(ast.NodeVisitor):
 
-    __slots__ = ("unused_imports",)
+    __slots__ = ("names_and_attrs",)
 
-    def __init__(self, unused_imports: set[str]) -> None:
-        self.unused_imports = unused_imports
+    def __init__(self) -> None:
+        self.names_and_attrs: set[str] = set()
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        self.names_and_attrs.add(node.id)
+        return node
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+        self.names_and_attrs.add(node.attr)
+        return self.generic_visit(node)
+
+
+class ImportFilter(ast.NodeTransformer):
+
+    __slots__ = ("imports_to_keep",)
+
+    def __init__(self, imports_to_keep: set[str]) -> None:
+        self.imports_to_keep: set[str] = imports_to_keep
 
     def generic_visit(self, node):
         for _, old_value in ast.iter_fields(node):
@@ -693,11 +692,12 @@ class ImportSkipper(ast.NodeVisitor):
         return node
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        exclude_imports(node, self.unused_imports)
+        filter_imports(node, self.imports_to_keep)
 
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
-        exclude_imports(node, self.unused_imports)
+        if node.module != "__future__":
+            filter_imports(node, self.imports_to_keep)
 
         return node if node.names else None

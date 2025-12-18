@@ -334,21 +334,23 @@ class AstNodeSkipper(ast.NodeVisitor):
         if self._within_class and get_node_name(node.target) == "__slots__":
             remove_duplicate_slots(node, self.warn_unusual_code)
 
-        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
-
         if self.token_types_config.skip_type_hints:
+            node.annotation = None  # type: ignore
+            parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
+
             if (
                 not parsed_node.value
                 and self._within_class
                 and not self._within_function
             ):
                 parsed_node.annotation = ast.Name("int")
+                return parsed_node
             elif parsed_node.value is None:
                 return None
             else:
                 return ast.Assign([parsed_node.target], parsed_node.value)
-
-        return parsed_node
+        else:
+            return self.generic_visit(node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST | None:
         if get_node_name(node.target) in self.tokens_config.variables_to_skip:

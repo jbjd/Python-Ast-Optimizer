@@ -75,7 +75,7 @@ def test_import_star():
     )
 
 
-def test_remove_unused_imports():
+def test_remove_unused_import():
 
     before_and_after = BeforeAndAfter(
         """
@@ -85,5 +85,41 @@ if a == b:
 
 print(a)""",
         "if a==b:pass\nprint(a)",
+    )
+    run_minifier_and_assert_correct(before_and_after)
+
+
+def test_remove_unused_import_type_annotation():
+
+    before_and_after = BeforeAndAfter(
+        """
+import foo
+
+a: foo = bar()
+
+def asdf(a: foo) -> foo:
+    return a""",
+        """
+a=bar()
+def asdf(a):return a
+""".strip(),
+    )
+    run_minifier_and_assert_correct(before_and_after)
+
+
+def test_remove_unused_import_from_type_annotation():
+
+    before_and_after = BeforeAndAfter(
+        """
+from .typing import foo
+
+a: foo | None = bar()
+
+def asdf(a: foo) -> foo:
+    return a""",
+        """
+a=bar()
+def asdf(a):return a
+""".strip(),
     )
     run_minifier_and_assert_correct(before_and_after)

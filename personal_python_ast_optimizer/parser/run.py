@@ -11,6 +11,6 @@ def run_minify_parser(
     module: ast.Module = ast.parse(source)
 
     if skip_config is not None:
-        module = AstNodeSkipper(skip_config).visit(module)
+        AstNodeSkipper(skip_config).visit(module)
 
     return parser.visit(module)

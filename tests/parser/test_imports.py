@@ -75,9 +75,8 @@ def test_import_star():
     )
 
 
-def test_remove_unused_import():
-
-    before_and_after = BeforeAndAfter(
+_unused_import_test_cases: list[BeforeAndAfter] = [
+    BeforeAndAfter(
         """
 if a == b:
     import foo
@@ -85,13 +84,8 @@ if a == b:
 
 print(a)""",
         "if a==b:pass\nprint(a)",
-    )
-    run_minifier_and_assert_correct(before_and_after)
-
-
-def test_remove_unused_import_type_annotation():
-
-    before_and_after = BeforeAndAfter(
+    ),
+    BeforeAndAfter(
         """
 import foo
 
@@ -103,13 +97,8 @@ def asdf(a: foo) -> foo:
 a=bar()
 def asdf(a):return a
 """.strip(),
-    )
-    run_minifier_and_assert_correct(before_and_after)
-
-
-def test_remove_unused_import_from_type_annotation():
-
-    before_and_after = BeforeAndAfter(
+    ),
+    BeforeAndAfter(
         """
 from .typing import foo
 
@@ -121,5 +110,21 @@ def asdf(a: foo) -> foo:
 a=bar()
 def asdf(a):return a
 """.strip(),
-    )
+    ),
+    BeforeAndAfter(
+        """
+from foo import bar as bar2
+
+if False:
+    bar2()
+
+bar()
+""".strip(),
+        "bar()",
+    ),
+]
+
+
+@pytest.mark.parametrize("before_and_after", _unused_import_test_cases)
+def test_remove_unused_import(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(before_and_after)

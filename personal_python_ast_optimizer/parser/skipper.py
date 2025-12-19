@@ -503,6 +503,8 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_arg(self, node: ast.arg) -> ast.AST:
         if self.token_types_config.skip_type_hints:
             node.annotation = None
+            return node
+
         return self.generic_visit(node)
 
     def visit_arguments(self, node: ast.arguments) -> ast.AST:
@@ -565,7 +567,6 @@ class AstNodeSkipper(ast.NodeTransformer):
     def _has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
-            or len(self.optimizations_config.vars_to_fold) > 0
             or self.optimizations_config.has_code_to_skip()
             or self.tokens_config.has_code_to_skip()
             or self.token_types_config.has_code_to_skip()

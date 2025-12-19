@@ -219,7 +219,7 @@ class MinifyUnparser(ast._Unparser):
             self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:
-        return len(self._source) > 0 and self._source[-1][-1:] == char_to_check
+        return self._source and self._source[-1][-1:] == char_to_check
 
     def _get_space_before_write(self) -> str:
         if not self._source:

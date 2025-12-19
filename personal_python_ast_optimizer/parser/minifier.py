@@ -1,5 +1,4 @@
 import ast
-from ast import _Unparser  # type: ignore
 from typing import Iterable, Iterator, Literal
 
 from personal_python_ast_optimizer.parser.utils import node_inlineable
@@ -10,7 +9,7 @@ from personal_python_ast_optimizer.python_info import (
 )
 
 
-class MinifyUnparser(_Unparser):
+class MinifyUnparser(ast._Unparser):
 
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
@@ -37,7 +36,7 @@ class MinifyUnparser(_Unparser):
         """Write text, with some mapping replacements"""
         text = tuple(self._yield_updated_text(text))
 
-        if len(text) == 0:
+        if not text:
             return
 
         first_letter_to_write: str = text[0][:1]
@@ -104,7 +103,7 @@ class MinifyUnparser(_Unparser):
         self.fill("assert ", splitter=self._get_line_splitter())
         self.traverse(node.test)
         if node.msg:
-            self.write(", ")
+            self.write(",")
             self.traverse(node.msg)
 
     def visit_Delete(self, node: ast.Delete) -> None:

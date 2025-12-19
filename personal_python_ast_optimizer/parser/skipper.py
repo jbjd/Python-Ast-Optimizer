@@ -218,7 +218,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             if isinstance(last_body_node, ast.Return) and (
                 is_return_none(last_body_node) or last_body_node.value is None
             ):
-                node.body = node.body[:-1]
+                node.body.pop()
 
         return self.generic_visit(node)
 
@@ -665,9 +665,6 @@ class UnusedImportSkipper(ast.NodeTransformer):
                         value = self.visit(value)
                         if value is None:
                             ast_removed = True
-                            continue
-                        elif not isinstance(value, ast.AST):
-                            new_values.extend(value)
                             continue
 
                     new_values.append(value)

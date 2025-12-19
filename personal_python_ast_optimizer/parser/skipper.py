@@ -29,6 +29,7 @@ from personal_python_ast_optimizer.parser.utils import (
 class AstNodeSkipper(ast.NodeTransformer):
 
     __slots__ = (
+        "_has_imports",
         "_skippable_futures",
         "_within_class",
         "_within_function",
@@ -50,6 +51,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         self.token_types_config: TokenTypesConfig = config.token_types_config
         self.tokens_config: TokensConfig = config.tokens_config
 
+        self._has_imports: bool = False
         self._within_class: bool = False
         self._within_function: bool = False
 
@@ -153,7 +155,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         module: ast.Module = self.generic_visit(node)  # type:ignore
 
-        if self.optimizations_config.remove_unused_imports:
+        if self.optimizations_config.remove_unused_imports and self._has_imports:
             import_filter = UnusedImportSkipper()
             import_filter.visit(module)
 
@@ -349,15 +351,16 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    def visit_Import(self, node: ast.Import) -> ast.AST | None:
+    def visit_Import(self, node: ast.Import) -> ast.Import | None:
         exclude_imports(node, self.tokens_config.module_imports_to_skip)
 
         if not node.names:
             return None
 
-        return self.generic_visit(node)
+        self._has_imports = True
+        return node
 
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
         normalized_module_name: str = node.module or ""
         if normalized_module_name in self.tokens_config.module_imports_to_skip:
             return None
@@ -367,7 +370,11 @@ class AstNodeSkipper(ast.NodeTransformer):
         if node.module == "__future__" and self._skippable_futures:
             exclude_imports(node, self._skippable_futures)
 
-        return self.generic_visit(node) if node.names else None
+        if not node.names:
+            return None
+
+        self._has_imports = True
+        return node
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""

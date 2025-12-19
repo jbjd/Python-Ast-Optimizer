@@ -181,23 +181,13 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
-    @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
-    def _should_skip_function(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> bool:
-        """If a function node should be skipped"""
-        return node.name in self.tokens_config.functions_to_skip or (
-            self.token_types_config.skip_overload_functions
-            and is_overload_function(node)
-        )
-
+    @_within_function_node
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
@@ -221,6 +211,15 @@ class AstNodeSkipper(ast.NodeTransformer):
                 node.body.pop()
 
         return self.generic_visit(node)
+
+    def _should_skip_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> bool:
+        """Determines if a function node should be skipped."""
+        return node.name in self.tokens_config.functions_to_skip or (
+            self.token_types_config.skip_overload_functions
+            and is_overload_function(node)
+        )
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):

@@ -84,7 +84,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return wrapper
 
-    def generic_visit(self, node) -> ast.AST:
+    def generic_visit(self, node: ast.AST) -> ast.AST:
         """Modified version of super class's generic_visit
         to extend functionality"""
         for field, old_value in ast.iter_fields(node):
@@ -154,10 +154,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         module: ast.Module = self.generic_visit(node)  # type:ignore
 
         if self.optimizations_config.remove_unused_imports:
-            names_and_attrs_finder = NamesAndAttersDetector()
-            names_and_attrs_finder.visit(module)
-
-            import_filter = ImportFilter(names_and_attrs_finder.names_and_attrs)
+            import_filter = UnusedImportSkipper()
             import_filter.visit(module)
 
         self._warn_unused_skips()
@@ -643,35 +640,19 @@ class AstNodeSkipper(ast.NodeTransformer):
         return ast.Constant(result)
 
 
-class NamesAndAttersDetector(ast.NodeVisitor):
+class UnusedImportSkipper(ast.NodeTransformer):
 
     __slots__ = ("names_and_attrs",)
 
     def __init__(self) -> None:
         self.names_and_attrs: set[str] = set()
 
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        self.names_and_attrs.add(node.id)
-        return node
-
-    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        self.names_and_attrs.add(node.attr)
-        return self.generic_visit(node)
-
-
-class ImportFilter(ast.NodeTransformer):
-
-    __slots__ = ("imports_to_keep",)
-
-    def __init__(self, imports_to_keep: set[str]) -> None:
-        self.imports_to_keep: set[str] = imports_to_keep
-
-    def generic_visit(self, node):
-        for _, old_value in ast.iter_fields(node):
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
                 ast_removed: bool = False
-                for value in old_value:
+                for value in reversed(old_value):
                     if isinstance(value, ast.AST):
                         value = self.visit(value)
                         if value is None:
@@ -686,17 +667,32 @@ class ImportFilter(ast.NodeTransformer):
                 if not isinstance(node, ast.Module) and not new_values and ast_removed:
                     new_values = [ast.Pass()]
 
-                old_value[:] = new_values
+                old_value[:] = reversed(new_values)
+
+            elif isinstance(old_value, ast.AST):
+                new_node = self.visit(old_value)
+                if new_node is None:
+                    delattr(node, field)
+                else:
+                    setattr(node, field, new_node)
 
         return node
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        filter_imports(node, self.imports_to_keep)
+        filter_imports(node, self.names_and_attrs)
 
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
         if node.module != "__future__":
-            filter_imports(node, self.imports_to_keep)
+            filter_imports(node, self.names_and_attrs)
 
         return node if node.names else None
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        self.names_and_attrs.add(node.id)
+        return node
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+        self.names_and_attrs.add(node.attr)
+        return self.generic_visit(node)

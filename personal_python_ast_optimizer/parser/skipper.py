@@ -66,10 +66,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @staticmethod
     def _within_class_node(function):
-        def wrapper(self: "AstNodeSkipper", *args, **kwargs) -> ast.AST | None:
+        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
             self._within_class = True
             try:
-                return function(self, *args, **kwargs)
+                return function(self, *args)
             finally:
                 self._within_class = False
 
@@ -77,10 +77,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @staticmethod
     def _within_function_node(function):
-        def wrapper(self: "AstNodeSkipper", *args, **kwargs) -> ast.AST | None:
+        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
             self._within_function = True
             try:
-                return function(self, *args, **kwargs)
+                return function(self, *args)
             finally:
                 self._within_function = False
 

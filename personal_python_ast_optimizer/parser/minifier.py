@@ -59,10 +59,6 @@ class MinifyUnparser(ast._Unparser):
             elif text:
                 yield text
 
-    def maybe_newline(self) -> None:
-        if self._source and self._source[-1] != "\n":
-            self.write("\n")
-
     def visit_node(
         self,
         node: ast.AST,
@@ -173,6 +169,54 @@ class MinifyUnparser(ast._Unparser):
         self.traverse(node.target)
         self.write(self.binop[node.op.__class__.__name__] + "=")
         self.traverse(node.value)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._write_decorators(node)
+        self.fill("class " + node.name)
+        if hasattr(node, "type_params"):
+            self._type_params_helper(node.type_params)
+        with self.delimit_if("(", ")", condition=node.bases or node.keywords):
+            comma = False
+            for e in node.bases:
+                if comma:
+                    self.write(",")
+                else:
+                    comma = True
+                self.traverse(e)
+            for e in node.keywords:
+                if comma:
+                    self.write(",")
+                else:
+                    comma = True
+                self.traverse(e)
+
+        with self.block():
+            self._write_docstring_and_traverse_body(node)
+
+    def _function_helper(
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+        fill_suffix: Literal["def", "async def"],
+    ) -> None:
+        self._write_decorators(node)
+        def_str = fill_suffix + " " + node.name
+        self.fill(def_str)
+        if hasattr(node, "type_params"):
+            self._type_params_helper(node.type_params)
+        with self.delimit("(", ")"):
+            self.traverse(node.args)
+        if node.returns:
+            self.write("->")
+            self.traverse(node.returns)
+        with self.block(extra=self.get_type_comment(node)):
+            self._write_docstring_and_traverse_body(node)
+
+    def _write_decorators(
+        self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        for deco in node.decorator_list:
+            self.fill("@")
+            self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:
         return len(self._source) > 0 and self._source[-1][-1:] == char_to_check

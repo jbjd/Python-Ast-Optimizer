@@ -153,14 +153,14 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
-        module: ast.Module = self.generic_visit(node)  # type:ignore
+        self.generic_visit(node)
 
         if self.optimizations_config.remove_unused_imports and self._has_imports:
             import_filter = UnusedImportSkipper()
-            import_filter.visit(module)
+            import_filter.visit(node)
 
         self._warn_unused_skips()
-        return module
+        return node
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:

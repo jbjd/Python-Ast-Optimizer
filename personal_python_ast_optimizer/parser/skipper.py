@@ -66,10 +66,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @staticmethod
     def _within_class_node(function):
-        def wrapper(self: "AstNodeSkipper", *args, **kwargs) -> ast.AST | None:
+        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
             self._within_class = True
             try:
-                return function(self, *args, **kwargs)
+                return function(self, *args)
             finally:
                 self._within_class = False
 
@@ -77,10 +77,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @staticmethod
     def _within_function_node(function):
-        def wrapper(self: "AstNodeSkipper", *args, **kwargs) -> ast.AST | None:
+        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
             self._within_function = True
             try:
-                return function(self, *args, **kwargs)
+                return function(self, *args)
             finally:
                 self._within_function = False
 
@@ -108,7 +108,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                     and not new_values
                     and field == "body"
                 ):
-                    new_values = [ast.Pass()]
+                    new_values.append(ast.Pass())
 
                 old_value[:] = new_values
 
@@ -153,14 +153,14 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
-        module: ast.Module = self.generic_visit(node)  # type:ignore
+        self.generic_visit(node)
 
         if self.optimizations_config.remove_unused_imports and self._has_imports:
             import_filter = UnusedImportSkipper()
-            import_filter.visit(module)
+            import_filter.visit(node)
 
         self._warn_unused_skips()
-        return module
+        return node
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
@@ -181,23 +181,13 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return self.generic_visit(node)
 
-    @_within_function_node
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
-    @_within_function_node
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
-    def _should_skip_function(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> bool:
-        """If a function node should be skipped"""
-        return node.name in self.tokens_config.functions_to_skip or (
-            self.token_types_config.skip_overload_functions
-            and is_overload_function(node)
-        )
-
+    @_within_function_node
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
@@ -218,9 +208,18 @@ class AstNodeSkipper(ast.NodeTransformer):
             if isinstance(last_body_node, ast.Return) and (
                 is_return_none(last_body_node) or last_body_node.value is None
             ):
-                node.body = node.body[:-1]
+                node.body.pop()
 
         return self.generic_visit(node)
+
+    def _should_skip_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> bool:
+        """Determines if a function node should be skipped."""
+        return node.name in self.tokens_config.functions_to_skip or (
+            self.token_types_config.skip_overload_functions
+            and is_overload_function(node)
+        )
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):
@@ -376,6 +375,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         self._has_imports = True
         return node
 
+    def visit_alias(self, node: ast.alias) -> ast.alias:
+        return node
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
         if node.id in self.optimizations_config.vars_to_fold:
@@ -423,6 +425,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
+            return node
 
         return self.generic_visit(node)
 
@@ -430,6 +433,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         """Always returns None. Caller responsible for ensuring empty bodies
         are populated with a Pass node."""
         return None  # This could be toggleable
+
+    def visit_Break(self, node: ast.Break) -> ast.Break:
+        return node
+
+    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
@@ -503,6 +512,8 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_arg(self, node: ast.arg) -> ast.AST:
         if self.token_types_config.skip_type_hints:
             node.annotation = None
+            return node
+
         return self.generic_visit(node)
 
     def visit_arguments(self, node: ast.arguments) -> ast.AST:
@@ -565,7 +576,6 @@ class AstNodeSkipper(ast.NodeTransformer):
     def _has_code_to_skip(self) -> bool:
         return (
             self.target_python_version is not None
-            or len(self.optimizations_config.vars_to_fold) > 0
             or self.optimizations_config.has_code_to_skip()
             or self.tokens_config.has_code_to_skip()
             or self.token_types_config.has_code_to_skip()
@@ -665,14 +675,11 @@ class UnusedImportSkipper(ast.NodeTransformer):
                         if value is None:
                             ast_removed = True
                             continue
-                        elif not isinstance(value, ast.AST):
-                            new_values.extend(value)
-                            continue
 
                     new_values.append(value)
 
                 if not isinstance(node, ast.Module) and not new_values and ast_removed:
-                    new_values = [ast.Pass()]
+                    new_values.append(ast.Pass())
 
                 old_value[:] = reversed(new_values)
 

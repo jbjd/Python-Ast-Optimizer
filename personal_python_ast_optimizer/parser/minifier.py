@@ -8,7 +8,7 @@ from personal_python_ast_optimizer.python_info import (
 )
 
 
-class MinifyUnparser(ast._Unparser):
+class MinifyUnparser(ast._Unparser):  # type: ignore
 
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
@@ -185,18 +185,18 @@ class MinifyUnparser(ast._Unparser):
             self._type_params_helper(node.type_params)
         with self.delimit_if("(", ")", condition=node.bases or node.keywords):
             comma = False
-            for e in node.bases:
+            for base in node.bases:
                 if comma:
                     self.write(",")
                 else:
                     comma = True
-                self.traverse(e)
-            for e in node.keywords:
+                self.traverse(base)
+            for kw in node.keywords:
                 if comma:
                     self.write(",")
                 else:
                     comma = True
-                self.traverse(e)
+                self.traverse(kw)
 
         with self.block():
             self._write_docstring_and_traverse_body(node)
@@ -227,7 +227,7 @@ class MinifyUnparser(ast._Unparser):
             self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:
-        return self._source and self._source[-1][-1:] == char_to_check
+        return bool(self._source) and self._source[-1][-1:] == char_to_check
 
     def _get_space_before_write(self) -> str:
         return (

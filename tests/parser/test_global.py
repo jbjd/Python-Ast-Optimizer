@@ -27,9 +27,9 @@ def test():
 """,
         """
 def test():
-    x = 1
-    def i():nonlocal x;print(x)
-    i()""".strip(),
+\tx=1
+\tdef i():nonlocal x;print(x)
+\ti()""".strip(),
     )
 
     run_minifier_and_assert_correct(before_and_after)

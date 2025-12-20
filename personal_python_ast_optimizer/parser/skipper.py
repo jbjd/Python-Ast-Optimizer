@@ -422,6 +422,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
+            return node
 
         return self.generic_visit(node)
 

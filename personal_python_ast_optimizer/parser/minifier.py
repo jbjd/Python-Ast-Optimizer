@@ -1,7 +1,6 @@
 import ast
 from typing import Iterable, Iterator, Literal
 
-from personal_python_ast_optimizer.parser.utils import node_inlineable
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,
     comparison_and_conjunctions,
@@ -77,7 +76,8 @@ class MinifyUnparser(ast._Unparser):
         if isinstance(node, list):
             last_visited_node: ast.stmt | None = None
             can_write_body_in_one_line = (
-                all(node_inlineable(sub_node) for sub_node in node) or len(node) == 1
+                all(self._node_inlineable(sub_node) for sub_node in node)
+                or len(node) == 1
             )
 
             for sub_node in node:
@@ -101,6 +101,14 @@ class MinifyUnparser(ast._Unparser):
         if node.msg:
             self.write(",")
             self.traverse(node.msg)
+
+    def visit_Global(self, node: ast.Global) -> None:
+        self.fill("global ", splitter=self._get_line_splitter())
+        self.interleave(lambda: self.write(","), self.write, node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
+        self.fill("nonlocal ", splitter=self._get_line_splitter())
+        self.interleave(lambda: self.write(","), self.write, node.names)
 
     def visit_Delete(self, node: ast.Delete) -> None:
         self.fill("del ", splitter=self._get_line_splitter())
@@ -240,7 +248,7 @@ class MinifyUnparser(ast._Unparser):
         if (
             self._indent > 0
             and self.previous_node_in_body is not None
-            and node_inlineable(self.previous_node_in_body)
+            and self._node_inlineable(self.previous_node_in_body)
         ):
             return ";"
 
@@ -251,3 +259,23 @@ class MinifyUnparser(ast._Unparser):
     ) -> None:
         """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self.write(","), self.traverse, body)
+
+    @staticmethod
+    def _node_inlineable(node: ast.AST) -> bool:
+        return node.__class__.__name__ in [
+            "Assert",
+            "AnnAssign",
+            "Assign",
+            "AugAssign",
+            "Break",
+            "Continue",
+            "Delete",
+            "Expr",
+            "Global",
+            "Import",
+            "ImportFrom",
+            "Nonlocal",
+            "Pass",
+            "Raise",
+            "Return",
+        ]

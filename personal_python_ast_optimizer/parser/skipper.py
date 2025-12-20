@@ -375,6 +375,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         self._has_imports = True
         return node
 
+    def visit_alias(self, node: ast.alias) -> ast.alias:
+        return node
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
         if node.id in self.optimizations_config.vars_to_fold:
@@ -430,6 +433,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         """Always returns None. Caller responsible for ensuring empty bodies
         are populated with a Pass node."""
         return None  # This could be toggleable
+
+    def visit_Break(self, node: ast.Break) -> ast.Break:
+        return node
+
+    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (

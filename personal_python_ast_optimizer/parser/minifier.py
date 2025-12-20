@@ -158,10 +158,10 @@ class MinifyUnparser(ast._Unparser):
             "(", ")", not node.simple and isinstance(node.target, ast.Name)
         ):
             self.traverse(node.target)
-        self.write(": ")
+        self.write(":")
         self.traverse(node.annotation)
         if node.value:
-            self.write(" = ")
+            self.write("=")
             self.traverse(node.value)
 
     def visit_Assign(self, node: ast.Assign) -> None:
@@ -230,10 +230,12 @@ class MinifyUnparser(ast._Unparser):
         return self._source and self._source[-1][-1:] == char_to_check
 
     def _get_space_before_write(self) -> str:
-        if not self._source:
-            return ""
-        most_recent_token: str = self._source[-1]
-        return "" if most_recent_token[-1:] in chars_that_dont_need_whitespace else " "
+        return (
+            ""
+            if not self._source
+            or self._source[-1][-1:] in chars_that_dont_need_whitespace
+            else " "
+        )
 
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         """Get character that starts the next line of code with the shortest

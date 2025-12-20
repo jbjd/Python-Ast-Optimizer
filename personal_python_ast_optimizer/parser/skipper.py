@@ -108,7 +108,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                     and not new_values
                     and field == "body"
                 ):
-                    new_values = [ast.Pass()]
+                    new_values.append(ast.Pass())
 
                 old_value[:] = new_values
 
@@ -679,7 +679,7 @@ class UnusedImportSkipper(ast.NodeTransformer):
                     new_values.append(value)
 
                 if not isinstance(node, ast.Module) and not new_values and ast_removed:
-                    new_values = [ast.Pass()]
+                    new_values.append(ast.Pass())
 
                 old_value[:] = reversed(new_values)
 

@@ -1,8 +1,6 @@
 import ast
-from ast import _Unparser  # type: ignore
 from typing import Iterable, Iterator, Literal
 
-from personal_python_ast_optimizer.parser.utils import node_inlineable
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,
     comparison_and_conjunctions,
@@ -10,7 +8,7 @@ from personal_python_ast_optimizer.python_info import (
 )
 
 
-class MinifyUnparser(_Unparser):
+class MinifyUnparser(ast._Unparser):  # type: ignore
 
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
@@ -37,7 +35,7 @@ class MinifyUnparser(_Unparser):
         """Write text, with some mapping replacements"""
         text = tuple(self._yield_updated_text(text))
 
-        if len(text) == 0:
+        if not text:
             return
 
         first_letter_to_write: str = text[0][:1]
@@ -60,10 +58,6 @@ class MinifyUnparser(_Unparser):
             elif text:
                 yield text
 
-    def maybe_newline(self) -> None:
-        if self._source and self._source[-1] != "\n":
-            self.write("\n")
-
     def visit_node(
         self,
         node: ast.AST,
@@ -82,7 +76,8 @@ class MinifyUnparser(_Unparser):
         if isinstance(node, list):
             last_visited_node: ast.stmt | None = None
             can_write_body_in_one_line = (
-                all(node_inlineable(sub_node) for sub_node in node) or len(node) == 1
+                all(self._node_inlineable(sub_node) for sub_node in node)
+                or len(node) == 1
             )
 
             for sub_node in node:
@@ -104,8 +99,16 @@ class MinifyUnparser(_Unparser):
         self.fill("assert ", splitter=self._get_line_splitter())
         self.traverse(node.test)
         if node.msg:
-            self.write(", ")
+            self.write(",")
             self.traverse(node.msg)
+
+    def visit_Global(self, node: ast.Global) -> None:
+        self.fill("global ", splitter=self._get_line_splitter())
+        self.interleave(lambda: self.write(","), self.write, node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
+        self.fill("nonlocal ", splitter=self._get_line_splitter())
+        self.interleave(lambda: self.write(","), self.write, node.names)
 
     def visit_Delete(self, node: ast.Delete) -> None:
         self.fill("del ", splitter=self._get_line_splitter())
@@ -155,10 +158,10 @@ class MinifyUnparser(_Unparser):
             "(", ")", not node.simple and isinstance(node.target, ast.Name)
         ):
             self.traverse(node.target)
-        self.write(": ")
+        self.write(":")
         self.traverse(node.annotation)
         if node.value:
-            self.write(" = ")
+            self.write("=")
             self.traverse(node.value)
 
     def visit_Assign(self, node: ast.Assign) -> None:
@@ -175,14 +178,64 @@ class MinifyUnparser(_Unparser):
         self.write(self.binop[node.op.__class__.__name__] + "=")
         self.traverse(node.value)
 
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._write_decorators(node)
+        self.fill("class " + node.name)
+        if hasattr(node, "type_params"):
+            self._type_params_helper(node.type_params)
+        with self.delimit_if("(", ")", condition=node.bases or node.keywords):
+            comma = False
+            for base in node.bases:
+                if comma:
+                    self.write(",")
+                else:
+                    comma = True
+                self.traverse(base)
+            for kw in node.keywords:
+                if comma:
+                    self.write(",")
+                else:
+                    comma = True
+                self.traverse(kw)
+
+        with self.block():
+            self._write_docstring_and_traverse_body(node)
+
+    def _function_helper(
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+        fill_suffix: Literal["def", "async def"],
+    ) -> None:
+        self._write_decorators(node)
+        def_str = fill_suffix + " " + node.name
+        self.fill(def_str)
+        if hasattr(node, "type_params"):
+            self._type_params_helper(node.type_params)
+        with self.delimit("(", ")"):
+            self.traverse(node.args)
+        if node.returns:
+            self.write("->")
+            self.traverse(node.returns)
+        with self.block(extra=self.get_type_comment(node)):
+            self._write_docstring_and_traverse_body(node)
+
+    def _write_decorators(
+        self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        for deco in node.decorator_list:
+            self.fill("@")
+            self.traverse(deco)
+
     def _last_char_is(self, char_to_check: str) -> bool:
-        return len(self._source) > 0 and self._source[-1][-1:] == char_to_check
+        return bool(self._source) and self._source[-1][-1:] == char_to_check
 
     def _get_space_before_write(self) -> str:
-        if not self._source:
-            return ""
-        most_recent_token: str = self._source[-1]
-        return "" if most_recent_token[-1:] in chars_that_dont_need_whitespace else " "
+        return (
+            ""
+            if not self._source
+            or self._source[-1][-1:] in chars_that_dont_need_whitespace
+            else " "
+        )
 
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         """Get character that starts the next line of code with the shortest
@@ -197,7 +250,7 @@ class MinifyUnparser(_Unparser):
         if (
             self._indent > 0
             and self.previous_node_in_body is not None
-            and node_inlineable(self.previous_node_in_body)
+            and self._node_inlineable(self.previous_node_in_body)
         ):
             return ";"
 
@@ -208,3 +261,23 @@ class MinifyUnparser(_Unparser):
     ) -> None:
         """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self.write(","), self.traverse, body)
+
+    @staticmethod
+    def _node_inlineable(node: ast.AST) -> bool:
+        return node.__class__.__name__ in [
+            "Assert",
+            "AnnAssign",
+            "Assign",
+            "AugAssign",
+            "Break",
+            "Continue",
+            "Delete",
+            "Expr",
+            "Global",
+            "Import",
+            "ImportFrom",
+            "Nonlocal",
+            "Pass",
+            "Raise",
+            "Return",
+        ]

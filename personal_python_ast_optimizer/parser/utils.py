@@ -6,9 +6,12 @@ from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
 def exclude_imports(node: ast.Import | ast.ImportFrom, exlcudes: Iterable[str]) -> None:
-    node.names = [
-        alias for alias in node.names if (alias.asname or alias.name) not in exlcudes
-    ]
+    if exlcudes:
+        node.names = [
+            alias
+            for alias in node.names
+            if (alias.asname or alias.name) not in exlcudes
+        ]
 
 
 def filter_imports(node: ast.Import | ast.ImportFrom, filter: Iterable[str]) -> None:
@@ -51,18 +54,24 @@ def skip_dangling_expressions(
 def skip_base_classes(
     node: ast.ClassDef, classes_to_ignore: Iterable[str] | TokensToSkip
 ) -> None:
-    node.bases = [
-        base for base in node.bases if getattr(base, "id", "") not in classes_to_ignore
-    ]
+    if classes_to_ignore:
+        node.bases = [
+            base
+            for base in node.bases
+            if getattr(base, "id", "") not in classes_to_ignore
+        ]
 
 
 def skip_decorators(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
     decorators_to_ignore: Iterable[str] | TokensToSkip,
 ) -> None:
-    node.decorator_list = [
-        n for n in node.decorator_list if get_node_name(n) not in decorators_to_ignore
-    ]
+    if decorators_to_ignore:
+        node.decorator_list = [
+            n
+            for n in node.decorator_list
+            if get_node_name(n) not in decorators_to_ignore
+        ]
 
 
 def remove_duplicate_slots(

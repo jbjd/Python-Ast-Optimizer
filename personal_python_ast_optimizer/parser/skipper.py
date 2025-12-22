@@ -147,9 +147,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
-        if not self._has_code_to_skip():
-            return node
-
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
@@ -571,14 +568,6 @@ class AstNodeSkipper(ast.NodeTransformer):
             False
             if self.target_python_version is None
             else self.target_python_version >= min_version
-        )
-
-    def _has_code_to_skip(self) -> bool:
-        return (
-            self.target_python_version is not None
-            or self.optimizations_config.has_code_to_skip()
-            or self.tokens_config.has_code_to_skip()
-            or self.token_types_config.has_code_to_skip()
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:

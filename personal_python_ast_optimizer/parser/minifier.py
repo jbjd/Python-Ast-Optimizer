@@ -55,7 +55,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
                 yield text.strip()
             elif text in comparison_and_conjunctions:
                 yield self._get_space_before_write() + text[1:]
-            elif text:
+            elif text != "":
                 yield text
 
     def visit_node(
@@ -227,24 +227,20 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
             self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:
-        return bool(self._source) and self._source[-1][-1:] == char_to_check
+        return bool(self._source) and self._source[-1][-1] == char_to_check
 
     def _get_space_before_write(self) -> str:
         return (
             ""
             if not self._source
-            or self._source[-1][-1:] in chars_that_dont_need_whitespace
+            or self._source[-1][-1] in chars_that_dont_need_whitespace
             else " "
         )
 
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         """Get character that starts the next line of code with the shortest
         possible whitespace. Either a new line, semicolon, or nothing."""
-        if (
-            len(self._source) > 0
-            and self._source[-1] == ":"
-            and self.can_write_body_in_one_line
-        ):
+        if self._source and self._source[-1] == ":" and self.can_write_body_in_one_line:
             return ""
 
         if (

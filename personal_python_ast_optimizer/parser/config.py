@@ -1,6 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum, EnumType
+from types import EllipsisType
 from typing import Iterable, Iterator
+
+# I tried to import this from ast, it worked on 3.12 but not 3.11?
+# TODO: When minimum python becomes 3.12, add "type" before definition
+_ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
 
 
 class TokensToSkip(dict[str, int]):
@@ -34,7 +39,7 @@ class TokensToSkip(dict[str, int]):
         return {key: 0 for key in input_set}
 
 
-class _Config(ABC):
+class _Config:
 
     __slots__ = ()
 
@@ -130,13 +135,13 @@ class OptimizationsConfig(_Config):
 
     def __init__(
         self,
-        vars_to_fold: dict[str, int | str | bool] | None = None,
+        vars_to_fold: dict[str, _ConstantValue] | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
         remove_unused_imports: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
-        self.vars_to_fold: dict[str, int | str | bool] = (
+        self.vars_to_fold: dict[str, _ConstantValue] = (
             {} if vars_to_fold is None else vars_to_fold
         )
         self.enums_to_fold: dict[str, dict[str, Enum]] = (

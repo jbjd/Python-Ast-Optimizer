@@ -1,10 +1,9 @@
 from abc import abstractmethod
 from enum import Enum, EnumType
-from types import EllipsisType
 from typing import Iterable, Iterator
 
 # I tried to import this from ast, it worked on 3.12 but not 3.11?
-type _ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
+type _ConstantValue = str | bytes | bool | int | float | complex | None
 
 
 class TokensToSkip(dict[str, int]):

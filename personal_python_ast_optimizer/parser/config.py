@@ -5,7 +5,7 @@ from typing import Iterable, Iterator
 
 # I tried to import this from ast, it worked on 3.12 but not 3.11?
 # TODO: When minimum python becomes 3.12, add "type" before definition
-_ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
+ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
 
 
 class TokensToSkip(dict[str, int]):
@@ -135,13 +135,13 @@ class OptimizationsConfig(_Config):
 
     def __init__(
         self,
-        vars_to_fold: dict[str, _ConstantValue] | None = None,
+        vars_to_fold: dict[str, ConstantValue] | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
         remove_unused_imports: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
-        self.vars_to_fold: dict[str, _ConstantValue] = (
+        self.vars_to_fold: dict[str, ConstantValue] = (
             {} if vars_to_fold is None else vars_to_fold
         )
         self.enums_to_fold: dict[str, dict[str, Enum]] = (

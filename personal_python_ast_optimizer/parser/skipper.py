@@ -387,7 +387,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.tokens_config.dict_keys_to_skip:
             new_dict = {
                 k: v
-                for k, v in zip(node.keys, node.values)
+                for k, v in zip(node.keys, node.values, strict=True)
                 if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
             }
             node.keys = list(new_dict.keys())

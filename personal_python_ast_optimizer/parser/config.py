@@ -11,8 +11,8 @@ ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
 class TokensToSkip(dict[str, int]):
     __slots__ = ("token_type",)
 
-    def __init__(self, tokens_to_skip: set[str] | None, token_type: str) -> None:
-        tokens_and_counts: dict[str, int] = self._set_to_dict_of_counts(tokens_to_skip)
+    def __init__(self, tokens_to_skip: Iterable[str] | None, token_type: str) -> None:
+        tokens_and_counts: dict[str, int] = dict.fromkeys(tokens_to_skip or [], 0)
         super().__init__(tokens_and_counts)
 
         self.token_type: str = token_type
@@ -28,14 +28,7 @@ class TokensToSkip(dict[str, int]):
         return contains
 
     def get_not_found_tokens(self) -> set[str]:
-        return set(token for token, found_count in self.items() if found_count == 0)
-
-    @staticmethod
-    def _set_to_dict_of_counts(input_set: set[str] | None) -> dict[str, int]:
-        if not input_set:
-            return {}
-
-        return {key: 0 for key in input_set}
+        return {token for token, found_count in self.items() if found_count == 0}
 
 
 class _Config:

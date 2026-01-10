@@ -9,7 +9,6 @@ ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
 
 
 class TokensToSkip(dict[str, int]):
-
     __slots__ = ("token_type",)
 
     def __init__(self, tokens_to_skip: set[str] | None, token_type: str) -> None:
@@ -40,7 +39,6 @@ class TokensToSkip(dict[str, int]):
 
 
 class _Config:
-
     __slots__ = ()
 
     @abstractmethod

@@ -27,7 +27,6 @@ from personal_python_ast_optimizer.parser.utils import (
 
 
 class AstNodeSkipper(ast.NodeTransformer):
-
     __slots__ = (
         "_has_imports",
         "_skippable_futures",
@@ -647,7 +646,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
 
 class UnusedImportSkipper(ast.NodeTransformer):
-
     __slots__ = ("names_and_attrs",)
 
     def __init__(self) -> None:

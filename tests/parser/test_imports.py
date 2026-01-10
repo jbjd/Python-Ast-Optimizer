@@ -29,7 +29,6 @@ _futures_imports_inline: str = (
 def test_futures_imports(
     version: tuple[int, int] | None, skip_type_hints: bool, after: str
 ):
-
     before_and_after = BeforeAndAfter(_futures_imports, after)
 
     run_minifier_and_assert_correct(
@@ -40,7 +39,6 @@ def test_futures_imports(
 
 
 def test_import_same_line():
-
     before_and_after = BeforeAndAfter(
         """
 import test
@@ -64,7 +62,6 @@ def i():import a,d;from b import c,d as e;from .b import f;print();import e""",
 
 
 def test_import_star():
-
     before_and_after = BeforeAndAfter(
         "from ctypes import *",
         "from ctypes import*",

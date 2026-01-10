@@ -8,7 +8,6 @@ _MODULE_NAME: str = "personal_python_ast_optimizer.parser.skipper"
 
 
 def test_warn_unused_skips():
-
     no_warn_module: ast.Module = ast.parse("from here import some_import;a=1")
 
     warn_module: ast.Module = ast.parse("a=1")

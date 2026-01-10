@@ -5,12 +5,12 @@ from typing import Iterable
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 
 
-def exclude_imports(node: ast.Import | ast.ImportFrom, exlcudes: Iterable[str]) -> None:
-    if exlcudes:
+def exclude_imports(node: ast.Import | ast.ImportFrom, excludes: Iterable[str]) -> None:
+    if excludes:
         node.names = [
             alias
             for alias in node.names
-            if (alias.asname or alias.name) not in exlcudes
+            if (alias.asname or alias.name) not in excludes
         ]
 
 

@@ -9,7 +9,6 @@ from personal_python_ast_optimizer.python_info import (
 
 
 class MinifyUnparser(ast._Unparser):  # type: ignore
-
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:

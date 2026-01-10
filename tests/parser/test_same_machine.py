@@ -32,7 +32,6 @@ _sys_example: str = f"N = '<' if sys.byteorder == '{sys.byteorder}' else '>'"
     ],
 )
 def test_assume_this_machine(assume_this_machine: bool, before: str, after: str):
-
     before_and_after = BeforeAndAfter(before, after)
 
     run_minifier_and_assert_correct(

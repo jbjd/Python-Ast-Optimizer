@@ -27,7 +27,6 @@ from personal_python_ast_optimizer.parser.utils import (
 
 
 class AstNodeSkipper(ast.NodeTransformer):
-
     __slots__ = (
         "_has_imports",
         "_skippable_futures",
@@ -388,7 +387,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.tokens_config.dict_keys_to_skip:
             new_dict = {
                 k: v
-                for k, v in zip(node.keys, node.values)
+                for k, v in zip(node.keys, node.values, strict=True)
                 if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
             }
             node.keys = list(new_dict.keys())
@@ -647,7 +646,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
 
 class UnusedImportSkipper(ast.NodeTransformer):
-
     __slots__ = ("names_and_attrs",)
 
     def __init__(self) -> None:

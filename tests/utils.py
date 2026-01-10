@@ -43,9 +43,9 @@ def run_minifier_and_assert_correct(
         ),
     )
     raise_if_python_code_invalid(minified_code)
-    assert (
-        before_and_after.after == minified_code
-    ), f"{before_and_after.after} != {minified_code}"
+    assert before_and_after.after == minified_code, (
+        f"{before_and_after.after} != {minified_code}"
+    )
 
 
 def raise_if_python_code_invalid(python_code: str) -> None:

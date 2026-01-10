@@ -1,5 +1,4 @@
 class Futures:
-
     __slots__ = ("name", "mandatory_version")
 
     def __init__(self, name: str, mandatory_version: tuple[int, int]) -> None:

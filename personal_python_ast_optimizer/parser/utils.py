@@ -1,5 +1,4 @@
 import ast
-import warnings
 from typing import Iterable
 
 from personal_python_ast_optimizer.parser.config import TokensToSkip
@@ -74,9 +73,7 @@ def skip_decorators(
         ]
 
 
-def remove_duplicate_slots(
-    node: ast.Assign | ast.AnnAssign, warn_duplicates: bool = True
-) -> None:
+def remove_duplicate_slots(node: ast.Assign | ast.AnnAssign) -> None:
     if isinstance(node.value, (ast.Tuple, ast.List, ast.Set)):
         found_values: set[str] = set()
         unique_objects: list[ast.expr] = []
@@ -92,8 +89,6 @@ def remove_duplicate_slots(
                 found_values.add(const_value.value)
 
         if len(node.value.elts) != len(unique_objects):
-            if warn_duplicates:
-                warnings.warn(f"Duplicate entries found in __slots__: {found_values}")
             node.value.elts = unique_objects
 
 

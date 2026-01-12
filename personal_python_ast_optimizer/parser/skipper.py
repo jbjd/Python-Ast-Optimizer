@@ -33,7 +33,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         "_within_class",
         "_within_function",
         "module_name",
-        "warn_unusual_code",
         "target_python_version",
         "optimizations_config",
         "token_types_config",
@@ -42,7 +41,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def __init__(self, config: SkipConfig) -> None:
         self.module_name: str = config.module_name
-        self.warn_unusual_code: bool = config.warn_unusual_code
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
@@ -271,7 +269,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             and len(node.targets) == 1
             and get_node_name(node.targets[0]) == "__slots__"
         ):
-            remove_duplicate_slots(node, self.warn_unusual_code)
+            remove_duplicate_slots(node)
 
         node.targets = new_targets
 
@@ -322,7 +320,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             return None
 
         if self._within_class and get_node_name(node.target) == "__slots__":
-            remove_duplicate_slots(node, self.warn_unusual_code)
+            remove_duplicate_slots(node)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
@@ -559,7 +557,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         return (
             isinstance(target, ast.Name)
             and target.id in self.optimizations_config.vars_to_fold
-            and isinstance(value, ast.Constant)
         )
 
     def _use_version_optimization(self, min_version: tuple[int, int]) -> bool:

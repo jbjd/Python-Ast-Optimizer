@@ -22,7 +22,6 @@ class BeforeAndAfter:
 
 def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
-    warn_unusual_code: bool = False,
     target_python_version: tuple[int, int] | None = None,
     token_types_config: TokenTypesConfig = TokenTypesConfig(),
     tokens_config: TokensConfig = TokensConfig(),
@@ -35,7 +34,6 @@ def run_minifier_and_assert_correct(
         before_and_after.before,
         SkipConfig(
             "",
-            warn_unusual_code=warn_unusual_code,
             target_python_version=target_python_version,
             tokens_config=tokens_config,
             token_types_config=token_types_config,

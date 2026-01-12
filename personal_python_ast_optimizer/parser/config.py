@@ -1,15 +1,7 @@
-import sys
 from abc import abstractmethod
 from enum import Enum, EnumType
 from types import EllipsisType
 from typing import Iterable, Iterator
-
-if sys.version_info[:2] < (3, 12):
-    ConstantValue = str | bytes | bool | int | float | complex | None | EllipsisType
-else:
-    type ConstantValue = (
-        str | bytes | bool | int | float | complex | None | EllipsisType
-    )
 
 
 class TokensToSkip(dict[str, int]):
@@ -130,15 +122,18 @@ class OptimizationsConfig(_Config):
 
     def __init__(
         self,
-        vars_to_fold: dict[str, ConstantValue] | None = None,
+        vars_to_fold: dict[
+            str, str | bytes | bool | int | float | complex | None | EllipsisType
+        ]
+        | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = True,
         remove_unused_imports: bool = True,
         assume_this_machine: bool = False,
     ) -> None:
-        self.vars_to_fold: dict[str, ConstantValue] = (
-            {} if vars_to_fold is None else vars_to_fold
-        )
+        self.vars_to_fold: dict[
+            str, str | bytes | bool | int | float | complex | None | EllipsisType
+        ] = {} if vars_to_fold is None else vars_to_fold
         self.enums_to_fold: dict[str, dict[str, Enum]] = (
             {}
             if enums_to_fold is None
@@ -161,7 +156,6 @@ class OptimizationsConfig(_Config):
 class SkipConfig(_Config):
     __slots__ = (
         "module_name",
-        "warn_unusual_code",
         "target_python_version",
         "token_types_config",
         "tokens_config",
@@ -172,14 +166,12 @@ class SkipConfig(_Config):
         self,
         module_name: str,
         *,
-        warn_unusual_code: bool = True,
         target_python_version: tuple[int, int] | None = None,
         tokens_config: TokensConfig = TokensConfig(),
         token_types_config: TokenTypesConfig = TokenTypesConfig(),
         optimizations_config: OptimizationsConfig = OptimizationsConfig(),
     ) -> None:
         self.module_name: str = module_name
-        self.warn_unusual_code: bool = warn_unusual_code
         self.target_python_version: tuple[int, int] | None = target_python_version
         self.tokens_config: TokensConfig = tokens_config
         self.token_types_config: TokenTypesConfig = token_types_config

@@ -4,7 +4,11 @@ indent-width = 4
 target-version = "py312"
 
 [lint]
-extend-select = ["C4", "E", "FURB", "F", "I", "PERF", "PL", "Q", "RET", "SIM", "UP", "W", "YTT"]
+select = ["C4", "E", "FURB", "F", "I", "PERF", "PL", "Q", "RET", "SIM", "TRY", "UP", "W", "YTT"]
+
+# D: Doc style
+# TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
+ignore = ["D", "TRY003"]
 
 [lint.isort]
 known-third-party = ["nuitka"]

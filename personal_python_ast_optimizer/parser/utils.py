@@ -81,9 +81,7 @@ def remove_duplicate_slots(node: ast.Assign | ast.AnnAssign) -> None:
             if not isinstance(const_value, ast.Constant) or not isinstance(
                 const_value.value, str
             ):
-                raise ValueError(
-                    f"Invalid slots value {const_value.__class__.__name__}"
-                )
+                raise TypeError(f"Invalid slots value {const_value.__class__.__name__}")
             if const_value.value not in found_values:
                 unique_objects.append(const_value)
                 found_values.add(const_value.value)

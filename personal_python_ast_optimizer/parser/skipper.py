@@ -160,10 +160,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        if (
-            node.name in self.tokens_config.classes_to_skip
-            or node.name in self.optimizations_config.enums_to_fold
-        ):
+        if node.name in self.tokens_config.classes_to_skip:
             return None
 
         if self._use_version_optimization((3, 0)):

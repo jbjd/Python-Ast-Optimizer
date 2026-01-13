@@ -18,13 +18,13 @@ class _SomeStrEnum(StrEnum):
 
 _fold_enum_cases = [
     BeforeAndAfter(
-        """
-class _SomeIntEnum(IntEnum):
+        """class _SomeIntEnum(IntEnum):
     A = 1
     B = 2
 
 print(_SomeIntEnum.A)""",
-        "print(1)",
+        """class _SomeIntEnum(IntEnum):A=1;B=2
+print(1)""",
     ),
     BeforeAndAfter(
         """

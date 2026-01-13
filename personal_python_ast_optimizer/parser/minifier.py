@@ -1,5 +1,6 @@
 import ast
-from typing import Iterable, Iterator, Literal
+from collections.abc import Iterable, Iterator
+from typing import Literal
 
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,

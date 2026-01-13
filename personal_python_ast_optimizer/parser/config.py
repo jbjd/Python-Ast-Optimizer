@@ -1,7 +1,7 @@
 from abc import abstractmethod
+from collections.abc import Iterable, Iterator
 from enum import Enum, EnumType
 from types import EllipsisType
-from typing import Iterable, Iterator
 
 
 class TokensToSkip(dict[str, int]):
@@ -50,7 +50,7 @@ class TokensConfig(_Config):
         "module_imports_to_skip",
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         from_imports_to_skip: set[str] | None = None,

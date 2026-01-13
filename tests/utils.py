@@ -23,9 +23,9 @@ class BeforeAndAfter:
 def run_minifier_and_assert_correct(
     before_and_after: BeforeAndAfter,
     target_python_version: tuple[int, int] | None = None,
-    token_types_config: TokenTypesConfig = TokenTypesConfig(),
-    tokens_config: TokensConfig = TokensConfig(),
-    optimizations_config: OptimizationsConfig = OptimizationsConfig(),
+    token_types_config: TokenTypesConfig | None = None,
+    tokens_config: TokensConfig | None = None,
+    optimizations_config: OptimizationsConfig | None = None,
 ):
     unparser: MinifyUnparser = MinifyUnparser()
 
@@ -35,9 +35,9 @@ def run_minifier_and_assert_correct(
         SkipConfig(
             "",
             target_python_version=target_python_version,
-            tokens_config=tokens_config,
-            token_types_config=token_types_config,
-            optimizations_config=optimizations_config,
+            tokens_config=tokens_config or TokensConfig(),
+            token_types_config=token_types_config or TokenTypesConfig(),
+            optimizations_config=optimizations_config or OptimizationsConfig(),
         ),
     )
     raise_if_python_code_invalid(minified_code)

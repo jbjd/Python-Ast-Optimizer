@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import Iterable
+from collections.abc import Iterable
 
 from personal_python_ast_optimizer.regex.classes import RegexReplacement
 
@@ -32,7 +32,7 @@ def apply_regex_to_file(
     encoding: str = "utf-8",
 ):
     """Wraps apply_regex with opening and writing to a file"""
-    with open(path, "r", encoding=encoding) as fp:
+    with open(path, encoding=encoding) as fp:
         source: str = fp.read()
 
     source = apply_regex(source, regex_replacement, warning_id)

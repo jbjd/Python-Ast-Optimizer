@@ -1,5 +1,5 @@
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from personal_python_ast_optimizer.parser.config import TokensToSkip
 

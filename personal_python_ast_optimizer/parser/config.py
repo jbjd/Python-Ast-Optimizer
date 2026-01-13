@@ -1,7 +1,7 @@
 from abc import abstractmethod
+from collections.abc import Iterable, Iterator
 from enum import Enum, EnumType
 from types import EllipsisType
-from typing import Iterable, Iterator
 
 
 class TokensToSkip(dict[str, int]):

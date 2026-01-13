@@ -50,7 +50,7 @@ class TokensConfig(_Config):
         "module_imports_to_skip",
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         from_imports_to_skip: set[str] | None = None,

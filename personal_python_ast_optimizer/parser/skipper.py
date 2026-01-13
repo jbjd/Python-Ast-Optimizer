@@ -94,10 +94,10 @@ class AstNodeSkipper(ast.NodeTransformer):
                 self._combine_imports(old_value)
                 for value in old_value:
                     if isinstance(value, ast.AST):
-                        value = self.visit(value)
+                        value = self.visit(value)  # noqa: PLW2901
                         if value is None:
                             continue
-                        elif not isinstance(value, ast.AST):
+                        if not isinstance(value, ast.AST):
                             new_values.extend(value)
                             continue
                     new_values.append(value)
@@ -421,7 +421,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Pass(self, node: ast.Pass) -> None:
         """Always returns None. Caller responsible for ensuring empty bodies
         are populated with a Pass node."""
-        return None  # This could be toggleable
+        return  # This could be toggleable
 
     def visit_Break(self, node: ast.Break) -> ast.Break:
         return node
@@ -576,7 +576,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             )
 
     @staticmethod
-    def _ast_constants_operation(
+    def _ast_constants_operation(  # noqa: PLR0912
         left: ast.Constant,
         right: ast.Constant,
         operation: ast.operator | ast.cmpop,
@@ -648,7 +648,7 @@ class UnusedImportSkipper(ast.NodeTransformer):
                 ast_removed: bool = False
                 for value in reversed(old_value):
                     if isinstance(value, ast.AST):
-                        value = self.visit(value)
+                        value = self.visit(value)  # noqa: PLW2901
                         if value is None:
                             ast_removed = True
                             continue

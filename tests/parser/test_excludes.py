@@ -66,6 +66,14 @@ def bar():
 """,
         "def bar():test=1",
     ),
+    BeforeAndAfter(
+        """
+def bar():
+    bar.foo = 2
+    test = 1
+""",
+        "def bar():test=1",
+    ),
 ]
 
 

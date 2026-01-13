@@ -75,11 +75,13 @@ class AstNodeSkipper(ast.NodeTransformer):
     @staticmethod
     def _within_function_node(function):
         def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
+            # In case we have a function in a function
+            previous_value: bool = self._within_function
             self._within_function = True
             try:
                 return function(self, *args)
             finally:
-                self._within_function = False
+                self._within_function = previous_value
 
         return wrapper
 
@@ -246,24 +248,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self._should_skip_function_assign(node):
             return None
 
-        # TODO: Currently if a.b.c.d only "c" and "d" are checked
-        var_name: str = get_node_name(node.targets[0])
-        parent_var_name: str = get_node_name(getattr(node.targets[0], "value", None))
-
-        if (
-            var_name in self.tokens_config.variables_to_skip
-            or parent_var_name in self.tokens_config.variables_to_skip
-        ):
-            return None
-
-        new_targets: list[ast.expr] = [
-            target
-            for target in node.targets
-            if not self._is_assign_of_folded_constant(target, node.value)
-        ]
-        if not new_targets:
-            return None
-
         if (
             self._within_class
             and len(node.targets) == 1
@@ -271,9 +255,9 @@ class AstNodeSkipper(ast.NodeTransformer):
         ):
             remove_duplicate_slots(node)
 
-        node.targets = new_targets
-
-        if isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple):
+        elif isinstance(node.targets[0], ast.Tuple) and isinstance(
+            node.value, ast.Tuple
+        ):
             target_elts = node.targets[0].elts
             original_target_len = len(target_elts)
 
@@ -287,9 +271,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                     else original_target_len - i - 1
                 )
                 for i in range(len(target_elts))
-                if self._is_assign_of_folded_constant(
-                    target_elts[i], node.value.elts[i]
-                )
+                if self._is_assign_of_folded_constant(target_elts[i])
             ]
 
             node.targets[0].elts = [
@@ -307,6 +289,19 @@ class AstNodeSkipper(ast.NodeTransformer):
                 node.targets = [node.targets[0].elts[0]]
             if len(node.value.elts) == 1:
                 node.value = node.value.elts[0]
+        else:
+            new_targets: list[ast.expr] = [
+                target
+                for target in node.targets
+                if not self._is_assign_of_folded_constant(target)
+                and get_node_name(target) not in self.tokens_config.variables_to_skip
+                and get_node_name(getattr(node.targets[0], "value", None))
+                not in self.tokens_config.variables_to_skip
+            ]
+            if not new_targets:
+                return None
+
+            node.targets = new_targets
 
         return self.generic_visit(node)
 
@@ -315,7 +310,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if (
             self._should_skip_function_assign(node)
             or get_node_name(node.target) in self.tokens_config.variables_to_skip
-            or self._is_assign_of_folded_constant(node.target, node.value)
+            or self._is_assign_of_folded_constant(node.target)
         ):
             return None
 
@@ -548,9 +543,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if index > 0:
             node.values = node.values[index:]
 
-    def _is_assign_of_folded_constant(
-        self, target: ast.expr, value: ast.expr | None
-    ) -> bool:
+    def _is_assign_of_folded_constant(self, target: ast.expr) -> bool:
         """Returns if node is assignment of a value that we are folding. In this case,
         there is no need to assign the value since its use"""
 

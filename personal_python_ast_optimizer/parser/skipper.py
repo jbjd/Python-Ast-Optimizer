@@ -118,9 +118,6 @@ class AstNodeSkipper(ast.NodeTransformer):
                 else:
                     setattr(node, field, new_node)
 
-            elif old_value is not None:
-                pass
-
         return node
 
     @staticmethod

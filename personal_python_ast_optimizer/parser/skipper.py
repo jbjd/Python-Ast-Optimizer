@@ -307,14 +307,15 @@ class AstNodeSkipper(ast.NodeTransformer):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""
+        target_name: str = get_node_name(node.target)
         if (
             self._should_skip_function_assign(node)
-            or get_node_name(node.target) in self.tokens_config.variables_to_skip
+            or target_name in self.tokens_config.variables_to_skip
             or self._is_assign_of_folded_constant(node.target)
         ):
             return None
 
-        if self._within_class and get_node_name(node.target) == "__slots__":
+        if self._within_class and target_name == "__slots__":
             remove_duplicate_slots(node)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
@@ -383,8 +384,10 @@ class AstNodeSkipper(ast.NodeTransformer):
                 for k, v in zip(node.keys, node.values, strict=True)
                 if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
             }
-            node.keys = list(new_dict.keys())
-            node.values = list(new_dict.values())
+
+            if len(new_dict) < len(node.keys):
+                node.keys = list(new_dict.keys())
+                node.values = list(new_dict.values())
 
         return self.generic_visit(node)
 
@@ -687,3 +690,16 @@ class UnusedImportSkipper(ast.NodeTransformer):
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         self.names_and_attrs.add(node.attr)
         return self.generic_visit(node)
+
+    # Nodes that do not need to be fully visited
+    def visit_alias(self, node: ast.alias) -> ast.alias:
+        return node
+
+    def visit_Pass(self, node: ast.Pass) -> ast.Pass:
+        return node
+
+    def visit_Break(self, node: ast.Break) -> ast.Break:
+        return node
+
+    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node

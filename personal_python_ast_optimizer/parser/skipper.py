@@ -214,7 +214,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             and is_overload_function(node)
         )
 
-    def visit_Try(self, node: ast.Try) -> ast.AST | None:
+    def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
         if isinstance(
@@ -224,7 +224,7 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return parsed_node
 
-    def visit_TryStar(self, node: ast.TryStar) -> ast.AST | None:
+    def visit_TryStar(self, node: ast.TryStar) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
         if isinstance(

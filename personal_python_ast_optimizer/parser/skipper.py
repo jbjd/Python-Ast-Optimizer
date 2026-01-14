@@ -214,6 +214,30 @@ class AstNodeSkipper(ast.NodeTransformer):
             and is_overload_function(node)
         )
 
+    def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(
+            parsed_node, (ast.Try, ast.TryStar)
+        ) and self._is_useless_try_node(parsed_node):
+            return parsed_node.finalbody or None
+
+        return parsed_node
+
+    def visit_TryStar(self, node: ast.TryStar) -> ast.AST | list[ast.stmt] | None:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(
+            parsed_node, (ast.Try, ast.TryStar)
+        ) and self._is_useless_try_node(parsed_node):
+            return parsed_node.finalbody or None
+
+        return parsed_node
+
+    @staticmethod
+    def _is_useless_try_node(node: ast.Try | ast.TryStar) -> bool:
+        return all(isinstance(n, ast.Pass) for n in node.body)
+
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):
             if node.attr in self.optimizations_config.enums_to_fold.get(

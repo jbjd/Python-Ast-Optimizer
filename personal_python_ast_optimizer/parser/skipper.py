@@ -29,6 +29,7 @@ from personal_python_ast_optimizer.parser.utils import (
 class AstNodeSkipper(ast.NodeTransformer):
     __slots__ = (
         "_has_imports",
+        "_locals_to_fold",
         "_skippable_futures",
         "_within_class",
         "_within_function",
@@ -61,6 +62,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_type_hints:
             self._skippable_futures.append("annotations")
 
+        self._locals_to_fold: dict[str, ast.Constant] = {}
+
     @staticmethod
     def _within_class_node(function):
         def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
@@ -81,6 +84,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             try:
                 return function(self, *args)
             finally:
+                self._locals_to_fold.clear()
                 self._within_function = previous_value
 
         return wrapper
@@ -172,7 +176,11 @@ class AstNodeSkipper(ast.NodeTransformer):
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
-        return self.generic_visit(node)
+        parsed_node: ast.ClassDef = self.generic_visit(node)  # type: ignore
+
+        self._check_overrides_local(parsed_node.name)
+
+        return parsed_node
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
@@ -203,7 +211,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             ):
                 node.body.pop()
 
-        return self.generic_visit(node)
+        parsed_node: ast.FunctionDef | ast.AsyncFunctionDef = self.generic_visit(node)  # type: ignore
+
+        self._check_overrides_local(parsed_node.name)
+
+        return parsed_node
 
     def _should_skip_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
@@ -264,21 +276,24 @@ class AstNodeSkipper(ast.NodeTransformer):
             self.optimizations_config.enums_to_fold[class_name][value_name].value
         )
 
-    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:  # noqa: PLR0912
         """Skips assign if it is an assignment to a constant that is being folded"""
         if self._should_skip_function_assign(node):
             return None
 
+        is_multi_assign: bool
         if (
             self._within_class
             and len(node.targets) == 1
             and get_node_name(node.targets[0]) == "__slots__"
         ):
+            is_multi_assign = False
             remove_duplicate_slots(node)
 
         elif isinstance(node.targets[0], ast.Tuple) and isinstance(
             node.value, ast.Tuple
         ):
+            is_multi_assign = True
             target_elts = node.targets[0].elts
             original_target_len = len(target_elts)
 
@@ -295,22 +310,28 @@ class AstNodeSkipper(ast.NodeTransformer):
                 if self._is_assign_of_folded_constant(target_elts[i])
             ]
 
-            node.targets[0].elts = [
-                target for i, target in enumerate(target_elts) if i not in bad_indexes
-            ]
-            node.value.elts = [
-                target
-                for i, target in enumerate(node.value.elts)
-                if i not in bad_indexes
-            ]
+            if bad_indexes:
+                node.targets[0].elts = [
+                    target
+                    for i, target in enumerate(target_elts)
+                    if i not in bad_indexes
+                ]
+                node.value.elts = [
+                    target
+                    for i, target in enumerate(node.value.elts)
+                    if i not in bad_indexes
+                ]
 
             if not node.targets[0].elts:
                 return None
+
+            # Multi-assignment has become single assignment
             if len(node.targets[0].elts) == 1:
                 node.targets = [node.targets[0].elts[0]]
-            if len(node.value.elts) == 1:
                 node.value = node.value.elts[0]
+                is_multi_assign = False
         else:
+            is_multi_assign = False
             new_targets: list[ast.expr] = [
                 target
                 for target in node.targets
@@ -323,6 +344,17 @@ class AstNodeSkipper(ast.NodeTransformer):
                 return None
 
             node.targets = new_targets
+
+        if self._within_function:
+            if is_multi_assign:
+                # TODO: Need to handle this, just remove all for now
+                for target in node.targets[0].elts:
+                    if isinstance(target, ast.Name):
+                        self._check_overrides_local(target.id)
+            elif isinstance(node.value, ast.Constant):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self._locals_to_fold[target.id] = node.value
 
         return self.generic_visit(node)
 
@@ -339,7 +371,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self._within_class and target_name == "__slots__":
             remove_duplicate_slots(node)
 
-        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
+        parsed_node: ast.Assign | ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
         if self.token_types_config.skip_type_hints:
             if (
@@ -351,7 +383,14 @@ class AstNodeSkipper(ast.NodeTransformer):
             elif parsed_node.value is None:
                 return None
             else:
-                return ast.Assign([parsed_node.target], parsed_node.value)
+                parsed_node = ast.Assign([parsed_node.target], parsed_node.value)
+
+        if (
+            self._within_function
+            and isinstance(parsed_node.target, ast.Name)
+            and isinstance(parsed_node.value, ast.Constant)
+        ):
+            self._locals_to_fold[target_name] = parsed_node.value
 
         return parsed_node
 
@@ -359,29 +398,44 @@ class AstNodeSkipper(ast.NodeTransformer):
         if get_node_name(node.target) in self.tokens_config.variables_to_skip:
             return None
 
-        return self.generic_visit(node)
+        parsed_node: ast.AugAssign = self.generic_visit(node)  # type: ignore
+
+        if (
+            isinstance(parsed_node.target, ast.Name)
+            and (target_id := parsed_node.target.id) in self._locals_to_fold
+        ):
+            if isinstance(parsed_node.value, ast.Constant):
+                self._locals_to_fold[target_id] = self._ast_constants_operation(
+                    self._locals_to_fold[target_id], parsed_node.value
+                )
+            else:
+                del self._locals_to_fold[target_id]
+
+        return parsed_node
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        exclude_imports(node, self.tokens_config.module_imports_to_skip)
-
-        if not node.names:
-            return None
-
-        self._has_imports = True
-        return node
+        return self._handle_import_node(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
         normalized_module_name: str = node.module or ""
         if normalized_module_name in self.tokens_config.module_imports_to_skip:
             return None
 
-        exclude_imports(node, self.tokens_config.from_imports_to_skip)
-
         if node.module == "__future__" and self._skippable_futures:
             exclude_imports(node, self._skippable_futures)
 
+        return self._handle_import_node(node)
+
+    def _handle_import_node(
+        self, node: ast.Import | ast.ImportFrom
+    ) -> ast.Import | ast.ImportFrom | None:
+        exclude_imports(node, self.tokens_config.module_imports_to_skip)
+
         if not node.names:
             return None
+
+        for alias in node.names:
+            self._check_overrides_local(alias.asname or alias.name)
 
         self._has_imports = True
         return node
@@ -390,11 +444,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         return node
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
-        """Extends super's implementation by adding constant folding"""
         if node.id in self.optimizations_config.vars_to_fold:
             constant_value = self.optimizations_config.vars_to_fold[node.id]
-
             return ast.Constant(constant_value)
+
+        if node.id in self._locals_to_fold:
+            return self._locals_to_fold[node.id]
 
         return node
 
@@ -657,6 +712,10 @@ class AstNodeSkipper(ast.NodeTransformer):
                 raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
 
         return ast.Constant(result)
+
+    def _check_overrides_local(self, name: str) -> None:
+        if name in self._locals_to_fold:
+            del self._locals_to_fold[name]
 
 
 class UnusedImportSkipper(ast.NodeTransformer):

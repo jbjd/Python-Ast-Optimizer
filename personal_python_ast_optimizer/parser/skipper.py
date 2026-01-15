@@ -8,6 +8,7 @@ from personal_python_ast_optimizer.parser.config import (
     SkipConfig,
     TokensConfig,
     TokenTypesConfig,
+    TypeHintsToSkip,
 )
 from personal_python_ast_optimizer.parser.machine_info import (
     machine_dependent_attributes,
@@ -347,7 +348,12 @@ class AstNodeSkipper(ast.NodeTransformer):
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
         if self.token_types_config.skip_type_hints:
-            if not parsed_node.value and self._node_context == _NodeContext.CLASS:
+            if (
+                not parsed_node.value
+                and self._node_context == _NodeContext.CLASS
+                and self.token_types_config.skip_type_hints
+                == TypeHintsToSkip.ALL_BUT_CLASS_VARS
+            ):
                 parsed_node.annotation = ast.Name("int")
             elif parsed_node.value is None:
                 return None

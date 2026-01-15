@@ -4,6 +4,17 @@ from enum import Enum, EnumType
 from types import EllipsisType
 
 
+class TypeHintsToSkip(Enum):
+    NONE = 0
+    # ALL might be unsafe, NamedTuple for example
+    ALL = 1
+    # Should be safe in most cases
+    ALL_BUT_CLASS_VARS = 2
+
+    def __bool__(self) -> bool:
+        return self != TypeHintsToSkip.NONE
+
+
 class TokensToSkip(dict[str, int]):
     __slots__ = ("token_type",)
 
@@ -103,11 +114,11 @@ class TokenTypesConfig(_Config):
         self,
         *,
         skip_dangling_expressions: bool = True,
-        skip_type_hints: bool = True,
+        skip_type_hints: TypeHintsToSkip = TypeHintsToSkip.ALL_BUT_CLASS_VARS,
         skip_overload_functions: bool = False,
     ) -> None:
         self.skip_dangling_expressions: bool = skip_dangling_expressions
-        self.skip_type_hints: bool = skip_type_hints
+        self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_overload_functions: bool = skip_overload_functions
 
 

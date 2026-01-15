@@ -1,5 +1,6 @@
 import ast
 import warnings
+from enum import Enum
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser.config import (
@@ -26,12 +27,16 @@ from personal_python_ast_optimizer.parser.utils import (
 )
 
 
+class _NodeContext(Enum):
+    NONE = 0
+    CLASS = 1
+    FUNCTION = 2
+
+
 class AstNodeSkipper(ast.NodeTransformer):
     __slots__ = (
         "_has_imports",
-        "_skippable_futures",
-        "_within_class",
-        "_within_function",
+        "_node_context_skippable_futures",
         "module_name",
         "target_python_version",
         "optimizations_config",
@@ -49,8 +54,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         self.tokens_config: TokensConfig = config.tokens_config
 
         self._has_imports: bool = False
-        self._within_class: bool = False
-        self._within_function: bool = False
+        self._node_context: _NodeContext = _NodeContext.NONE
 
         self._skippable_futures: list[str] = (
             get_unneeded_futures(self.target_python_version)
@@ -64,11 +68,12 @@ class AstNodeSkipper(ast.NodeTransformer):
     @staticmethod
     def _within_class_node(function):
         def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
-            self._within_class = True
+            previous_value: _NodeContext = self._node_context
+            self._node_context = _NodeContext.CLASS
             try:
                 return function(self, *args)
             finally:
-                self._within_class = False
+                self._node_context = previous_value
 
         return wrapper
 
@@ -76,12 +81,12 @@ class AstNodeSkipper(ast.NodeTransformer):
     def _within_function_node(function):
         def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
             # In case we have a function in a function
-            previous_value: bool = self._within_function
-            self._within_function = True
+            previous_value: _NodeContext = self._node_context
+            self._node_context = _NodeContext.FUNCTION
             try:
                 return function(self, *args)
             finally:
-                self._within_function = previous_value
+                self._node_context = previous_value
 
         return wrapper
 
@@ -270,7 +275,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             return None
 
         if (
-            self._within_class
+            self._node_context == _NodeContext.CLASS
             and len(node.targets) == 1
             and get_node_name(node.targets[0]) == "__slots__"
         ):
@@ -336,17 +341,13 @@ class AstNodeSkipper(ast.NodeTransformer):
         ):
             return None
 
-        if self._within_class and target_name == "__slots__":
+        if self._node_context == _NodeContext.CLASS and target_name == "__slots__":
             remove_duplicate_slots(node)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
         if self.token_types_config.skip_type_hints:
-            if (
-                not parsed_node.value
-                and self._within_class
-                and not self._within_function
-            ):
+            if not parsed_node.value and self._node_context == _NodeContext.CLASS:
                 parsed_node.annotation = ast.Name("int")
             elif parsed_node.value is None:
                 return None

@@ -1,3 +1,4 @@
+from personal_python_ast_optimizer.parser.config import TokenTypesConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -19,7 +20,17 @@ class SomeTuple():
     '''A tuple, wow!'''
     thing1: str
     thing2: int
-""",
-        "class SomeTuple:thing1:int;thing2:int",
+
+    def a():
+        class B:
+            thing3: None
+        return B""",
+        """class SomeTuple:
+\tthing1:int;thing2:int
+\tdef a():
+\t\tclass B:thing3:int
+\t\treturn B""",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after, token_types_config=TokenTypesConfig(skip_type_hints=True)
+    )

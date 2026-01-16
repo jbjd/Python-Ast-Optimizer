@@ -3,6 +3,7 @@ import pytest
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     TokenTypesConfig,
+    TypeHintsToSkip,
 )
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
@@ -21,13 +22,13 @@ _futures_imports_inline: str = (
 @pytest.mark.parametrize(
     "version,skip_type_hints,after",
     [
-        (None, False, _futures_imports_inline),
-        ((3, 7), False, "from __future__ import annotations"),
-        ((3, 7), True, ""),
+        (None, TypeHintsToSkip.NONE, _futures_imports_inline),
+        ((3, 7), TypeHintsToSkip.NONE, "from __future__ import annotations"),
+        ((3, 7), TypeHintsToSkip.ALL, ""),
     ],
 )
 def test_futures_imports(
-    version: tuple[int, int] | None, skip_type_hints: bool, after: str
+    version: tuple[int, int] | None, skip_type_hints: TypeHintsToSkip, after: str
 ):
     before_and_after = BeforeAndAfter(_futures_imports, after)
 

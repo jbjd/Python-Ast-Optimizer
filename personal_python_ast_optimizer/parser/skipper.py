@@ -38,6 +38,7 @@ class AstNodeSkipper(ast.NodeTransformer):
     __slots__ = (
         "_has_imports",
         "_node_context_skippable_futures",
+        "_simplified_named_tuple",
         "module_name",
         "target_python_version",
         "optimizations_config",
@@ -55,6 +56,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         self.tokens_config: TokensConfig = config.tokens_config
 
         self._has_imports: bool = False
+        self._simplified_named_tuple: bool = False
         self._node_context: _NodeContext = _NodeContext.NONE
 
         self._skippable_futures: list[str] = (
@@ -157,6 +159,21 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         self.generic_visit(node)
 
+        if self._simplified_named_tuple:
+            import_to_update: ast.ImportFrom | None = None
+            for n in node.body:
+                if isinstance(n, ast.ImportFrom) and n.module == "collections":
+                    if any(alias.name == "namedtuple" for alias in n.names):
+                        break
+                    if import_to_update is None:
+                        import_to_update = n
+            else:  # namedtuple was not already imported
+                alias = ast.alias("namedtuple")
+                if import_to_update is None:
+                    node.body.insert(0, ast.ImportFrom("collections", [alias]))
+                else:
+                    import_to_update.names.append(alias)
+
         if self.optimizations_config.remove_unused_imports and self._has_imports:
             import_filter = UnusedImportSkipper()
             import_filter.visit(node)
@@ -175,10 +192,41 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
+        if (
+            self.token_types_config.simplify_named_tuples
+            and self._is_simple_named_tuple(node)
+        ):
+            self._simplified_named_tuple = True
+            named_tuple = ast.Call(
+                ast.Name("namedtuple"),
+                [
+                    ast.Constant(node.name),
+                    ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore
+                ],
+                [],
+            )
+            return ast.Assign([ast.Name(node.name)], named_tuple)
+
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
         return self.generic_visit(node)
+
+    @staticmethod
+    def _is_simple_named_tuple(node: ast.ClassDef) -> bool:
+        return (
+            len(node.bases) == 1
+            and isinstance(node.bases[0], ast.Name)
+            and node.bases[0].id == "NamedTuple"
+            and not node.keywords
+            and not node.decorator_list
+            and all(
+                isinstance(n, ast.AnnAssign)
+                and isinstance(n.target, ast.Name)
+                and n.value is None
+                for n in node.body
+            )
+        )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)

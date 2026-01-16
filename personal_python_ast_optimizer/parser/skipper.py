@@ -170,7 +170,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             else:  # namedtuple was not already imported
                 alias = ast.alias("namedtuple")
                 if import_to_update is None:
-                    node.body.insert(0, ast.ImportFrom("collections", [alias]))
+                    node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
                 else:
                     import_to_update.names.append(alias)
 

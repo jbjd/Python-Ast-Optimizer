@@ -6,8 +6,7 @@ from personal_python_ast_optimizer.parser.config import (
     TokensConfig,
     TokenTypesConfig,
 )
-from personal_python_ast_optimizer.parser.minifier import MinifyUnparser
-from personal_python_ast_optimizer.parser.run import run_minify_parser
+from personal_python_ast_optimizer.parser.run import run_unparser
 
 
 class BeforeAndAfter:
@@ -27,12 +26,9 @@ def run_minifier_and_assert_correct(
     tokens_config: TokensConfig | None = None,
     optimizations_config: OptimizationsConfig | None = None,
 ):
-    unparser: MinifyUnparser = MinifyUnparser()
-
-    minified_code: str = run_minify_parser(
-        unparser,
+    minified_code: str = run_unparser(
         before_and_after.before,
-        SkipConfig(
+        skip_config=SkipConfig(
             "",
             target_python_version=target_python_version,
             tokens_config=tokens_config or TokensConfig(),

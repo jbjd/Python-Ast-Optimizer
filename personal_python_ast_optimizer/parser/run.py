@@ -5,7 +5,7 @@ from personal_python_ast_optimizer.parser.minifier import MinifyUnparser
 from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper
 
 
-def run_minify_parser(
+def run_unparser(
     source: str,
     unparser: ast._Unparser | None = None,  # type: ignore[name-defined]
     skip_config: SkipConfig | None = None,

@@ -6,7 +6,7 @@ from types import EllipsisType
 
 class TypeHintsToSkip(Enum):
     NONE = 0
-    # ALL might be unsafe, NamedTuple for example
+    # ALL might be unsafe, NamedTuple or TypedDict for example
     ALL = 1
     # Should be safe in most cases
     ALL_BUT_CLASS_VARS = 2

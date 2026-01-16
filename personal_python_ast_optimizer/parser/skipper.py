@@ -192,25 +192,28 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_dangling_expressions:
             skip_dangling_expressions(node)
 
+        skip_base_classes(node, self.tokens_config.classes_to_skip)
+        skip_decorators(node, self.tokens_config.decorators_to_skip)
+
+        parsed_node = self.generic_visit(node)
+
         if (
             self.token_types_config.simplify_named_tuples
-            and self._is_simple_named_tuple(node)
+            and isinstance(parsed_node, ast.ClassDef)
+            and self._is_simple_named_tuple(parsed_node)
         ):
             self._simplified_named_tuple = True
             named_tuple = ast.Call(
                 ast.Name("namedtuple"),
                 [
-                    ast.Constant(node.name),
-                    ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore
+                    ast.Constant(parsed_node.name),
+                    ast.List([ast.Constant(n.target.id) for n in parsed_node.body]),  # type: ignore
                 ],
                 [],
             )
-            return ast.Assign([ast.Name(node.name)], named_tuple)
+            return ast.Assign([ast.Name(parsed_node.name)], named_tuple)
 
-        skip_base_classes(node, self.tokens_config.classes_to_skip)
-        skip_decorators(node, self.tokens_config.decorators_to_skip)
-
-        return self.generic_visit(node)
+        return parsed_node
 
     @staticmethod
     def _is_simple_named_tuple(node: ast.ClassDef) -> bool:

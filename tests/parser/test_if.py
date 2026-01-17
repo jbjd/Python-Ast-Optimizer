@@ -65,6 +65,14 @@ else:bar()""",
         "test()",
     ),
     BeforeAndAfter(
+        "if str(a) == 'a':pass",
+        "",
+    ),
+    BeforeAndAfter(
+        "if a < 3:pass",
+        "",
+    ),
+    BeforeAndAfter(
         """
 try:foo()
 except:raise OSError

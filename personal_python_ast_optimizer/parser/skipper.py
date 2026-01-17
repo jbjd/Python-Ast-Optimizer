@@ -25,6 +25,9 @@ from personal_python_ast_optimizer.parser.utils import (
     skip_base_classes,
     skip_decorators,
 )
+from personal_python_ast_optimizer.python_info import (
+    default_functions_safe_to_exclude_in_test_expr,
+)
 
 
 class _NodeContext(Enum):
@@ -101,17 +104,19 @@ class AstNodeSkipper(ast.NodeTransformer):
                 self._combine_imports(old_value)
                 for value in old_value:
                     if isinstance(value, ast.AST):
-                        value = self.visit(value)  # noqa: PLW2901
+                        value: ast.AST | list[ast.AST] | None = self.visit(value)  # noqa: PLW2901
+
                         if value is None or (
                             self.token_types_config.skip_dangling_expressions
                             and isinstance(value, ast.Expr)
-                            # TODO: handle binop/boolop/compare with only constants or names
                             and isinstance(value.value, ast.Constant)
                         ):
                             continue
+
                         if not isinstance(value, ast.AST):
                             new_values.extend(value)
                             continue
+
                     new_values.append(value)
 
                 if (
@@ -500,7 +505,11 @@ class AstNodeSkipper(ast.NodeTransformer):
                 return if_body or None
 
             if not parsed_node.orelse and self._body_is_only_pass(parsed_node.body):
-                return ast.Expr(parsed_node.test)
+                call_finder = _DanglingExprCallFinder(
+                    self.optimizations_config.functions_safe_to_exclude_in_test_expr
+                )
+                call_finder.visit(parsed_node.test)
+                return [ast.Expr(expr) for expr in call_finder.calls]
 
         return parsed_node
 
@@ -565,6 +574,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                 return ast.Constant(machine_dependent_functions[function_call_key])
 
         return self.generic_visit(node)
+
+    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+        return node
 
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (
@@ -823,4 +835,25 @@ class UnusedImportSkipper(ast.NodeTransformer):
         return node
 
     def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node
+
+    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+        return node
+
+
+class _DanglingExprCallFinder(ast.NodeTransformer):
+    """Finds all calls in a given dangling expression
+    execpt for a subset of builtin functions that have
+    no side effects."""
+
+    __slots__ = ("calls", "excludes")
+
+    def __init__(self, excludes: set[str]) -> None:
+        self.calls: list[ast.Call] = []
+        self.excludes: set[str] = excludes
+
+    def visit_Call(self, node: ast.Call) -> ast.Call:
+        if get_node_name(node) not in default_functions_safe_to_exclude_in_test_expr:
+            self.calls.append(node)
+
         return node

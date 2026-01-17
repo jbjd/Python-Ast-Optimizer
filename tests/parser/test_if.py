@@ -5,17 +5,17 @@ from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 _if_cases = [
     BeforeAndAfter(
         """
-if a() == b:pass
+if a() == b:eggs()
 else:pass
 """,
-        "if a()==b:pass",
+        "if a()==b:eggs()",
     ),
     BeforeAndAfter(
         """
-if a == b:pass
+if a == b:eggs()
 else:print()""",
         """
-if a==b:pass
+if a==b:eggs()
 else:print()
 """.strip(),
     ),
@@ -55,6 +55,14 @@ else:test2()""".strip(),
 if 1 != 2:foo()
 else:bar()""",
         "foo()",
+    ),
+    BeforeAndAfter(
+        "if test():pass\nelse:foo()",
+        "if test():pass\nelse:foo()",
+    ),
+    BeforeAndAfter(
+        "if test():pass",
+        "test()",
     ),
 ]
 

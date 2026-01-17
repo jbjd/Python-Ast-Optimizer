@@ -292,9 +292,9 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
-        if isinstance(
-            parsed_node, (ast.Try, ast.TryStar)
-        ) and self._is_useless_try_node(parsed_node):
+        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
+            parsed_node.body
+        ):
             return parsed_node.finalbody or None
 
         return parsed_node
@@ -302,16 +302,16 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_TryStar(self, node: ast.TryStar) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
-        if isinstance(
-            parsed_node, (ast.Try, ast.TryStar)
-        ) and self._is_useless_try_node(parsed_node):
+        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
+            parsed_node.body
+        ):
             return parsed_node.finalbody or None
 
         return parsed_node
 
     @staticmethod
-    def _is_useless_try_node(node: ast.Try | ast.TryStar) -> bool:
-        return all(isinstance(n, ast.Pass) for n in node.body)
+    def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
+        return all(isinstance(n, ast.Pass) for n in node_body)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):
@@ -491,13 +491,15 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = self.generic_visit(node)
 
-        if isinstance(parsed_node, ast.If) and isinstance(
-            parsed_node.test, ast.Constant
-        ):
-            if_body: list[ast.stmt] = (
-                parsed_node.body if parsed_node.test.value else parsed_node.orelse
-            )
-            return if_body or None
+        if isinstance(parsed_node, ast.If):
+            if isinstance(parsed_node.test, ast.Constant):
+                if_body: list[ast.stmt] = (
+                    parsed_node.body if parsed_node.test.value else parsed_node.orelse
+                )
+                return if_body or None
+
+            if not parsed_node.orelse and self._body_is_only_pass(parsed_node.body):
+                return parsed_node.test
 
         return parsed_node
 

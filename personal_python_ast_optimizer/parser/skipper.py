@@ -197,7 +197,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if (
             self.token_types_config.simplify_named_tuples
-            and isinstance(node, ast.ClassDef)
             and self._is_simple_named_tuple(node)
         ):
             self._simplified_named_tuple = True
@@ -524,6 +523,11 @@ class AstNodeSkipper(ast.NodeTransformer):
             return node
 
         return self.generic_visit(node)
+
+    def visit_Assert(self, node: ast.Assert) -> ast.AST | None:
+        return (
+            None if self.token_types_config.skip_asserts else self.generic_visit(node)
+        )
 
     def visit_Pass(self, node: ast.Pass) -> None:
         """Always returns None. Caller responsible for ensuring empty bodies

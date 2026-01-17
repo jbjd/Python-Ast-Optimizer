@@ -195,25 +195,16 @@ class AstNodeSkipper(ast.NodeTransformer):
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
-        parsed_node = self.generic_visit(node)
-
         if (
             self.token_types_config.simplify_named_tuples
-            and isinstance(parsed_node, ast.ClassDef)
-            and self._is_simple_named_tuple(parsed_node)
+            and isinstance(node, ast.ClassDef)
+            and self._is_simple_named_tuple(node)
         ):
             self._simplified_named_tuple = True
-            named_tuple = ast.Call(
-                ast.Name("namedtuple"),
-                [
-                    ast.Constant(parsed_node.name),
-                    ast.List([ast.Constant(n.target.id) for n in parsed_node.body]),  # type: ignore
-                ],
-                [],
-            )
-            return ast.Assign([ast.Name(parsed_node.name)], named_tuple)
+            named_tuple = self._build_named_tuple(node)
+            return ast.Assign([ast.Name(node.name)], named_tuple)
 
-        return parsed_node
+        return self.generic_visit(node)
 
     @staticmethod
     def _is_simple_named_tuple(node: ast.ClassDef) -> bool:
@@ -224,11 +215,45 @@ class AstNodeSkipper(ast.NodeTransformer):
             and not node.keywords
             and not node.decorator_list
             and all(
-                isinstance(n, ast.AnnAssign)
-                and isinstance(n.target, ast.Name)
-                and n.value is None
+                isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name)
                 for n in node.body
             )
+        )
+
+    @staticmethod
+    def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
+        """Build what a namedtuple node would  be for a given
+        class def inheriting from NamedTuple with only AnnAssigns in the body."""
+
+        defaults: list[ast.expr]
+
+        if node.body:
+            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore
+
+            for i in range(1, len(node.body)):
+                assign: ast.AnnAssign = node.body[i]  # type: ignore
+                if assign.value is not None:
+                    defaults.append(assign.value)
+                elif node.body[i - 1].value is not None:  # type: ignore
+                    raise ValueError(
+                        f"Non-default namedtuple {node.name} field "
+                        "cannot follow default field"
+                    )
+
+        else:
+            defaults = []
+
+        keywords: list[ast.keyword] = (
+            [ast.keyword("defaults", ast.List(defaults))] if defaults else []
+        )
+
+        return ast.Call(
+            ast.Name("namedtuple"),
+            [
+                ast.Constant(node.name),
+                ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore
+            ],
+            keywords,
         )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:

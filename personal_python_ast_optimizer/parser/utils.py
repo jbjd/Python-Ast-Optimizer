@@ -37,19 +37,6 @@ def is_return_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
-def skip_dangling_expressions(
-    node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-) -> None:
-    """Removes constant dangling expression like doc strings"""
-    node.body = [
-        element
-        for element in node.body
-        if not (
-            isinstance(element, ast.Expr) and isinstance(element.value, ast.Constant)
-        )
-    ]
-
-
 def skip_base_classes(
     node: ast.ClassDef, classes_to_ignore: Iterable[str] | TokensToSkip
 ) -> None:

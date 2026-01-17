@@ -23,7 +23,6 @@ from personal_python_ast_optimizer.parser.utils import (
     is_return_none,
     remove_duplicate_slots,
     skip_base_classes,
-    skip_dangling_expressions,
     skip_decorators,
 )
 
@@ -103,7 +102,11 @@ class AstNodeSkipper(ast.NodeTransformer):
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value)  # noqa: PLW2901
-                        if value is None:
+                        if value is None or (
+                            self.token_types_config.skip_dangling_expressions
+                            and isinstance(value, ast.Expr)
+                            and isinstance(value.value, ast.Constant)
+                        ):
                             continue
                         if not isinstance(value, ast.AST):
                             new_values.extend(value)
@@ -154,9 +157,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
-
         self.generic_visit(node)
 
         if self._simplified_named_tuple:
@@ -188,9 +188,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if self._use_version_optimization((3, 0)):
             skip_base_classes(node, ["object"])
-
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
 
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
@@ -271,9 +268,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if self.token_types_config.skip_type_hints:
             node.returns = None
-
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
 
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 

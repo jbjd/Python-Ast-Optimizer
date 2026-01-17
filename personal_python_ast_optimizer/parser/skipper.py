@@ -105,6 +105,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                         if value is None or (
                             self.token_types_config.skip_dangling_expressions
                             and isinstance(value, ast.Expr)
+                            # TODO: handle binop/boolop/compare with only constants or names
                             and isinstance(value.value, ast.Constant)
                         ):
                             continue

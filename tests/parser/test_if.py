@@ -64,6 +64,13 @@ else:bar()""",
         "if test():pass",
         "test()",
     ),
+    BeforeAndAfter(
+        """
+try:foo()
+except:raise OSError
+if test():pass""",
+        "try:foo()\nexcept:raise OSError\ntest()",
+    ),
 ]
 
 

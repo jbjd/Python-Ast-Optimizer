@@ -499,7 +499,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 return if_body or None
 
             if not parsed_node.orelse and self._body_is_only_pass(parsed_node.body):
-                return parsed_node.test
+                return ast.Expr(parsed_node.test)
 
         return parsed_node
 

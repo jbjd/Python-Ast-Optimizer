@@ -97,7 +97,7 @@ class A(NamedTuple):
         )
 
 
-_simplify_named_tuple_test_cases: list[tuple[str, str]] = [
+_collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
     (
         "a = (1,) + (0,0) + b",
         "a=(1,0,0,*b)",
@@ -113,7 +113,7 @@ _simplify_named_tuple_test_cases: list[tuple[str, str]] = [
 ]
 
 
-@pytest.mark.parametrize(("before", "after"), _simplify_named_tuple_test_cases)
+@pytest.mark.parametrize(("before", "after"), _collection_concat_to_unpack_test_cases)
 def test_collection_concat_to_unpack(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 

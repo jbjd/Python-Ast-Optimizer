@@ -517,6 +517,22 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         return parsed_node
 
+    def visit_While(self, node: ast.While) -> ast.AST | None:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.While) and isinstance(
+            parsed_node.test, ast.Constant
+        ):
+            if not parsed_node.test.value:
+                return None
+
+            # 1 is faster in python 2, same in 3
+            # but less size
+            if parsed_node.test.value is True:
+                parsed_node.test.value = 1
+
+        return parsed_node
+
     def visit_Return(self, node: ast.Return) -> ast.AST:
         if is_return_none(node):
             node.value = None
@@ -552,6 +568,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                 return ast.Constant(machine_dependent_functions[function_call_key])
 
         return self.generic_visit(node)
+
+    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+        return node
 
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (
@@ -810,4 +829,7 @@ class UnusedImportSkipper(ast.NodeTransformer):
         return node
 
     def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node
+
+    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
         return node

@@ -23,8 +23,10 @@ from personal_python_ast_optimizer.parser.utils import (
     is_return_none,
     remove_duplicate_slots,
     skip_base_classes,
-    skip_dangling_expressions,
     skip_decorators,
+)
+from personal_python_ast_optimizer.python_info import (
+    default_functions_safe_to_exclude_in_test_expr,
 )
 
 
@@ -103,11 +105,18 @@ class AstNodeSkipper(ast.NodeTransformer):
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value)  # noqa: PLW2901
-                        if value is None:
+
+                        if value is None or (
+                            self.token_types_config.skip_dangling_expressions
+                            and isinstance(value, ast.Expr)
+                            and isinstance(value.value, ast.Constant)
+                        ):
                             continue
+
                         if not isinstance(value, ast.AST):
                             new_values.extend(value)
                             continue
+
                     new_values.append(value)
 
                 if (
@@ -154,9 +163,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
-
         self.generic_visit(node)
 
         if self._simplified_named_tuple:
@@ -188,9 +194,6 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         if self._use_version_optimization((3, 0)):
             skip_base_classes(node, ["object"])
-
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
 
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
@@ -272,9 +275,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         if self.token_types_config.skip_type_hints:
             node.returns = None
 
-        if self.token_types_config.skip_dangling_expressions:
-            skip_dangling_expressions(node)
-
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
         if node.body:
@@ -298,9 +298,9 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
-        if isinstance(
-            parsed_node, (ast.Try, ast.TryStar)
-        ) and self._is_useless_try_node(parsed_node):
+        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
+            parsed_node.body
+        ):
             return parsed_node.finalbody or None
 
         return parsed_node
@@ -308,16 +308,16 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_TryStar(self, node: ast.TryStar) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
 
-        if isinstance(
-            parsed_node, (ast.Try, ast.TryStar)
-        ) and self._is_useless_try_node(parsed_node):
+        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
+            parsed_node.body
+        ):
             return parsed_node.finalbody or None
 
         return parsed_node
 
     @staticmethod
-    def _is_useless_try_node(node: ast.Try | ast.TryStar) -> bool:
-        return all(isinstance(n, ast.Pass) for n in node.body)
+    def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
+        return all(isinstance(n, ast.Pass) for n in node_body)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):
@@ -497,13 +497,19 @@ class AstNodeSkipper(ast.NodeTransformer):
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = self.generic_visit(node)
 
-        if isinstance(parsed_node, ast.If) and isinstance(
-            parsed_node.test, ast.Constant
-        ):
-            if_body: list[ast.stmt] = (
-                parsed_node.body if parsed_node.test.value else parsed_node.orelse
-            )
-            return if_body or None
+        if isinstance(parsed_node, ast.If):
+            if isinstance(parsed_node.test, ast.Constant):
+                if_body: list[ast.stmt] = (
+                    parsed_node.body if parsed_node.test.value else parsed_node.orelse
+                )
+                return if_body or None
+
+            if not parsed_node.orelse and self._body_is_only_pass(parsed_node.body):
+                call_finder = _DanglingExprCallFinder(
+                    self.optimizations_config.functions_safe_to_exclude_in_test_expr
+                )
+                call_finder.visit(parsed_node.test)
+                return [ast.Expr(expr) for expr in call_finder.calls]
 
         return parsed_node
 
@@ -831,4 +837,22 @@ class UnusedImportSkipper(ast.NodeTransformer):
         return node
 
     def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+        return node
+
+
+class _DanglingExprCallFinder(ast.NodeTransformer):
+    """Finds all calls in a given dangling expression
+    except for a subset of builtin functions that have
+    no side effects."""
+
+    __slots__ = ("calls", "excludes")
+
+    def __init__(self, excludes: set[str]) -> None:
+        self.calls: list[ast.Call] = []
+        self.excludes: set[str] = excludes
+
+    def visit_Call(self, node: ast.Call) -> ast.Call:
+        if get_node_name(node) not in default_functions_safe_to_exclude_in_test_expr:
+            self.calls.append(node)
+
         return node

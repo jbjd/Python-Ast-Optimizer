@@ -3,6 +3,10 @@ from collections.abc import Iterable, Iterator
 from enum import Enum, EnumType
 from types import EllipsisType
 
+from personal_python_ast_optimizer.python_info import (
+    default_functions_safe_to_exclude_in_test_expr,
+)
+
 
 class TypeHintsToSkip(Enum):
     NONE = 0
@@ -132,18 +136,20 @@ class OptimizationsConfig(_Config):
     __slots__ = (
         "vars_to_fold",
         "enums_to_fold",
+        "functions_safe_to_exclude_in_test_expr",
         "remove_unused_imports",
         "fold_constants",
         "assume_this_machine",
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         vars_to_fold: dict[
             str, str | bytes | bool | int | float | complex | None | EllipsisType
         ]
         | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
+        functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         fold_constants: bool = True,
         remove_unused_imports: bool = True,
         assume_this_machine: bool = False,
@@ -155,6 +161,10 @@ class OptimizationsConfig(_Config):
             {}
             if enums_to_fold is None
             else self._format_enums_to_fold_as_dict(enums_to_fold)
+        )
+        self.functions_safe_to_exclude_in_test_expr: set[str] = (
+            functions_safe_to_exclude_in_test_expr
+            or default_functions_safe_to_exclude_in_test_expr
         )
         self.remove_unused_imports: bool = remove_unused_imports
         self.assume_this_machine: bool = assume_this_machine

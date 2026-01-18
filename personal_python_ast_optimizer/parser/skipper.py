@@ -674,7 +674,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
                     parsed_node.left.elts.append(ast.Starred(parsed_node.right))
                 else:
-                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))
+                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
                     return parsed_node.right
 
                 return parsed_node.left

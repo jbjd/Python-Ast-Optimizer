@@ -137,6 +137,7 @@ class OptimizationsConfig(_Config):
         "vars_to_fold",
         "enums_to_fold",
         "functions_safe_to_exclude_in_test_expr",
+        "remove_typing_cast",
         "remove_unused_imports",
         "fold_constants",
         "assume_this_machine",
@@ -144,14 +145,16 @@ class OptimizationsConfig(_Config):
 
     def __init__(  # noqa: PLR0913
         self,
+        *,
         vars_to_fold: dict[
             str, str | bytes | bool | int | float | complex | None | EllipsisType
         ]
         | None = None,
         enums_to_fold: Iterable[EnumType] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
-        fold_constants: bool = True,
         remove_unused_imports: bool = True,
+        remove_typing_cast: bool = True,
+        fold_constants: bool = False,
         assume_this_machine: bool = False,
     ) -> None:
         self.vars_to_fold: dict[
@@ -167,6 +170,7 @@ class OptimizationsConfig(_Config):
             or default_functions_safe_to_exclude_in_test_expr
         )
         self.remove_unused_imports: bool = remove_unused_imports
+        self.remove_typing_cast: bool = remove_typing_cast
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
 

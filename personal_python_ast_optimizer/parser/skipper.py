@@ -104,7 +104,7 @@ class AstNodeSkipper(ast.NodeTransformer):
                 self._combine_imports(old_value)
                 for value in old_value:
                     if isinstance(value, ast.AST):
-                        value: ast.AST | list[ast.AST] | None = self.visit(value)  # noqa: PLW2901
+                        value = self.visit(value)  # noqa: PLW2901
 
                         if value is None or (
                             self.token_types_config.skip_dangling_expressions

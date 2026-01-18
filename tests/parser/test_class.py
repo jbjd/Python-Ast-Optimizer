@@ -19,19 +19,21 @@ class Foo():
 def test_class_preserves_type_hints():
     before_and_after = BeforeAndAfter(
         """
+import some_type
 class SomeTuple():
     '''A tuple, wow!'''
-    thing1: str
+    thing1: some_type
     thing2: int
 
     def a():
         class B:
             thing3: None
         return B""",
-        """class SomeTuple:
-\tthing1:int;thing2:int
+        """import some_type
+class SomeTuple:
+\tthing1:some_type;thing2:int
 \tdef a():
-\t\tclass B:thing3:int
+\t\tclass B:thing3:None
 \t\treturn B""",
     )
     run_minifier_and_assert_correct(

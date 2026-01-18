@@ -644,15 +644,40 @@ class AstNodeSkipper(ast.NodeTransformer):
         # and constants need to be folded depth first
         parsed_node: ast.AST = self.generic_visit(node)
 
-        if (
-            self.optimizations_config.fold_constants
-            and isinstance(parsed_node, ast.BinOp)
-            and isinstance(parsed_node.left, ast.Constant)
-            and isinstance(parsed_node.right, ast.Constant)
-        ):
-            return self._ast_constants_operation(
-                parsed_node.left, parsed_node.right, parsed_node.op
-            )
+        if isinstance(parsed_node, ast.BinOp):
+            if (
+                self.optimizations_config.fold_constants
+                and isinstance(parsed_node.left, ast.Constant)
+                and isinstance(parsed_node.right, ast.Constant)
+            ):
+                return self._ast_constants_operation(
+                    parsed_node.left, parsed_node.right, parsed_node.op
+                )
+
+            if (
+                self.optimizations_config.collection_concat_to_unpack
+                and isinstance(parsed_node.op, ast.Add)
+                and (
+                    isinstance(parsed_node.left, (ast.Tuple, ast.List))
+                    or isinstance(parsed_node.right, (ast.Tuple, ast.List))
+                )
+            ):
+                if (
+                    isinstance(parsed_node.left, ast.Tuple)
+                    and isinstance(parsed_node.right, ast.Tuple)
+                    or (
+                        isinstance(parsed_node.left, ast.List)
+                        and isinstance(parsed_node.right, ast.List)
+                    )
+                ):  # noqa: E721
+                    parsed_node.left.elts += parsed_node.right.elts
+                elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
+                    parsed_node.left.elts.append(ast.Starred(parsed_node.right))
+                else:
+                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))
+                    return parsed_node.right
+
+                return parsed_node.left
 
         return parsed_node
 

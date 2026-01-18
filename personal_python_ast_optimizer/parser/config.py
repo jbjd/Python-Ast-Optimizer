@@ -139,6 +139,7 @@ class OptimizationsConfig(_Config):
         "functions_safe_to_exclude_in_test_expr",
         "remove_typing_cast",
         "remove_unused_imports",
+        "collection_concat_to_unpack",
         "fold_constants",
         "assume_this_machine",
     )
@@ -154,6 +155,7 @@ class OptimizationsConfig(_Config):
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         remove_unused_imports: bool = True,
         remove_typing_cast: bool = True,
+        collection_concat_to_unpack: bool = False,
         fold_constants: bool = False,
         assume_this_machine: bool = False,
     ) -> None:
@@ -171,6 +173,7 @@ class OptimizationsConfig(_Config):
         )
         self.remove_unused_imports: bool = remove_unused_imports
         self.remove_typing_cast: bool = remove_typing_cast
+        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
 

@@ -61,7 +61,7 @@ else:bar()""",
         "if test():pass\nelse:foo()",
     ),
     BeforeAndAfter(
-        "if test():pass",
+        "if test():pass\nelse:pass",
         "test()",
     ),
     BeforeAndAfter(

@@ -85,3 +85,63 @@ if test():pass""",
 @pytest.mark.parametrize("before_and_after", _if_cases)
 def test_if(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(before_and_after)
+
+
+_nested_if_cases = [
+    BeforeAndAfter(
+        """
+if a < b and foo() or bar():
+    if b < c:
+        print()
+""",
+        "if(a<b and foo()or bar())and b<c:print()",
+    ),
+    BeforeAndAfter(
+        """
+if foo():
+    if bar():
+        print()
+""",
+        "if foo()and bar():print()",
+    ),
+    BeforeAndAfter(
+        """
+if a < b:
+    if b < c:
+        print()
+    something_else()
+""",
+        """if a<b:
+\tif b<c:print()
+\tsomething_else()""",
+    ),
+    BeforeAndAfter(
+        """
+if a < b:
+    if b < c:
+        print()
+else:
+    something_else()
+""",
+        """if a<b:
+\tif b<c:print()
+else:something_else()""",
+    ),
+    BeforeAndAfter(
+        """
+if a < b:
+    if b < c:
+        print()
+    else:
+        something_else()
+""",
+        """if a<b:
+\tif b<c:print()
+\telse:something_else()""",
+    ),
+]
+
+
+@pytest.mark.parametrize("before_and_after", _nested_if_cases)
+def test_nested_if(before_and_after: BeforeAndAfter):
+    run_minifier_and_assert_correct(before_and_after)

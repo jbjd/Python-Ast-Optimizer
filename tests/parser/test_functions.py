@@ -1,4 +1,7 @@
-from personal_python_ast_optimizer.parser.config import TokenTypesConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokenTypesConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -75,4 +78,34 @@ def test_overload(a: float) -> int: do_something()
     run_minifier_and_assert_correct(
         before_and_after,
         token_types_config=TokenTypesConfig(skip_overload_functions=True),
+    )
+
+
+def test_typing_cast_remove():
+    before_and_after = BeforeAndAfter(
+        """
+from typing import cast
+
+a = cast(str, 1)
+""",
+        "a=1",
+    )
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(remove_typing_cast=True),
+    )
+
+
+def test_typing_cast():
+    before_and_after = BeforeAndAfter(
+        """
+from typing import cast
+
+a = cast(str, 1)
+""",
+        "from typing import cast\na=cast(str,1)",
+    )
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(remove_typing_cast=False),
     )

@@ -587,6 +587,14 @@ class AstNodeSkipper(ast.NodeTransformer):
             if function_call_key in machine_dependent_functions:
                 return ast.Constant(machine_dependent_functions[function_call_key])
 
+        if (
+            self.optimizations_config.remove_typing_cast
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "cast"
+            and len(node.args) == 2  # noqa: PLR2004
+        ):
+            return node.args[1]
+
         return self.generic_visit(node)
 
     def visit_Constant(self, node: ast.Constant) -> ast.Constant:

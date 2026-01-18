@@ -532,10 +532,9 @@ class AstNodeSkipper(ast.NodeTransformer):
             if not parsed_node.test.value:
                 return None
 
-            # 1 is faster in python 2, same in 3
-            # but less size
-            if parsed_node.test.value is True:
-                parsed_node.test.value = 1
+            # 1 is faster than True in python 2
+            # They are the same in python 3, but less size
+            parsed_node.test.value = 1
 
         return parsed_node
 

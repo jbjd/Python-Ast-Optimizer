@@ -422,10 +422,10 @@ class AstNodeSkipper(ast.NodeTransformer):
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
 
-        if self.token_types_config.skip_type_hints and (
-            self._node_context != _NodeContext.CLASS
-            or self.token_types_config.skip_type_hints
-            != TypeHintsToSkip.ALL_BUT_CLASS_VARS
+        if self.token_types_config.skip_type_hints == TypeHintsToSkip.ALL or (
+            self.token_types_config.skip_type_hints
+            == TypeHintsToSkip.ALL_BUT_CLASS_VARS
+            and self._node_context != _NodeContext.CLASS
         ):
             if parsed_node.value is None:
                 return None

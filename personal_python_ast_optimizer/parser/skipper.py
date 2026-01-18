@@ -842,7 +842,7 @@ class UnusedImportSkipper(ast.NodeTransformer):
 
 class _DanglingExprCallFinder(ast.NodeTransformer):
     """Finds all calls in a given dangling expression
-    execpt for a subset of builtin functions that have
+    except for a subset of builtin functions that have
     no side effects."""
 
     __slots__ = ("calls", "excludes")

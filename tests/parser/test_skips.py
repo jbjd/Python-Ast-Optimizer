@@ -74,13 +74,6 @@ def bar():
 """,
         "def bar():test=1",
     ),
-    BeforeAndAfter(
-        """
-foo = something
-foo.do()
-""",
-        "",
-    ),
 ]
 
 

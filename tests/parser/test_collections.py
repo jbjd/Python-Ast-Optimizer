@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import TokenTypesConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokenTypesConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -92,3 +95,29 @@ class A(NamedTuple):
             before_and_after,
             token_types_config=TokenTypesConfig(simplify_named_tuples=True),
         )
+
+
+_collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
+    (
+        "a = (1,) + (0,0) + b",
+        "a=(1,0,0,*b)",
+    ),
+    (
+        "a = [1] + b + [2]",
+        "a=[1,*b,2]",
+    ),
+    (
+        "a = b + [2] + [3]",
+        "a=[*b,2,3]",
+    ),
+]
+
+
+@pytest.mark.parametrize(("before", "after"), _collection_concat_to_unpack_test_cases)
+def test_collection_concat_to_unpack(before: str, after: str):
+    before_and_after = BeforeAndAfter(before, after)
+
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(collection_concat_to_unpack=True),
+    )

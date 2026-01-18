@@ -501,12 +501,30 @@ class AstNodeSkipper(ast.NodeTransformer):
                 )
                 return if_body or None
 
-            if not parsed_node.orelse and self._body_is_only_pass(parsed_node.body):
-                call_finder = _DanglingExprCallFinder(
-                    self.optimizations_config.functions_safe_to_exclude_in_test_expr
-                )
-                call_finder.visit(parsed_node.test)
-                return [ast.Expr(expr) for expr in call_finder.calls]
+            if not parsed_node.orelse:
+                if self._body_is_only_pass(parsed_node.body):
+                    call_finder = _DanglingExprCallFinder(
+                        self.optimizations_config.functions_safe_to_exclude_in_test_expr
+                    )
+                    call_finder.visit(parsed_node.test)
+                    return [ast.Expr(expr) for expr in call_finder.calls]
+
+                if (
+                    len(parsed_node.body) == 1
+                    and isinstance(parsed_node.body[0], ast.If)
+                    and not parsed_node.body[0].orelse
+                ):
+                    # These if conditions can be combine into one if
+                    if isinstance(parsed_node.test, ast.BoolOp) and isinstance(
+                        parsed_node.test.op, ast.And
+                    ):
+                        parsed_node.test.values.append(parsed_node.body[0].test)
+                    else:
+                        parsed_node.test = ast.BoolOp(
+                            ast.And(), [parsed_node.test, parsed_node.body[0].test]
+                        )
+
+                    parsed_node.body = parsed_node.body[0].body
 
         return parsed_node
 

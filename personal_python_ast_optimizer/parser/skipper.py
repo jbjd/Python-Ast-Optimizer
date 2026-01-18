@@ -593,7 +593,7 @@ class AstNodeSkipper(ast.NodeTransformer):
             and node.func.id == "cast"
             and len(node.args) == 2  # noqa: PLR2004
         ):
-            return node.args[1]
+            return self.generic_visit(node.args[1])
 
         return self.generic_visit(node)
 

@@ -8,9 +8,9 @@ def test_remove_dup_slots_tuple():
     run_minifier_and_assert_correct(before_and_after)
 
 
-def test_remove_dup_slots__list_annotation():
+def test_remove_dup_slots_list_annotation():
     before_and_after = BeforeAndAfter(
-        "class A:__slots__: list = ['a', 'b', 'a']", "class A:__slots__=['a','b']"
+        "class A:__slots__: list = ['a', 'b', 'a']", "class A:__slots__:list=['a','b']"
     )
     run_minifier_and_assert_correct(before_and_after)
 

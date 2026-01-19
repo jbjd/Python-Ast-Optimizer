@@ -1,9 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    TokenTypesConfig,
-)
+from personal_python_ast_optimizer.parser.config import OptimizationsConfig
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -73,7 +70,7 @@ def test_simplify_named_tuple(before: str, after: str):
 
     run_minifier_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(simplify_named_tuples=True),
+        optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
     )
 
 
@@ -93,7 +90,7 @@ class A(NamedTuple):
     with pytest.raises(ValueError):
         run_minifier_and_assert_correct(
             before_and_after,
-            token_types_config=TokenTypesConfig(simplify_named_tuples=True),
+            optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
         )
 
 

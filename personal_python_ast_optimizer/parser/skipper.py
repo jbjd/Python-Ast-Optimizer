@@ -199,7 +199,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
         if (
-            self.token_types_config.simplify_named_tuples
+            self.optimizations_config.simplify_named_tuples
             and self._is_simple_named_tuple(node)
         ):
             self._simplified_named_tuple = True

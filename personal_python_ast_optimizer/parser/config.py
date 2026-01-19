@@ -109,7 +109,6 @@ class TokensConfig(_Config):
 
 class TokenTypesConfig(_Config):
     __slots__ = (
-        "simplify_named_tuples",
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_type_hints",
@@ -123,13 +122,11 @@ class TokenTypesConfig(_Config):
         skip_type_hints: TypeHintsToSkip = TypeHintsToSkip.ALL_BUT_CLASS_VARS,
         skip_asserts: bool = False,
         skip_overload_functions: bool = False,
-        simplify_named_tuples: bool = False,
     ) -> None:
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_asserts: bool = skip_asserts
         self.skip_overload_functions: bool = skip_overload_functions
-        self.simplify_named_tuples: bool = simplify_named_tuples
 
 
 class OptimizationsConfig(_Config):
@@ -142,6 +139,7 @@ class OptimizationsConfig(_Config):
         "collection_concat_to_unpack",
         "fold_constants",
         "assume_this_machine",
+        "simplify_named_tuples",
     )
 
     def __init__(  # noqa: PLR0913
@@ -158,6 +156,7 @@ class OptimizationsConfig(_Config):
         collection_concat_to_unpack: bool = False,
         fold_constants: bool = False,
         assume_this_machine: bool = False,
+        simplify_named_tuples: bool = False,
     ) -> None:
         self.vars_to_fold: dict[
             str, str | bytes | bool | int | float | complex | None | EllipsisType
@@ -176,6 +175,7 @@ class OptimizationsConfig(_Config):
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
+        self.simplify_named_tuples: bool = simplify_named_tuples
 
     @staticmethod
     def _format_enums_to_fold_as_dict(

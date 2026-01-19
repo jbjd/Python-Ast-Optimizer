@@ -56,14 +56,14 @@ def re_replace(
 def re_replace_file(
     path: str,
     regex_replacement: RegexReplacement | Iterable[RegexReplacement],
-    warning_id: str = "",
     encoding: str = "utf-8",
+    raise_if_not_applied: bool = False,
 ):
     """Wraps apply_regex with opening and writing to a file"""
     with open(path, encoding=encoding) as fp:
         source: str = fp.read()
 
-    source = re_replace(source, regex_replacement, warning_id)
+    source = re_replace(source, regex_replacement, raise_if_not_applied)
 
     with open(path, "w", encoding=encoding) as fp:
         fp.write(source)

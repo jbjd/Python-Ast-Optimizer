@@ -4,13 +4,15 @@ indent-width = 4
 target-version = "py312"
 
 [lint]
-select = ["C4", "E", "FURB", "F", "I", "PERF", "PL", "Q", "RET", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
+select = ["B", "C", "C4", "E", "FURB", "F", "I", "PERF", "PL", "Q", "RET", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
 
 # COM812: Trailing Comma (Only covers single line trailing commas, seems out of place)
 # D: Doc style
+# EM: Error messages
 # FBT: Boolean Trap (Slower)
+# PTH: Use Pathlib (Wants slower API used)
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["COM812", "D", "FBT", "TRY003"]
+ignore = ["COM812", "D", "EM", "FBT", "PTH", "TRY003"]
 
 [lint.extend-per-file-ignores]
 

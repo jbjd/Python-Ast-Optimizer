@@ -201,15 +201,19 @@ class SkipConfig(_Config):
         module_name: str,
         *,
         target_python_version: tuple[int, int] | None = None,
-        tokens_config: TokensConfig = TokensConfig(),
-        token_types_config: TokenTypesConfig = TokenTypesConfig(),
-        optimizations_config: OptimizationsConfig = OptimizationsConfig(),
+        tokens_config: TokensConfig | None = None,
+        token_types_config: TokenTypesConfig | None = None,
+        optimizations_config: OptimizationsConfig | None = None,
     ) -> None:
         self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = target_python_version
-        self.tokens_config: TokensConfig = tokens_config
-        self.token_types_config: TokenTypesConfig = token_types_config
-        self.optimizations_config: OptimizationsConfig = optimizations_config
+        self.tokens_config: TokensConfig = tokens_config or TokensConfig()
+        self.token_types_config: TokenTypesConfig = (
+            token_types_config or TokenTypesConfig()
+        )
+        self.optimizations_config: OptimizationsConfig = (
+            optimizations_config or OptimizationsConfig()
+        )
 
     def has_code_to_skip(self) -> bool:
         return (

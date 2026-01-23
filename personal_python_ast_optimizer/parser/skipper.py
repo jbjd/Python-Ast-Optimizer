@@ -663,12 +663,11 @@ class AstNodeSkipper(ast.NodeTransformer):
                 )
             ):
                 if (
-                    (isinstance(parsed_node.left, ast.Tuple)
-                    and isinstance(parsed_node.right, ast.Tuple))
-                    or (
-                        isinstance(parsed_node.left, ast.List)
-                        and isinstance(parsed_node.right, ast.List)
-                    )
+                    isinstance(parsed_node.left, ast.Tuple)
+                    and isinstance(parsed_node.right, ast.Tuple)
+                ) or (
+                    isinstance(parsed_node.left, ast.List)
+                    and isinstance(parsed_node.right, ast.List)
                 ):
                     parsed_node.left.elts += parsed_node.right.elts
                 elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
@@ -748,18 +747,19 @@ class AstNodeSkipper(ast.NodeTransformer):
             and get_node_name(node.value.func) in self.tokens_config.functions_to_skip
         )
 
-    def _warn_unused_skips(self):
+    def _warn_unused_skips(self) -> None:
         for (
             token_type,
             not_found_tokens,
         ) in self.tokens_config.get_missing_tokens_iter():
             warnings.warn(
                 f"{self.module_name}: requested to skip {token_type} "
-                f"{not_found_tokens} but was not found"
+                f"{not_found_tokens} but was not found",
+                stacklevel=2,
             )
 
     @staticmethod
-    def _ast_constants_operation(  # noqa: PLR0912
+    def _ast_constants_operation(  # noqa: C901, PLR0912
         left: ast.Constant,
         right: ast.Constant,
         operation: ast.operator | ast.cmpop,

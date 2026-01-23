@@ -42,8 +42,8 @@ class AstNodeSkipper(ast.NodeTransformer):
         "_node_context_skippable_futures",
         "_simplified_named_tuple",
         "module_name",
-        "target_python_version",
         "optimizations_config",
+        "target_python_version",
         "token_types_config",
         "tokens_config",
     )
@@ -663,13 +663,13 @@ class AstNodeSkipper(ast.NodeTransformer):
                 )
             ):
                 if (
-                    isinstance(parsed_node.left, ast.Tuple)
-                    and isinstance(parsed_node.right, ast.Tuple)
+                    (isinstance(parsed_node.left, ast.Tuple)
+                    and isinstance(parsed_node.right, ast.Tuple))
                     or (
                         isinstance(parsed_node.left, ast.List)
                         and isinstance(parsed_node.right, ast.List)
                     )
-                ):  # noqa: E721
+                ):
                     parsed_node.left.elts += parsed_node.right.elts
                 elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
                     parsed_node.left.elts.append(ast.Starred(parsed_node.right))

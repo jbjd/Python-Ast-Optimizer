@@ -12,7 +12,7 @@ from personal_python_ast_optimizer.parser.run import run_unparser
 class BeforeAndAfter:
     """Input and output after minifying it"""
 
-    __slots__ = ("before", "after")
+    __slots__ = ("after", "before")
 
     def __init__(self, before: str, after: str) -> None:
         self.before: str = before

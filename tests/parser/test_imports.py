@@ -20,7 +20,7 @@ _futures_imports_inline: str = (
 
 
 @pytest.mark.parametrize(
-    "version,skip_type_hints,after",
+    ("version", "skip_type_hints", "after"),
     [
         (None, TypeHintsToSkip.NONE, _futures_imports_inline),
         ((3, 7), TypeHintsToSkip.NONE, "from __future__ import annotations"),

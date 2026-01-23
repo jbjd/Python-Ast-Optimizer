@@ -20,7 +20,7 @@ print(sys.platform == 'a')
 
 
 @pytest.mark.parametrize(
-    "assume_this_machine,before,after",
+    ("assume_this_machine", "before", "after"),
     [
         (
             True,

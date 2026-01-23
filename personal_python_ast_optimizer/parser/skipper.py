@@ -526,8 +526,9 @@ class AstNodeSkipper(ast.NodeTransformer):
 
                     parsed_node.body = parsed_node.body[0].body
 
-            # Remove useless else after if-return
-            elif isinstance(parsed_node.body[-1], ast.Return):
+            elif self.optimizations_config.remove_useless_else and isinstance(
+                parsed_node.body[-1], (ast.Raise, ast.Return)
+            ):
                 denested_else: list[ast.stmt] = parsed_node.orelse
                 parsed_node.orelse = []
                 denested_else.insert(0, parsed_node)

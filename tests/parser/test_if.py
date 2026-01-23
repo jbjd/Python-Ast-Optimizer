@@ -152,13 +152,13 @@ def test_if_return():
         """
 def a(foo):
     if foo > 5:
-        return 5
+        raise ValueError
     elif foo < 9:
         return 6
     else:
         return 7""",
         """def a(foo):
-\tif foo>5:return 5
+\tif foo>5:raise ValueError
 \tif foo<9:return 6
 \treturn 7""",
     )

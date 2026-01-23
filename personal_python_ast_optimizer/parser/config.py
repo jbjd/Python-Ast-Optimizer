@@ -138,6 +138,7 @@ class OptimizationsConfig(_Config):
         "functions_safe_to_exclude_in_test_expr",
         "remove_typing_cast",
         "remove_unused_imports",
+        "remove_useless_else",
         "simplify_named_tuples",
         "vars_to_fold",
     )
@@ -152,6 +153,7 @@ class OptimizationsConfig(_Config):
         enums_to_fold: Iterable[EnumType] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         remove_unused_imports: bool = True,
+        remove_useless_else: bool = True,
         remove_typing_cast: bool = True,
         collection_concat_to_unpack: bool = False,
         fold_constants: bool = False,
@@ -171,6 +173,7 @@ class OptimizationsConfig(_Config):
             or default_functions_safe_to_exclude_in_test_expr
         )
         self.remove_unused_imports: bool = remove_unused_imports
+        self.remove_useless_else: bool = remove_useless_else
         self.remove_typing_cast: bool = remove_typing_cast
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.assume_this_machine: bool = assume_this_machine

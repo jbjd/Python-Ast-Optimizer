@@ -5,7 +5,7 @@ from collections.abc import Iterable, Iterator
 class RegexReplacement:
     """Represents arguments to a regex replacement call like re.sub"""
 
-    __slots__ = ("pattern", "replacement", "flags", "count")
+    __slots__ = ("count", "flags", "pattern", "replacement")
 
     def __init__(
         self, pattern: str, replacement: str = "", flags: int = 0, count: int = 1

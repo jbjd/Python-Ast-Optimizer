@@ -56,13 +56,13 @@ class _Config:
 class TokensConfig(_Config):
     __slots__ = (
         "_no_warn",
+        "classes_to_skip",
+        "decorators_to_skip",
+        "dict_keys_to_skip",
         "from_imports_to_skip",
         "functions_to_skip",
-        "variables_to_skip",
-        "classes_to_skip",
-        "dict_keys_to_skip",
-        "decorators_to_skip",
         "module_imports_to_skip",
+        "variables_to_skip",
     )
 
     def __init__(  # noqa: PLR0913
@@ -111,8 +111,8 @@ class TokenTypesConfig(_Config):
     __slots__ = (
         "skip_asserts",
         "skip_dangling_expressions",
-        "skip_type_hints",
         "skip_overload_functions",
+        "skip_type_hints",
     )
 
     def __init__(
@@ -131,15 +131,15 @@ class TokenTypesConfig(_Config):
 
 class OptimizationsConfig(_Config):
     __slots__ = (
-        "vars_to_fold",
+        "assume_this_machine",
+        "collection_concat_to_unpack",
         "enums_to_fold",
+        "fold_constants",
         "functions_safe_to_exclude_in_test_expr",
         "remove_typing_cast",
         "remove_unused_imports",
-        "collection_concat_to_unpack",
-        "fold_constants",
-        "assume_this_machine",
         "simplify_named_tuples",
+        "vars_to_fold",
     )
 
     def __init__(  # noqa: PLR0913
@@ -190,10 +190,10 @@ class OptimizationsConfig(_Config):
 class SkipConfig(_Config):
     __slots__ = (
         "module_name",
+        "optimizations_config",
         "target_python_version",
         "token_types_config",
         "tokens_config",
-        "optimizations_config",
     )
 
     def __init__(
@@ -201,15 +201,19 @@ class SkipConfig(_Config):
         module_name: str,
         *,
         target_python_version: tuple[int, int] | None = None,
-        tokens_config: TokensConfig = TokensConfig(),
-        token_types_config: TokenTypesConfig = TokenTypesConfig(),
-        optimizations_config: OptimizationsConfig = OptimizationsConfig(),
+        tokens_config: TokensConfig | None = None,
+        token_types_config: TokenTypesConfig | None = None,
+        optimizations_config: OptimizationsConfig | None = None,
     ) -> None:
         self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = target_python_version
-        self.tokens_config: TokensConfig = tokens_config
-        self.token_types_config: TokenTypesConfig = token_types_config
-        self.optimizations_config: OptimizationsConfig = optimizations_config
+        self.tokens_config: TokensConfig = tokens_config or TokensConfig()
+        self.token_types_config: TokenTypesConfig = (
+            token_types_config or TokenTypesConfig()
+        )
+        self.optimizations_config: OptimizationsConfig = (
+            optimizations_config or OptimizationsConfig()
+        )
 
     def has_code_to_skip(self) -> bool:
         return (

@@ -526,6 +526,14 @@ class AstNodeSkipper(ast.NodeTransformer):
 
                     parsed_node.body = parsed_node.body[0].body
 
+            elif self.optimizations_config.remove_useless_else and isinstance(
+                parsed_node.body[-1], (ast.Raise, ast.Return)
+            ):
+                denested_else: list[ast.stmt] = parsed_node.orelse
+                parsed_node.orelse = []
+                denested_else.insert(0, parsed_node)
+                return denested_else
+
         return parsed_node
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST | None:

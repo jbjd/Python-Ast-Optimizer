@@ -44,7 +44,3 @@ def run_minifier_and_assert_correct(
 
 def raise_if_python_code_invalid(python_code: str) -> None:
     ast.parse(python_code)
-
-
-def _python_version_str_to_int_tuple(python_version: str) -> tuple[int, int]:
-    return tuple(int(i) for i in python_version.split("."))[:2]  # type: ignore

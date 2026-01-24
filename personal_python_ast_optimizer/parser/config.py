@@ -28,7 +28,7 @@ class TokensToSkip(dict[str, int]):
 
         self.token_type: str = token_type
 
-    def __contains__(self, key: str) -> bool:  # type: ignore
+    def __contains__(self, key: str) -> bool:  # type: ignore[attr-defined,override]
         """Returns if token is marked to skip and
         increments internal counter when True is returned"""
         contains: bool = super().__contains__(key)
@@ -48,9 +48,6 @@ class _Config:
     @abstractmethod
     def __init__(self) -> None:
         pass
-
-    def has_code_to_skip(self) -> bool:
-        return any(getattr(self, attr) for attr in self.__slots__)  # type: ignore
 
 
 class TokensConfig(_Config):
@@ -76,7 +73,7 @@ class TokensConfig(_Config):
         decorators_to_skip: set[str] | None = None,
         module_imports_to_skip: set[str] | None = None,
         no_warn: set[str] | None = None,
-    ):
+    ) -> None:
         self.from_imports_to_skip = TokensToSkip(from_imports_to_skip, "from imports")
         self.functions_to_skip = TokensToSkip(functions_to_skip, "functions")
         self.variables_to_skip = TokensToSkip(variables_to_skip, "variables")
@@ -92,9 +89,6 @@ class TokensConfig(_Config):
         for attr in self.__slots__:
             if attr != "_no_warn":
                 yield getattr(self, attr)
-
-    def has_code_to_skip(self) -> bool:
-        return any(self)  # type: ignore
 
     def get_missing_tokens_iter(self) -> Iterator[tuple[str, str]]:
         for tokens_to_skip in self:
@@ -216,12 +210,4 @@ class SkipConfig(_Config):
         )
         self.optimizations_config: OptimizationsConfig = (
             optimizations_config or OptimizationsConfig()
-        )
-
-    def has_code_to_skip(self) -> bool:
-        return (
-            self.target_python_version is not None
-            or self.tokens_config.has_code_to_skip()
-            or self.token_types_config.has_code_to_skip()
-            or self.optimizations_config.has_code_to_skip()
         )

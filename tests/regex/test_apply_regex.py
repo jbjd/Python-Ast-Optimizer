@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.regex.replace import (
-    RegexNoMatchException,
+    RegexNoMatchError,
     RegexReplacement,
     re_replace,
 )
@@ -31,7 +31,7 @@ def test_re_replace(replacement: RegexReplacement, source: str, expected_output:
 
 
 def test_re_replace_raises():
-    with pytest.raises(RegexNoMatchException):
+    with pytest.raises(RegexNoMatchError):
         re_replace(
             "Fox", RegexReplacement("series", "wonder"), raise_if_not_applied=True
         )

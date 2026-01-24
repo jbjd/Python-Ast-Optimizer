@@ -13,9 +13,9 @@ def exclude_imports(node: ast.Import | ast.ImportFrom, excludes: Iterable[str]) 
         ]
 
 
-def filter_imports(node: ast.Import | ast.ImportFrom, filter: Iterable[str]) -> None:
+def filter_imports(node: ast.Import | ast.ImportFrom, filters: Iterable[str]) -> None:
     node.names = [
-        alias for alias in node.names if (alias.asname or alias.name) in filter
+        alias for alias in node.names if (alias.asname or alias.name) in filters
     ]
 
 

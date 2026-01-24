@@ -22,7 +22,7 @@ class RegexReplacement:
         yield self.count
 
 
-class RegexNoMatchException(Exception):
+class RegexNoMatchError(Exception):
     pass
 
 
@@ -46,7 +46,7 @@ def re_replace(
             unused_regex.append(regex)
 
     if unused_regex:
-        raise RegexNoMatchException(
+        raise RegexNoMatchError(
             f"Found {len(unused_regex)} unused regex: {unused_regex}"
         )
 
@@ -58,7 +58,7 @@ def re_replace_file(
     regex_replacement: RegexReplacement | Iterable[RegexReplacement],
     encoding: str = "utf-8",
     raise_if_not_applied: bool = False,
-):
+) -> None:
     """Wraps apply_regex with opening and writing to a file"""
     with open(path, encoding=encoding) as fp:
         source: str = fp.read()

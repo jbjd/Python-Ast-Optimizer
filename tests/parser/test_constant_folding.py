@@ -11,6 +11,8 @@ _binary_op_folding_cases = [
     BeforeAndAfter("a=64|1", "a=65"),
     BeforeAndAfter("a=7&3", "a=3"),
     BeforeAndAfter("a=3^6", "a=5"),
+    BeforeAndAfter("a='a' is 'b'", "a=False"),
+    BeforeAndAfter("a='a' is not 'b'", "a=True"),
 ]
 
 

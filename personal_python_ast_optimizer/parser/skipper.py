@@ -820,6 +820,10 @@ class AstNodeSkipper(ast.NodeTransformer):
                 result = left_value > right_value  # type: ignore
             case ast.GtE():
                 result = left_value >= right_value  # type: ignore
+            case ast.Is():
+                result = left_value is right_value
+            case ast.IsNot():
+                result = left_value is not right_value
             case _:
                 raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
 

@@ -1,5 +1,6 @@
 import ast
 import warnings
+from collections.abc import Iterable
 from enum import Enum
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
@@ -181,7 +182,9 @@ class AstNodeSkipper(ast.NodeTransformer):
                     import_to_update.names.append(alias)
 
         if self.optimizations_config.remove_unused_imports and self._has_imports:
-            import_filter = UnusedImportSkipper()
+            import_filter = UnusedImportSkipper(
+                self.optimizations_config.unused_imports_to_preserve
+            )
             import_filter.visit(node)
 
         self._warn_unused_skips()
@@ -833,8 +836,8 @@ class AstNodeSkipper(ast.NodeTransformer):
 class UnusedImportSkipper(ast.NodeTransformer):
     __slots__ = ("names_and_attrs",)
 
-    def __init__(self) -> None:
-        self.names_and_attrs: set[str] = set()
+    def __init__(self, imports_to_preserve: Iterable[str]) -> None:
+        self.names_and_attrs: set[str] = set(imports_to_preserve)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):

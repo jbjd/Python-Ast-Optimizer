@@ -140,6 +140,7 @@ class OptimizationsConfig(_Config):
         "remove_unused_imports",
         "remove_useless_else",
         "simplify_named_tuples",
+        "unused_imports_to_preserve",
         "vars_to_fold",
     )
 
@@ -153,6 +154,7 @@ class OptimizationsConfig(_Config):
         enums_to_fold: Iterable[EnumType] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         remove_unused_imports: bool = True,
+        unused_imports_to_preserve: Iterable[str] | None = None,
         remove_useless_else: bool = True,
         remove_typing_cast: bool = True,
         collection_concat_to_unpack: bool = False,
@@ -160,6 +162,9 @@ class OptimizationsConfig(_Config):
         assume_this_machine: bool = False,
         simplify_named_tuples: bool = False,
     ) -> None:
+        if unused_imports_to_preserve and not remove_unused_imports:
+            raise ValueError("Can't preserve imports if remove_unused_imports is False")
+
         self.vars_to_fold: dict[
             str, str | bytes | bool | int | float | complex | None | EllipsisType
         ] = {} if vars_to_fold is None else vars_to_fold
@@ -168,10 +173,15 @@ class OptimizationsConfig(_Config):
             if enums_to_fold is None
             else self._format_enums_to_fold_as_dict(enums_to_fold)
         )
+
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
             functions_safe_to_exclude_in_test_expr
             or default_functions_safe_to_exclude_in_test_expr
         )
+        self.unused_imports_to_preserve: Iterable[str] = (
+            unused_imports_to_preserve or []
+        )
+
         self.remove_unused_imports: bool = remove_unused_imports
         self.remove_useless_else: bool = remove_useless_else
         self.remove_typing_cast: bool = remove_typing_cast

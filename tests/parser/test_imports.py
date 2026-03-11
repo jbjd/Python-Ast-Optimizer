@@ -120,9 +120,16 @@ bar()
 """.strip(),
         "bar()",
     ),
+    BeforeAndAfter(
+        "import asdf",
+        "import asdf",
+    ),
 ]
 
 
 @pytest.mark.parametrize("before_and_after", _unused_import_test_cases)
 def test_remove_unused_import(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(before_and_after)
+    run_minifier_and_assert_correct(
+        before_and_after,
+        optimizations_config=OptimizationsConfig(unused_imports_to_preserve=["asdf"]),
+    )

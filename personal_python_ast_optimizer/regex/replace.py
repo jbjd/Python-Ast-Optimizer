@@ -31,8 +31,8 @@ def re_replace(
     regex_replacement: RegexReplacement | Iterable[RegexReplacement],
     raise_if_not_applied: bool = False,
 ) -> str:
-    """Runs a series of regex on given source.
-    Passing warning_id enabled warnings when patterns are not found"""
+    """Runs a series of regex on given source."""
+
     if isinstance(regex_replacement, RegexReplacement):
         regex_replacement = (regex_replacement,)
 
@@ -59,7 +59,8 @@ def re_replace_file(
     encoding: str = "utf-8",
     raise_if_not_applied: bool = False,
 ):
-    """Wraps apply_regex with opening and writing to a file"""
+    """Wraps apply_regex with opening and writing to a file."""
+
     with open(path, encoding=encoding) as fp:
         source: str = fp.read()
 

@@ -1,4 +1,4 @@
-class Futures:
+class Future:
     __slots__ = ("mandatory_version", "name")
 
     def __init__(self, name: str, mandatory_version: tuple[int, int]) -> None:
@@ -6,25 +6,23 @@ class Futures:
         self.mandatory_version: tuple[int, int] = mandatory_version
 
 
-futures_to_mandatory_version: list[Futures] = [
-    Futures("nested_scopes", (2, 2)),
-    Futures("generators", (2, 3)),
-    Futures("with_statement", (2, 6)),
-    Futures("division", (3, 0)),
-    Futures("absolute_import", (3, 0)),
-    Futures("print_function", (3, 0)),
-    Futures("unicode_literals", (3, 0)),
-    Futures("generator_stop", (3, 7)),
+future_to_mandatory_versions: list[Future] = [
+    Future("nested_scopes", (2, 2)),
+    Future("generators", (2, 3)),
+    Future("with_statement", (2, 6)),
+    Future("division", (3, 0)),
+    Future("absolute_import", (3, 0)),
+    Future("print_function", (3, 0)),
+    Future("unicode_literals", (3, 0)),
+    Future("generator_stop", (3, 7)),
 ]
 
 
 def get_unneeded_futures(python_version: tuple[int, int]) -> list[str]:
-    """Returns list of __future__ imports that are unneeded in provided
+    """Returns __future__ imports that are unneeded in provided
     python version"""
-    unneeded_futures: list[str] = [
+    return [
         future.name
-        for future in futures_to_mandatory_version
+        for future in future_to_mandatory_versions
         if python_version >= future.mandatory_version
     ]
-
-    return unneeded_futures

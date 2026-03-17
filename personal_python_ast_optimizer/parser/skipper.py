@@ -574,7 +574,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
             None if self.token_types_config.skip_asserts else self.generic_visit(node)
         )
 
-    def visit_Pass(self, node: ast.Pass) -> None:
+    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]
         """Always returns None. Caller responsible for ensuring empty bodies
         are populated with a Pass node."""
         return  # This could be toggleable

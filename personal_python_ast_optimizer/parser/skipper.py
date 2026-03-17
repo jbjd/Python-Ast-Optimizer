@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from enum import Enum
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
+from personal_python_ast_optimizer.parser._base import AstNodeTransformerBase
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     SkipConfig,
@@ -37,7 +38,7 @@ class _NodeContext(Enum):
     FUNCTION = 2
 
 
-class AstNodeSkipper(ast.NodeTransformer):
+class AstNodeSkipper(AstNodeTransformerBase):
     __slots__ = (
         "_has_imports",
         "_node_context_skippable_futures",
@@ -468,9 +469,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         self._has_imports = True
         return node
 
-    def visit_alias(self, node: ast.alias) -> ast.alias:
-        return node
-
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
         if node.id in self.optimizations_config.vars_to_fold:
@@ -581,12 +579,6 @@ class AstNodeSkipper(ast.NodeTransformer):
         are populated with a Pass node."""
         return  # This could be toggleable
 
-    def visit_Break(self, node: ast.Break) -> ast.Break:
-        return node
-
-    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
-        return node
-
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
             self.optimizations_config.assume_this_machine
@@ -607,9 +599,6 @@ class AstNodeSkipper(ast.NodeTransformer):
             return self.generic_visit(node.args[1])
 
         return self.generic_visit(node)
-
-    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
-        return node
 
     def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
         if (
@@ -833,7 +822,7 @@ class AstNodeSkipper(ast.NodeTransformer):
         return ast.Constant(result)
 
 
-class UnusedImportSkipper(ast.NodeTransformer):
+class UnusedImportSkipper(AstNodeTransformerBase):
     __slots__ = ("names_and_attrs",)
 
     def __init__(self, imports_to_preserve: Iterable[str]) -> None:
@@ -886,24 +875,8 @@ class UnusedImportSkipper(ast.NodeTransformer):
         self.names_and_attrs.add(node.attr)
         return self.generic_visit(node)
 
-    # Nodes that do not need to be fully visited
-    def visit_alias(self, node: ast.alias) -> ast.alias:
-        return node
 
-    def visit_Pass(self, node: ast.Pass) -> ast.Pass:
-        return node
-
-    def visit_Break(self, node: ast.Break) -> ast.Break:
-        return node
-
-    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
-        return node
-
-    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
-        return node
-
-
-class _DanglingExprCallFinder(ast.NodeTransformer):
+class _DanglingExprCallFinder(AstNodeTransformerBase):
     """Finds all calls in a given dangling expression
     except for a subset of builtin functions that have
     no side effects."""

@@ -1,10 +1,12 @@
 import ast
 import warnings
-from collections.abc import Iterable
 from enum import Enum
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
-from personal_python_ast_optimizer.parser._base import AstNodeTransformerBase
+from personal_python_ast_optimizer.parser._base import (
+    AstNodeTransformerBase,
+    UnusedNodeSkipperBase,
+)
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     SkipConfig,
@@ -822,58 +824,41 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return ast.Constant(result)
 
 
-class UnusedImportSkipper(AstNodeTransformerBase):
-    __slots__ = ("names_and_attrs",)
-
-    def __init__(self, imports_to_preserve: Iterable[str]) -> None:
-        self.names_and_attrs: set[str] = set(imports_to_preserve)
-
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        for field, old_value in ast.iter_fields(node):
-            if isinstance(old_value, list):
-                new_values = []
-                ast_removed: bool = False
-                for value in reversed(old_value):
-                    if isinstance(value, ast.AST):
-                        value = self.visit(value)  # noqa: PLW2901
-                        if value is None:
-                            ast_removed = True
-                            continue
-
-                    new_values.append(value)
-
-                if not isinstance(node, ast.Module) and not new_values and ast_removed:
-                    new_values.append(ast.Pass())
-
-                old_value[:] = reversed(new_values)
-
-            elif isinstance(old_value, ast.AST):
-                new_node = self.visit(old_value)
-                if new_node is None:
-                    delattr(node, field)
-                else:
-                    setattr(node, field, new_node)
-
-        return node
-
+class UnusedImportSkipper(UnusedNodeSkipperBase):
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        filter_imports(node, self.names_and_attrs)
+        filter_imports(node, self.names)
 
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
         if node.module != "__future__":
-            filter_imports(node, self.names_and_attrs)
+            filter_imports(node, self.names)
 
         return node if node.names else None
 
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        self.names_and_attrs.add(node.id)
-        return node
-
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        self.names_and_attrs.add(node.attr)
+        self.names.add(node.attr)
         return self.generic_visit(node)
+
+
+class UnusedLocalSkipper(UnusedNodeSkipperBase):
+    """Skips unused locals in functions."""
+
+    def visit_Assign(self, node: ast.Assign):
+        if self.depth == 1 and not (
+            isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple)
+        ):
+            node.targets = [
+                target for target in node.targets if get_node_name(target) in self.names
+            ]
+
+        return super().visit_Assign(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        if self.depth == 1 and get_node_name(node.target) not in self.names:
+            return None
+
+        return super().visit_Assign(node)
 
 
 class _DanglingExprCallFinder(AstNodeTransformerBase):

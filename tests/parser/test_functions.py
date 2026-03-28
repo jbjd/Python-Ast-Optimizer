@@ -123,8 +123,9 @@ def foo():
             print(a)
 """,
         """def foo():
-    class A:
-        def foo2(self):b=3""",
+\ta=3
+\tclass A:
+\t\tdef foo2(self):print(a)""",
     ),
     BeforeAndAfter(
         """
@@ -132,7 +133,19 @@ def foo():
     a = 3
     print(a)
 """,
-        "def foo():a=3;print(3)",
+        "def foo():a=3;print(a)",
+    ),
+    BeforeAndAfter(
+        """
+def foo():
+    a = 3
+    class A:
+        def foo2(self):
+            print(4)
+""",
+        """def foo():
+\tclass A:
+\t\tdef foo2(self):print(4)""",
     ),
 ]
 

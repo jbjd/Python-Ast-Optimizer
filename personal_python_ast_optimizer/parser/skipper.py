@@ -1,12 +1,10 @@
 import ast
 import warnings
+from collections.abc import Iterable
 from enum import Enum
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
-from personal_python_ast_optimizer.parser._base import (
-    AstNodeTransformerBase,
-    UnusedNodeSkipperBase,
-)
+from personal_python_ast_optimizer.parser._base import AstNodeTransformerBase
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     SkipConfig,
@@ -185,8 +183,12 @@ class AstNodeSkipper(AstNodeTransformerBase):
                     import_to_update.names.append(alias)
 
         if self.optimizations_config.remove_unused_imports and self._has_imports:
-            import_filter = UnusedImportSkipper(
-                self.optimizations_config.unused_imports_to_preserve
+            import_filter = UnusedNodeSkipper(
+                _UnusedNodeSkipperConfig(
+                    remove_imports=self.optimizations_config.remove_unused_imports,
+                    remove_locals=False,
+                ),
+                self.optimizations_config.unused_imports_to_preserve,
             )
             import_filter.visit(node)
 
@@ -824,41 +826,79 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return ast.Constant(result)
 
 
-class UnusedImportSkipper(UnusedNodeSkipperBase):
+class _UnusedNodeSkipperConfig:
+    __slots__ = ("remove_imports", "remove_locals")
+
+    def __init__(self, *, remove_imports: bool, remove_locals: bool):
+        self.remove_imports: bool = remove_imports
+        self.remove_locals: bool = remove_locals
+
+
+class UnusedNodeSkipper(AstNodeTransformerBase):
+    __slots__ = ("config", "names")
+
+    def __init__(
+        self,
+        config: _UnusedNodeSkipperConfig,
+        imports_to_preserve: Iterable[str] | None = None,
+    ) -> None:
+        self.config: _UnusedNodeSkipperConfig = config
+        self.names: set[str] = (
+            set(imports_to_preserve) if imports_to_preserve is not None else set()
+        )
+
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        for field, old_value in ast.iter_fields(node):
+            if isinstance(old_value, list):
+                new_values = []
+                ast_removed: bool = False
+                for value in reversed(old_value):
+                    if isinstance(value, ast.AST):
+                        value = self.visit(value)  # noqa: PLW2901
+                        if value is None:
+                            ast_removed = True
+                            continue
+
+                    new_values.append(value)
+
+                if not isinstance(node, ast.Module) and not new_values and ast_removed:
+                    new_values.append(ast.Pass())
+
+                old_value[:] = reversed(new_values)
+
+            elif isinstance(old_value, ast.AST):
+                new_node = self.visit(old_value)
+                if new_node is None:
+                    delattr(node, field)
+                else:
+                    setattr(node, field, new_node)
+
+        return node
+
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
+        if not self.config.remove_imports:
+            return node
+
         filter_imports(node, self.names)
 
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
+        if not self.config.remove_imports:
+            return node
+
         if node.module != "__future__":
             filter_imports(node, self.names)
 
         return node if node.names else None
 
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        self.names.add(node.id)
+        return node
+
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         self.names.add(node.attr)
         return self.generic_visit(node)
-
-
-class UnusedLocalSkipper(UnusedNodeSkipperBase):
-    """Skips unused locals in functions."""
-
-    def visit_Assign(self, node: ast.Assign):
-        if self.depth == 1 and not (
-            isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple)
-        ):
-            node.targets = [
-                target for target in node.targets if get_node_name(target) in self.names
-            ]
-
-        return super().visit_Assign(node)
-
-    def visit_AnnAssign(self, node: ast.AnnAssign):
-        if self.depth == 1 and get_node_name(node.target) not in self.names:
-            return None
-
-        return super().visit_Assign(node)
 
 
 class _DanglingExprCallFinder(AstNodeTransformerBase):

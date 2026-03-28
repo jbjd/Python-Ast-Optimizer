@@ -138,6 +138,7 @@ class OptimizationsConfig(_Config):
         "functions_safe_to_exclude_in_test_expr",
         "remove_typing_cast",
         "remove_unused_imports",
+        "remove_unused_locals",
         "remove_useless_else",
         "simplify_named_tuples",
         "unused_imports_to_preserve",
@@ -155,6 +156,7 @@ class OptimizationsConfig(_Config):
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         remove_unused_imports: bool = True,
         unused_imports_to_preserve: Iterable[str] | None = None,
+        remove_unused_locals: bool = True,
         remove_useless_else: bool = True,
         remove_typing_cast: bool = True,
         collection_concat_to_unpack: bool = False,
@@ -183,6 +185,7 @@ class OptimizationsConfig(_Config):
         )
 
         self.remove_unused_imports: bool = remove_unused_imports
+        self.remove_unused_locals: bool = remove_unused_locals
         self.remove_useless_else: bool = remove_useless_else
         self.remove_typing_cast: bool = remove_typing_cast
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack

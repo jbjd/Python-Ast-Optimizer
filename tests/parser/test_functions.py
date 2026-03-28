@@ -1,3 +1,5 @@
+import pytest
+
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     TokenTypesConfig,
@@ -109,3 +111,32 @@ a = cast(str, 1)
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_typing_cast=False),
     )
+
+
+_unused_locals_cases = [
+    BeforeAndAfter(
+        """
+def foo():
+    a = 3
+    class A:
+        def foo2(self):
+            print(a)
+""",
+        """def foo():
+    class A:
+        def foo2(self):b=3""",
+    ),
+    BeforeAndAfter(
+        """
+def foo():
+    a = 3
+    print(a)
+""",
+        "def foo():a=3;print(3)",
+    ),
+]
+
+
+@pytest.mark.parametrize("before_and_after", _unused_locals_cases)
+def test_function_unused_locals(before_and_after: BeforeAndAfter):
+    run_minifier_and_assert_correct(before_and_after)

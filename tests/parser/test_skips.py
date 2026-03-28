@@ -81,6 +81,7 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
+        optimizations_config=OptimizationsConfig(remove_unused_locals=False),
         tokens_config=TokensConfig(variables_to_skip={"foo"}),
     )
 
@@ -136,6 +137,7 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     run_minifier_and_assert_correct(
         before_and_after,
+        optimizations_config=OptimizationsConfig(remove_unused_locals=False),
         tokens_config=TokensConfig(functions_to_skip={"foo"}),
     )
 

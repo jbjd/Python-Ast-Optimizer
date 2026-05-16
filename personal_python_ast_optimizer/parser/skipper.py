@@ -821,6 +821,18 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         return ast.Constant(result)
 
+    def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
+        return None if self.token_types_config.skip_generics else node
+
+    def visit_ParamSpec(self, node: ast.ParamSpec) -> ast.ParamSpec | None:
+        return None if self.token_types_config.skip_generics else node
+
+    def visit_TypeVarTuple(self, node: ast.TypeVarTuple) -> ast.TypeVarTuple | None:
+        return None if self.token_types_config.skip_generics else node
+
+    def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.TypeAlias | None:
+        return None if self.token_types_config.skip_generics else node
+
 
 class UnusedImportSkipper(AstNodeTransformerBase):
     __slots__ = ("names_and_attrs",)

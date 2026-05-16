@@ -111,6 +111,7 @@ class TokenTypesConfig(_Config):
     __slots__ = (
         "skip_asserts",
         "skip_dangling_expressions",
+        "skip_generics",
         "skip_overload_functions",
         "skip_type_hints",
     )
@@ -120,11 +121,16 @@ class TokenTypesConfig(_Config):
         *,
         skip_dangling_expressions: bool = True,
         skip_type_hints: TypeHintsToSkip = TypeHintsToSkip.ALL_BUT_CLASS_VARS,
+        skip_generics: bool = False,
         skip_asserts: bool = False,
         skip_overload_functions: bool = False,
     ) -> None:
+        if skip_generics and not skip_type_hints:
+            raise ValueError("Can't skip Generics if not skipping type hints")
+
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
+        self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
         self.skip_overload_functions: bool = skip_overload_functions
 

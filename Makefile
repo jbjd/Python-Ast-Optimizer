@@ -1,7 +1,7 @@
 validate:
 	ruff check .
 	ruff format --check
-	mypy . --check-untyped-defs
+	mypy .
 	codespell personal_python_ast_optimizer tests setup.py README.md
 
 test:

@@ -138,7 +138,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self.traverse(node.exc)
 
         if node.cause:
-            self._source.append(" from ")
+            self.write(" from ")
             self.traverse(node.cause)
 
     def visit_Expr(self, node: ast.Expr) -> None:

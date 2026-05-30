@@ -103,10 +103,24 @@ class AstNodeSkipper(AstNodeTransformerBase):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
-                self._combine_imports(old_value)
-                for value in old_value:
+                for i in range(len(old_value)):
+                    value = old_value[i]
                     if isinstance(value, ast.AST):
-                        value = self.visit(value)  # noqa: PLW2901
+                        value = self.visit(value)
+
+                        if new_values:
+                            previous_value = new_values[-1]
+                            if (
+                                isinstance(value, ast.Import)
+                                and isinstance(previous_value, ast.Import)
+                            ) or (
+                                isinstance(value, ast.ImportFrom)
+                                and isinstance(previous_value, ast.ImportFrom)
+                                and value.module == previous_value.module
+                                and value.level == previous_value.level
+                            ):
+                                previous_value.names += value.names
+                                continue
 
                         if value is None or (
                             self.token_types_config.skip_dangling_expressions
@@ -138,31 +152,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                     setattr(node, field, new_node)
 
         return node
-
-    @staticmethod
-    def _combine_imports(body: list) -> None:
-        if not body:
-            return
-
-        new_body = [body[0]]
-
-        for i in range(1, len(body)):
-            this_node = body[i]
-            last_node = new_body[-1]
-
-            if (
-                isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import)
-            ) or (
-                isinstance(this_node, ast.ImportFrom)
-                and isinstance(last_node, ast.ImportFrom)
-                and this_node.module == last_node.module
-                and this_node.level == last_node.level
-            ):
-                last_node.names += this_node.names
-            else:
-                new_body.append(this_node)
-
-        body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         self.generic_visit(node)

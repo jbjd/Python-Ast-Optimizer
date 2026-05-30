@@ -21,7 +21,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self.can_write_body_in_one_line: bool = False
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
-        """Overrides super fill to use tabs over spaces and different line splitters"""
+        """Overrides super fill to use tabs over spaces and different line splitters."""
         match splitter:
             case "\n":
                 self.maybe_newline()
@@ -30,6 +30,12 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
                 self.write(text)
             case _:
                 self.write(f";{text}")
+
+    def fill_literal(self, text: str) -> None:
+        """Adds text to source without an additional parsing. Only use when text is
+        known to contain no extra whitespace."""
+        self.maybe_newline()
+        self._source.append("\t" * self._indent + text)
 
     def write(self, *text: str) -> None:
         """Write text, with some mapping replacements"""
@@ -99,7 +105,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self.fill("assert ", splitter=self._get_line_splitter())
         self.traverse(node.test)
         if node.msg:
-            self.write(",")
+            self._source.append(",")
             self.traverse(node.msg)
 
     def visit_Global(self, node: ast.Global) -> None:
@@ -117,7 +123,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
     def visit_Return(self, node: ast.Return) -> None:
         self.fill("return", splitter=self._get_line_splitter())
         if node.value:
-            self.write(" ")
+            self._source.append(" ")
             self.traverse(node.value)
 
     def visit_Raise(self, node: ast.Raise) -> None:
@@ -128,11 +134,11 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
                 raise ValueError("Node can't use cause without an exception.")
             return
 
-        self.write(" ")
+        self._source.append(" ")
         self.traverse(node.exc)
 
         if node.cause:
-            self.write(" from ")
+            self._source.append(" from ")
             self.traverse(node.cause)
 
     def visit_Expr(self, node: ast.Expr) -> None:
@@ -158,10 +164,10 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
             "(", ")", not node.simple and isinstance(node.target, ast.Name)
         ):
             self.traverse(node.target)
-        self.write(":")
+        self._source.append(":")
         self.traverse(node.annotation)
         if node.value:
-            self.write("=")
+            self._source.append("=")
             self.traverse(node.value)
 
     def visit_Assign(self, node: ast.Assign) -> None:
@@ -169,31 +175,31 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         for target in node.targets:
             self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore
             self.traverse(target)
-            self.write("=")
+            self._source.append("=")
         self.traverse(node.value)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self.fill(splitter=self._get_line_splitter())
         self.traverse(node.target)
-        self.write(self.binop[node.op.__class__.__name__] + "=")
+        self._source.append(self.binop[node.op.__class__.__name__] + "=")
         self.traverse(node.value)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self._write_decorators(node)
-        self.fill("class " + node.name)
+        self.fill_literal("class " + node.name)
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
         with self.delimit_if("(", ")", condition=node.bases or node.keywords):
             comma = False
             for base in node.bases:
                 if comma:
-                    self.write(",")
+                    self._source.append(",")
                 else:
                     comma = True
                 self.traverse(base)
             for kw in node.keywords:
                 if comma:
-                    self.write(",")
+                    self._source.append(",")
                 else:
                     comma = True
                 self.traverse(kw)
@@ -207,14 +213,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         fill_suffix: Literal["def", "async def"],
     ) -> None:
         self._write_decorators(node)
-        def_str = fill_suffix + " " + node.name
-        self.fill(def_str)
+        self.fill_literal(f"{fill_suffix} {node.name}")
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
         with self.delimit("(", ")"):
             self.traverse(node.args)
         if node.returns:
-            self.write("->")
+            self._source.append("->")
             self.traverse(node.returns)
         with self.block(extra=self.get_type_comment(node)):
             self._write_docstring_and_traverse_body(node)
@@ -223,7 +228,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
     ) -> None:
         for deco in node.decorator_list:
-            self.fill("@")
+            self.fill_literal("@")
             self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:

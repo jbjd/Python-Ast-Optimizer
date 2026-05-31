@@ -8,7 +8,9 @@ from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
 def test_generics_config():
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Can't skip Generics if not skipping type hints"
+    ):
         TokenTypesConfig(skip_type_hints=TypeHintsToSkip.NONE, skip_generics=True)
 
 

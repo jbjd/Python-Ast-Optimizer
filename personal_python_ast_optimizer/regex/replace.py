@@ -58,7 +58,7 @@ def re_replace_file(
     regex_replacement: RegexReplacement | Iterable[RegexReplacement],
     encoding: str = "utf-8",
     raise_if_not_applied: bool = False,
-):
+) -> None:
     """Wraps apply_regex with opening and writing to a file."""
 
     with open(path, encoding=encoding) as fp:

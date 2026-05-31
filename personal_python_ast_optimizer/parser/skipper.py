@@ -228,8 +228,8 @@ class AstNodeSkipper(AstNodeTransformerBase):
                     defaults.append(assign.value)
                 elif node.body[i - 1].value is not None:  # type: ignore
                     raise ValueError(
-                        f"Non-default namedtuple {node.name} field "
-                        "cannot follow default field"
+                        f'Non-default namedtuple "{node.name}" field '
+                        f'"{get_node_name(assign.target)}" cannot follow default field'
                     )
 
         else:
@@ -559,9 +559,10 @@ class AstNodeSkipper(AstNodeTransformerBase):
             None if self.token_types_config.skip_asserts else self.generic_visit(node)
         )
 
-    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]
-        """Always returns None. Caller responsible for ensuring empty bodies
-        are populated with a Pass node."""
+    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]  # noqa: ARG002
+        """Always returns None. Pass is handled elsewhere only as needed.
+
+        :param node: This is ignored"""
         return  # This could be toggleable
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:

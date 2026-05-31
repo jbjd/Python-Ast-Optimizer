@@ -74,6 +74,12 @@ def bar():
 """,
         "def bar():test=1",
     ),
+    BeforeAndAfter(
+        """
+*foo=1,2
+""",
+        "",
+    ),
 ]
 
 

@@ -27,9 +27,6 @@ from personal_python_ast_optimizer.parser.utils import (
     skip_base_classes,
     skip_decorators,
 )
-from personal_python_ast_optimizer.python_info import (
-    default_functions_safe_to_exclude_in_test_expr,
-)
 
 
 class _NodeContext(Enum):
@@ -97,12 +94,12 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         return wrapper
 
-    def generic_visit(self, node: ast.AST) -> ast.AST:
+    def generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
         """Modified version of super class's generic_visit
         to extend functionality"""
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
-                new_values = []
+                new_values: list = []
                 for i in range(len(old_value)):
                     value = old_value[i]
                     if isinstance(value, ast.AST):
@@ -353,6 +350,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
         elif isinstance(node.targets[0], ast.Tuple) and isinstance(
             node.value, ast.Tuple
         ):
+            # TODO: handle skipping Starred vars
             target_elts = node.targets[0].elts
             original_target_len = len(target_elts)
 
@@ -390,8 +388,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 for target in node.targets
                 if not self._is_assign_of_folded_constant(target)
                 and get_node_name(target) not in self.tokens_config.variables_to_skip
-                and get_node_name(getattr(node.targets[0], "value", None))
-                not in self.tokens_config.variables_to_skip
             ]
             if not new_targets:
                 return None
@@ -884,12 +880,12 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
 
     __slots__ = ("calls", "excludes")
 
-    def __init__(self, excludes: set[str]) -> None:
+    def __init__(self, excludes: Iterable[str]) -> None:
         self.calls: list[ast.Call] = []
-        self.excludes: set[str] = excludes
+        self.excludes: Iterable[str] = excludes
 
     def visit_Call(self, node: ast.Call) -> ast.Call:
-        if get_node_name(node) not in default_functions_safe_to_exclude_in_test_expr:
+        if get_node_name(node.func) not in self.excludes:
             self.calls.append(node)
 
         return node

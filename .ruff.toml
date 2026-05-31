@@ -18,10 +18,8 @@ ignore = ["COM812", "D", "EM", "FBT", "PTH", "TRY003"]
 
 # ANN201: Missing return type
 # PT011: Pytest raises
+# S101: Assert
 "tests/*" = ["ANN201", "PT011", "S101"]
-
-[lint.isort]
-known-third-party = ["nuitka"]
 
 [format]
 quote-style = "double"

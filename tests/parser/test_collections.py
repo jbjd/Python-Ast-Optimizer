@@ -87,7 +87,10 @@ class A(NamedTuple):
         "",
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match='Non-default namedtuple "A" field "bar" cannot follow default field',
+    ):
         run_minifier_and_assert_correct(
             before_and_after,
             optimizations_config=OptimizationsConfig(simplify_named_tuples=True),

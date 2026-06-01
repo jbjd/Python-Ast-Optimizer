@@ -27,9 +27,6 @@ from personal_python_ast_optimizer.parser.utils import (
     skip_base_classes,
     skip_decorators,
 )
-from personal_python_ast_optimizer.python_info import (
-    default_functions_safe_to_exclude_in_test_expr,
-)
 
 
 class _NodeContext(Enum):
@@ -97,16 +94,30 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         return wrapper
 
-    def generic_visit(self, node: ast.AST) -> ast.AST:
+    def generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
         """Modified version of super class's generic_visit
         to extend functionality"""
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
-                new_values = []
-                self._combine_imports(old_value)
-                for value in old_value:
+                new_values: list = []
+                for i in range(len(old_value)):
+                    value = old_value[i]
                     if isinstance(value, ast.AST):
-                        value = self.visit(value)  # noqa: PLW2901
+                        value = self.visit(value)
+
+                        if new_values:
+                            previous_value = new_values[-1]
+                            if (
+                                isinstance(value, ast.Import)
+                                and isinstance(previous_value, ast.Import)
+                            ) or (
+                                isinstance(value, ast.ImportFrom)
+                                and isinstance(previous_value, ast.ImportFrom)
+                                and value.module == previous_value.module
+                                and value.level == previous_value.level
+                            ):
+                                previous_value.names += value.names
+                                continue
 
                         if value is None or (
                             self.token_types_config.skip_dangling_expressions
@@ -138,31 +149,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                     setattr(node, field, new_node)
 
         return node
-
-    @staticmethod
-    def _combine_imports(body: list) -> None:
-        if not body:
-            return
-
-        new_body = [body[0]]
-
-        for i in range(1, len(body)):
-            this_node = body[i]
-            last_node = new_body[-1]
-
-            if (
-                isinstance(this_node, ast.Import) and isinstance(last_node, ast.Import)
-            ) or (
-                isinstance(this_node, ast.ImportFrom)
-                and isinstance(last_node, ast.ImportFrom)
-                and this_node.module == last_node.module
-                and this_node.level == last_node.level
-            ):
-                last_node.names += this_node.names
-            else:
-                new_body.append(this_node)
-
-        body[:] = new_body
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
         self.generic_visit(node)
@@ -242,8 +228,8 @@ class AstNodeSkipper(AstNodeTransformerBase):
                     defaults.append(assign.value)
                 elif node.body[i - 1].value is not None:  # type: ignore
                     raise ValueError(
-                        f"Non-default namedtuple {node.name} field "
-                        "cannot follow default field"
+                        f'Non-default namedtuple "{node.name}" field '
+                        f'"{get_node_name(assign.target)}" cannot follow default field'
                     )
 
         else:
@@ -364,6 +350,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
         elif isinstance(node.targets[0], ast.Tuple) and isinstance(
             node.value, ast.Tuple
         ):
+            # TODO: handle skipping Starred vars
             target_elts = node.targets[0].elts
             original_target_len = len(target_elts)
 
@@ -401,8 +388,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 for target in node.targets
                 if not self._is_assign_of_folded_constant(target)
                 and get_node_name(target) not in self.tokens_config.variables_to_skip
-                and get_node_name(getattr(node.targets[0], "value", None))
-                not in self.tokens_config.variables_to_skip
             ]
             if not new_targets:
                 return None
@@ -574,9 +559,10 @@ class AstNodeSkipper(AstNodeTransformerBase):
             None if self.token_types_config.skip_asserts else self.generic_visit(node)
         )
 
-    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]
-        """Always returns None. Caller responsible for ensuring empty bodies
-        are populated with a Pass node."""
+    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]  # noqa: ARG002
+        """Always returns None. Pass is handled elsewhere only as needed.
+
+        :param node: This is ignored"""
         return  # This could be toggleable
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
@@ -777,41 +763,41 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         match operation:
             case ast.Add():
-                result = left_value + right_value  # type: ignore
+                result = left_value + right_value  # type: ignore[operator]
             case ast.Sub():
-                result = left_value - right_value  # type: ignore
+                result = left_value - right_value  # type: ignore[operator]
             case ast.Mult():
-                result = left_value * right_value  # type: ignore
+                result = left_value * right_value  # type: ignore[operator]
             case ast.Div():
-                result = left_value / right_value  # type: ignore
+                result = left_value / right_value  # type: ignore[operator]
             case ast.FloorDiv():
-                result = left_value // right_value  # type: ignore
+                result = left_value // right_value  # type: ignore[operator]
             case ast.Mod():
-                result = left_value % right_value  # type: ignore
+                result = left_value % right_value  # type: ignore[operator]
             case ast.Pow():
-                result = left_value**right_value  # type: ignore
+                result = left_value**right_value  # type: ignore[operator]
             case ast.LShift():
-                result = left_value << right_value  # type: ignore
+                result = left_value << right_value  # type: ignore[operator]
             case ast.RShift():
-                result = left_value >> right_value  # type: ignore
+                result = left_value >> right_value  # type: ignore[operator]
             case ast.BitOr():
-                result = left_value | right_value  # type: ignore
+                result = left_value | right_value  # type: ignore[operator]
             case ast.BitXor():
-                result = left_value ^ right_value  # type: ignore
+                result = left_value ^ right_value  # type: ignore[operator]
             case ast.BitAnd():
-                result = left_value & right_value  # type: ignore
+                result = left_value & right_value  # type: ignore[operator]
             case ast.Eq():
                 result = left_value == right_value
             case ast.NotEq():
                 result = left_value != right_value
             case ast.Lt():
-                result = left_value < right_value  # type: ignore
+                result = left_value < right_value  # type: ignore[operator]
             case ast.LtE():
-                result = left_value <= right_value  # type: ignore
+                result = left_value <= right_value  # type: ignore[operator]
             case ast.Gt():
-                result = left_value > right_value  # type: ignore
+                result = left_value > right_value  # type: ignore[operator]
             case ast.GtE():
-                result = left_value >= right_value  # type: ignore
+                result = left_value >= right_value  # type: ignore[operator]
             case ast.Is():
                 result = left_value is right_value
             case ast.IsNot():
@@ -895,12 +881,12 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
 
     __slots__ = ("calls", "excludes")
 
-    def __init__(self, excludes: set[str]) -> None:
+    def __init__(self, excludes: Iterable[str]) -> None:
         self.calls: list[ast.Call] = []
-        self.excludes: set[str] = excludes
+        self.excludes: Iterable[str] = excludes
 
     def visit_Call(self, node: ast.Call) -> ast.Call:
-        if get_node_name(node) not in default_functions_safe_to_exclude_in_test_expr:
+        if get_node_name(node.func) not in self.excludes:
             self.calls.append(node)
 
         return node

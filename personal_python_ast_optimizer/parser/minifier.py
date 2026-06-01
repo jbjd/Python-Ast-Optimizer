@@ -1,6 +1,6 @@
 import ast
 from collections.abc import Iterable, Iterator
-from typing import Literal
+from typing import Literal, LiteralString
 
 from personal_python_ast_optimizer.python_info import (
     chars_that_dont_need_whitespace,
@@ -21,7 +21,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self.can_write_body_in_one_line: bool = False
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
-        """Overrides super fill to use tabs over spaces and different line splitters"""
+        """Overrides super fill to use tabs over spaces and different line splitters."""
         match splitter:
             case "\n":
                 self.maybe_newline()
@@ -29,7 +29,33 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
             case "":
                 self.write(text)
             case _:
-                self.write(f";{text}")
+                self.write(";" + text)
+
+    def fill_literal(self, text: LiteralString) -> None:
+        """Adds text to source without an additional parsing. Only use when text is
+        known to contain no extra whitespace."""
+        match self._get_line_splitter():
+            case "\n":
+                self.fill_literal_new_line(text)
+            case "":
+                self._source.append(text)
+            case _:
+                self._source.append(";" + text)
+
+    def fill_literal_new_line(self, text: LiteralString) -> None:
+        self.maybe_newline()
+        self._source.append("\t" * self._indent + text)
+
+    def fill_splitter(self) -> None:
+        """Adds splitter to source based on previous node."""
+        splitter: str = self._get_line_splitter()
+
+        if splitter == ";":
+            self._source.append(";")
+        elif splitter == "\n":
+            self.maybe_newline()
+            if self._indent > 0:
+                self._source.append("\t" * self._indent)
 
     def write(self, *text: str) -> None:
         """Write text, with some mapping replacements"""
@@ -87,48 +113,50 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
             self.visit_node(node)
 
     def visit_Break(self, _: ast.Break) -> None:
-        self.fill("break", splitter=self._get_line_splitter())
+        self.fill_literal("break")
 
     def visit_Pass(self, _: ast.Pass | None = None) -> None:
-        self.fill("pass", splitter=self._get_line_splitter())
+        self.fill_literal("pass")
 
     def visit_Continue(self, _: ast.Continue) -> None:
-        self.fill("continue", splitter=self._get_line_splitter())
+        self.fill_literal("continue")
 
     def visit_Assert(self, node: ast.Assert) -> None:
-        self.fill("assert ", splitter=self._get_line_splitter())
+        self.fill_literal("assert ")
         self.traverse(node.test)
         if node.msg:
-            self.write(",")
+            self._source.append(",")
             self.traverse(node.msg)
 
     def visit_Global(self, node: ast.Global) -> None:
-        self.fill("global ", splitter=self._get_line_splitter())
-        self.interleave(lambda: self.write(","), self.write, node.names)
+        self._write_scope("global ", node.names)
 
     def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
-        self.fill("nonlocal ", splitter=self._get_line_splitter())
-        self.interleave(lambda: self.write(","), self.write, node.names)
+        self._write_scope("nonlocal ", node.names)
+
+    def _write_scope(self, scope: LiteralString, names: list[str]) -> None:
+        self.fill_literal(scope)
+        self.interleave(lambda: self._source.append(","), self._source.extend, names)
 
     def visit_Delete(self, node: ast.Delete) -> None:
-        self.fill("del ", splitter=self._get_line_splitter())
-        self._write_comma_delimitated_body(node.targets)
+        self.fill_literal("del ")
+        self._traverse_comma_delimitated_body(node.targets)
 
     def visit_Return(self, node: ast.Return) -> None:
-        self.fill("return", splitter=self._get_line_splitter())
+        self.fill_literal("return")
         if node.value:
-            self.write(" ")
+            self._source.append(" ")
             self.traverse(node.value)
 
     def visit_Raise(self, node: ast.Raise) -> None:
-        self.fill("raise", splitter=self._get_line_splitter())
+        self.fill_literal("raise")
 
         if not node.exc:
             if node.cause:
                 raise ValueError("Node can't use cause without an exception.")
             return
 
-        self.write(" ")
+        self._source.append(" ")
         self.traverse(node.exc)
 
         if node.cause:
@@ -136,67 +164,65 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
             self.traverse(node.cause)
 
     def visit_Expr(self, node: ast.Expr) -> None:
-        self.fill(splitter=self._get_line_splitter())
+        self.fill_splitter()
         self.set_precedence(ast._Precedence.YIELD, node.value)  # type: ignore
         self.traverse(node.value)
 
     def visit_Import(self, node: ast.Import) -> None:
-        self.fill("import ", splitter=self._get_line_splitter())
-        self._write_comma_delimitated_body(node.names)
+        self.fill_literal("import ")
+        self._traverse_comma_delimitated_body(node.names)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        self.fill("from ", splitter=self._get_line_splitter())
-        self.write("." * (node.level or 0))
+        self.fill_literal("from ")
+        level_dots: str = "." * (node.level or 0)
+        if level_dots != "":
+            self._source.append(level_dots)
         if node.module:
-            self.write(node.module)
-        self.write(" import ")
-        self._write_comma_delimitated_body(node.names)
+            self._source.append(node.module)
+        self._source.append(" import ")
+        self._traverse_comma_delimitated_body(node.names)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        self.fill(splitter=self._get_line_splitter())
+        self.fill_splitter()
         with self.delimit_if(
             "(", ")", not node.simple and isinstance(node.target, ast.Name)
         ):
             self.traverse(node.target)
-        self.write(":")
+
+        self._source.append(":")
         self.traverse(node.annotation)
-        if node.value:
-            self.write("=")
-            self.traverse(node.value)
+
+        if node.value is not None:
+            self._source.append("=")
+            self.visit_node(node.value)
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.fill(splitter=self._get_line_splitter())
+        self.fill_splitter()
+
         for target in node.targets:
             self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore
-            self.traverse(target)
-            self.write("=")
-        self.traverse(node.value)
+            self.visit_node(target)
+            self._source.append("=")
+
+        self.visit_node(node.value)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        self.fill(splitter=self._get_line_splitter())
-        self.traverse(node.target)
-        self.write(self.binop[node.op.__class__.__name__] + "=")
-        self.traverse(node.value)
+        self.fill_splitter()
+
+        self.visit_node(node.target)
+        self._source.append(self.binop[node.op.__class__.__name__] + "=")
+        self.visit_node(node.value)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self._write_decorators(node)
-        self.fill("class " + node.name)
+        self.fill_literal_new_line("class " + node.name)
+
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
+
         with self.delimit_if("(", ")", condition=node.bases or node.keywords):
-            comma = False
-            for base in node.bases:
-                if comma:
-                    self.write(",")
-                else:
-                    comma = True
-                self.traverse(base)
-            for kw in node.keywords:
-                if comma:
-                    self.write(",")
-                else:
-                    comma = True
-                self.traverse(kw)
+            self._traverse_comma_delimitated_body(node.bases)
+            self._traverse_comma_delimitated_body(node.keywords)
 
         with self.block():
             self._write_docstring_and_traverse_body(node)
@@ -207,15 +233,18 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         fill_suffix: Literal["def", "async def"],
     ) -> None:
         self._write_decorators(node)
-        def_str = fill_suffix + " " + node.name
-        self.fill(def_str)
+        self.fill_literal_new_line(f"{fill_suffix} {node.name}")
+
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
+
         with self.delimit("(", ")"):
-            self.traverse(node.args)
+            self.visit_node(node.args)
+
         if node.returns:
-            self.write("->")
-            self.traverse(node.returns)
+            self._source.append("->")
+            self.visit_node(node.returns)
+
         with self.block(extra=self.get_type_comment(node)):
             self._write_docstring_and_traverse_body(node)
 
@@ -223,7 +252,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
     ) -> None:
         for deco in node.decorator_list:
-            self.fill("@")
+            self.fill_literal_new_line("@")
             self.traverse(deco)
 
     def _last_char_is(self, char_to_check: str) -> bool:
@@ -252,11 +281,11 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
 
         return "\n"
 
-    def _write_comma_delimitated_body(
-        self, body: list[ast.alias] | list[ast.expr]
+    def _traverse_comma_delimitated_body(
+        self, body: list[ast.alias] | list[ast.expr] | list[ast.keyword]
     ) -> None:
         """Writes ast expr objects with comma delimitation"""
-        self.interleave(lambda: self.write(","), self.traverse, body)
+        self.interleave(lambda: self._source.append(","), self.traverse, body)
 
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:

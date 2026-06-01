@@ -13,16 +13,18 @@ def exclude_imports(node: ast.Import | ast.ImportFrom, excludes: Iterable[str]) 
         ]
 
 
-def filter_imports(node: ast.Import | ast.ImportFrom, filter: Iterable[str]) -> None:
+def filter_imports(node: ast.Import | ast.ImportFrom, includes: Iterable[str]) -> None:
     node.names = [
-        alias for alias in node.names if (alias.asname or alias.name) in filter
+        alias for alias in node.names if (alias.asname or alias.name) in includes
     ]
 
 
-def get_node_name(node: ast.AST | None) -> str:
-    """Gets id or attr which both can represent var names"""
-    if isinstance(node, ast.Call):
-        node = node.func
+def get_node_name(node: ast.expr) -> str:
+    """Returns 'id' or 'attr' attributes or empty string if missing.
+
+    :param node:"""
+    if isinstance(node, ast.Starred):
+        node = node.value
     return getattr(node, "id", "") or getattr(node, "attr", "")
 
 

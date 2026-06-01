@@ -4,24 +4,25 @@ indent-width = 4
 target-version = "py312"
 
 [lint]
-select = ["B", "C", "C4", "E", "FURB", "F", "I", "PERF", "PL", "Q", "RET", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
+select = ["A", "ARG", "B", "C", "C4", "E", "FURB", "F", "I", "N", "PERF", "PL", "PT", "Q", "RET", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
 
 # COM812: Trailing Comma (Only covers single line trailing commas, seems out of place)
 # D: Doc style
 # EM: Error messages
 # FBT: Boolean Trap (Slower)
 # PTH: Use Pathlib (Wants slower API used)
+# SLF001: Private member access
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["COM812", "D", "EM", "FBT", "PTH", "TRY003"]
+ignore = ["COM812", "D", "EM", "FBT", "PTH", "SLF001", "TRY003"]
 
 [lint.extend-per-file-ignores]
 
-# ANN201: Missing return type
-# PT011: Pytest raises
-"tests/*" = ["ANN201", "PT011", "S101"]
+# N802: Uppercase function names
+"personal_python_ast_optimizer/parser/*" = ["N802"]
 
-[lint.isort]
-known-third-party = ["nuitka"]
+# ANN201: Missing return type
+# S101: Assert
+"tests/*" = ["ANN201", "S101"]
 
 [format]
 quote-style = "double"

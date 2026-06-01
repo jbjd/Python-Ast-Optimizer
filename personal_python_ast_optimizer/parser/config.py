@@ -76,7 +76,7 @@ class TokensConfig(_Config):
         decorators_to_skip: set[str] | None = None,
         module_imports_to_skip: set[str] | None = None,
         no_warn: set[str] | None = None,
-    ):
+    ) -> None:
         self.from_imports_to_skip = TokensToSkip(from_imports_to_skip, "from imports")
         self.functions_to_skip = TokensToSkip(functions_to_skip, "functions")
         self.variables_to_skip = TokensToSkip(variables_to_skip, "variables")

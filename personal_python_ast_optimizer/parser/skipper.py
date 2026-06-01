@@ -763,41 +763,41 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         match operation:
             case ast.Add():
-                result = left_value + right_value  # type: ignore
+                result = left_value + right_value  # type: ignore[operator]
             case ast.Sub():
-                result = left_value - right_value  # type: ignore
+                result = left_value - right_value  # type: ignore[operator]
             case ast.Mult():
-                result = left_value * right_value  # type: ignore
+                result = left_value * right_value  # type: ignore[operator]
             case ast.Div():
-                result = left_value / right_value  # type: ignore
+                result = left_value / right_value  # type: ignore[operator]
             case ast.FloorDiv():
-                result = left_value // right_value  # type: ignore
+                result = left_value // right_value  # type: ignore[operator]
             case ast.Mod():
-                result = left_value % right_value  # type: ignore
+                result = left_value % right_value  # type: ignore[operator]
             case ast.Pow():
-                result = left_value**right_value  # type: ignore
+                result = left_value**right_value  # type: ignore[operator]
             case ast.LShift():
-                result = left_value << right_value  # type: ignore
+                result = left_value << right_value  # type: ignore[operator]
             case ast.RShift():
-                result = left_value >> right_value  # type: ignore
+                result = left_value >> right_value  # type: ignore[operator]
             case ast.BitOr():
-                result = left_value | right_value  # type: ignore
+                result = left_value | right_value  # type: ignore[operator]
             case ast.BitXor():
-                result = left_value ^ right_value  # type: ignore
+                result = left_value ^ right_value  # type: ignore[operator]
             case ast.BitAnd():
-                result = left_value & right_value  # type: ignore
+                result = left_value & right_value  # type: ignore[operator]
             case ast.Eq():
                 result = left_value == right_value
             case ast.NotEq():
                 result = left_value != right_value
             case ast.Lt():
-                result = left_value < right_value  # type: ignore
+                result = left_value < right_value  # type: ignore[operator]
             case ast.LtE():
-                result = left_value <= right_value  # type: ignore
+                result = left_value <= right_value  # type: ignore[operator]
             case ast.Gt():
-                result = left_value > right_value  # type: ignore
+                result = left_value > right_value  # type: ignore[operator]
             case ast.GtE():
-                result = left_value >= right_value  # type: ignore
+                result = left_value >= right_value  # type: ignore[operator]
             case ast.Is():
                 result = left_value is right_value
             case ast.IsNot():

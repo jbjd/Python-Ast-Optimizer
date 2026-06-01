@@ -22,7 +22,7 @@ class RegexReplacement:
         yield self.count
 
 
-class RegexNoMatchException(Exception):
+class RegexNoMatchException(Exception):  # noqa: N818
     pass
 
 

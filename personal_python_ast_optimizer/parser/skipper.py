@@ -1,7 +1,8 @@
 import ast
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
+from typing import Self
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import AstNodeTransformerBase
@@ -70,8 +71,10 @@ class AstNodeSkipper(AstNodeTransformerBase):
             self._skippable_futures.append("annotations")
 
     @staticmethod
-    def _within_class_node(function):
-        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
+    def _within_class_node[*Ts, R](
+        function: Callable[["AstNodeSkipper", *Ts], R],
+    ) -> Callable[["AstNodeSkipper", *Ts], R]:
+        def wrapper(self: Self, *args: *Ts) -> R:
             previous_value: _NodeContext = self._node_context
             self._node_context = _NodeContext.CLASS
             try:
@@ -82,8 +85,10 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return wrapper
 
     @staticmethod
-    def _within_function_node(function):
-        def wrapper(self: "AstNodeSkipper", *args) -> ast.AST | None:
+    def _within_function_node[*Ts, R](
+        function: Callable[["AstNodeSkipper", *Ts], R],
+    ) -> Callable[["AstNodeSkipper", *Ts], R]:
+        def wrapper(self: Self, *args: *Ts) -> R:
             # In case we have a function in a function
             previous_value: _NodeContext = self._node_context
             self._node_context = _NodeContext.FUNCTION

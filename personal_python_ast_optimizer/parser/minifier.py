@@ -1,5 +1,5 @@
 import ast
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import Literal, LiteralString
 
 from personal_python_ast_optimizer.python_info import (
@@ -9,12 +9,12 @@ from personal_python_ast_optimizer.python_info import (
 )
 
 
-class MinifyUnparser(ast._Unparser):  # type: ignore
+class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:
-        self._source: list[str]  # type: ignore
-        self._indent: int  # type: ignore
+        self._source: list[str]  # type: ignore[misc]
+        self._indent: int  # type: ignore[misc]
         super().__init__()
 
         self.previous_node_in_body: ast.stmt | None = None
@@ -90,13 +90,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         can_write_body_in_one_line: bool = False,
         last_visited_node: ast.stmt | None = None,
     ) -> None:
-        method = "visit_" + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
+        method: str = "visit_" + node.__class__.__name__
+        visitor: Callable = getattr(self, method, self.generic_visit)  # type: ignore[assignment]
 
         self.can_write_body_in_one_line = can_write_body_in_one_line
         self.previous_node_in_body = last_visited_node
 
-        return visitor(node)  # type: ignore
+        return visitor(node)
 
     def traverse(self, node: list[ast.stmt] | ast.AST) -> None:
         if isinstance(node, list):
@@ -165,7 +165,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
 
     def visit_Expr(self, node: ast.Expr) -> None:
         self.fill_splitter()
-        self.set_precedence(ast._Precedence.YIELD, node.value)  # type: ignore
+        self.set_precedence(ast._Precedence.YIELD, node.value)  # type: ignore[attr-defined]
         self.traverse(node.value)
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -200,7 +200,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore
         self.fill_splitter()
 
         for target in node.targets:
-            self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore
+            self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore[attr-defined]
             self.visit_node(target)
             self._source.append("=")
 

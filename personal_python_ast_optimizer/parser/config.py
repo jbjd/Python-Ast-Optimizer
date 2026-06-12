@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from collections.abc import Iterable, Iterator
 from enum import Enum, EnumType
 from types import EllipsisType
@@ -28,7 +27,7 @@ class TokensToSkip(dict[str, int]):
 
         self.token_type: str = token_type
 
-    def __contains__(self, key: str) -> bool:  # type: ignore
+    def __contains__(self, key: str) -> bool:  # type: ignore[override]
         """Returns if token is marked to skip and
         increments internal counter when True is returned"""
         contains: bool = super().__contains__(key)
@@ -42,18 +41,7 @@ class TokensToSkip(dict[str, int]):
         return {token for token, found_count in self.items() if found_count == 0}
 
 
-class _Config:
-    __slots__ = ()
-
-    @abstractmethod
-    def __init__(self) -> None:
-        pass
-
-    def has_code_to_skip(self) -> bool:
-        return any(getattr(self, attr) for attr in self.__slots__)  # type: ignore
-
-
-class TokensConfig(_Config):
+class TokensConfig:
     __slots__ = (
         "_no_warn",
         "classes_to_skip",
@@ -93,9 +81,6 @@ class TokensConfig(_Config):
             if attr != "_no_warn":
                 yield getattr(self, attr)
 
-    def has_code_to_skip(self) -> bool:
-        return any(self)  # type: ignore
-
     def get_missing_tokens_iter(self) -> Iterator[tuple[str, str]]:
         for tokens_to_skip in self:
             not_found_tokens: list[str] = [
@@ -107,7 +92,7 @@ class TokensConfig(_Config):
                 yield (tokens_to_skip.token_type, ",".join(not_found_tokens))
 
 
-class TokenTypesConfig(_Config):
+class TokenTypesConfig:
     __slots__ = (
         "skip_asserts",
         "skip_dangling_expressions",
@@ -135,7 +120,7 @@ class TokenTypesConfig(_Config):
         self.skip_overload_functions: bool = skip_overload_functions
 
 
-class OptimizationsConfig(_Config):
+class OptimizationsConfig:
     __slots__ = (
         "assume_this_machine",
         "collection_concat_to_unpack",
@@ -206,7 +191,7 @@ class OptimizationsConfig(_Config):
         return {enum.__name__: enum._member_map_ for enum in enums}
 
 
-class SkipConfig(_Config):
+class SkipConfig:
     __slots__ = (
         "module_name",
         "optimizations_config",
@@ -232,12 +217,4 @@ class SkipConfig(_Config):
         )
         self.optimizations_config: OptimizationsConfig = (
             optimizations_config or OptimizationsConfig()
-        )
-
-    def has_code_to_skip(self) -> bool:
-        return (
-            self.target_python_version is not None
-            or self.tokens_config.has_code_to_skip()
-            or self.token_types_config.has_code_to_skip()
-            or self.optimizations_config.has_code_to_skip()
         )

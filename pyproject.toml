@@ -11,5 +11,10 @@ dynamic         = ["version"]
 ignore_missing_imports = true  # Handled by ruff
 check_untyped_defs = true
 
+[tool.pytest]
+pythonpath = ["personal_python_ast_optimizer"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
 [tool.setuptools.dynamic]
 version         = {file = "version.txt"}

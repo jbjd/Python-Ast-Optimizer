@@ -225,13 +225,13 @@ class AstNodeSkipper(AstNodeTransformerBase):
         defaults: list[ast.expr]
 
         if node.body:
-            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore
+            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
 
             for i in range(1, len(node.body)):
-                assign: ast.AnnAssign = node.body[i]  # type: ignore
+                assign: ast.AnnAssign = node.body[i]  # type: ignore[assignment]
                 if assign.value is not None:
                     defaults.append(assign.value)
-                elif node.body[i - 1].value is not None:  # type: ignore
+                elif node.body[i - 1].value is not None:  # type: ignore[attr-defined]
                     raise ValueError(
                         f'Non-default namedtuple "{node.name}" field '
                         f'"{get_node_name(assign.target)}" cannot follow default field'
@@ -248,7 +248,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
             ast.Name("namedtuple"),
             [
                 ast.Constant(node.name),
-                ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore
+                ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore[attr-defined]
             ],
             keywords,
         )
@@ -414,7 +414,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
         if self._node_context == _NodeContext.CLASS and target_name == "__slots__":
             remove_duplicate_slots(node)
 
-        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore
+        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore[assignment]
 
         if self.token_types_config.skip_type_hints == TypeHintsToSkip.ALL or (
             self.token_types_config.skip_type_hints
@@ -624,7 +624,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
             if isinstance(parsed_node.op, ast.Not):
                 return ast.Constant(not parsed_node.operand.value)
             if isinstance(parsed_node.op, ast.Invert):
-                return ast.Constant(~parsed_node.operand.value)  # type: ignore
+                return ast.Constant(~parsed_node.operand.value)  # type: ignore[operator]
             if isinstance(parsed_node.op, ast.UAdd):
                 return parsed_node.operand
 
@@ -688,7 +688,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return self.generic_visit(node)
 
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
-        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore
+        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore[assignment]
 
         if isinstance(parsed_node.op, (ast.Or, ast.And)):
             # For And nodes left values that are Truthy and const can be removed

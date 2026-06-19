@@ -897,11 +897,17 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
         self.excludes |= set(node.names)
         return node
 
+    # TODO: Needs complete rewrite to
+    # 1. find all assigns of int constant (that never prevously appeared)
+    # 2. Pass that data to new class that uses it to do folding
+    # This version can't handle simple syntax like if _:a=1 elif _:a=2
+
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
         for target in node.targets:
             if isinstance(target, ast.Name) and target.id in self.foldable:
                 del self.foldable[target.id]
+                self.excludes(target.id)
 
         parsed_node: ast.Assign = self.generic_visit(node)
 
@@ -918,6 +924,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
 
         if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
             del self.foldable[node.target.id]
+            self.excludes(node.target.id)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)
 

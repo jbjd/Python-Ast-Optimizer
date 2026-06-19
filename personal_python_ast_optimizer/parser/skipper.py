@@ -5,7 +5,10 @@ from enum import Enum
 from typing import Self
 
 from personal_python_ast_optimizer.futures import get_unneeded_futures
-from personal_python_ast_optimizer.parser._base import AstNodeTransformerBase
+from personal_python_ast_optimizer.parser._base import (
+    AstNodeTransformerBase,
+    AstNodeTransformerReverse,
+)
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     SkipConfig,
@@ -279,7 +282,19 @@ class AstNodeSkipper(AstNodeTransformerBase):
             ):
                 node.body.pop()
 
-        return self.generic_visit(node)
+        parsed_function: ast.FunctionDef | ast.AsyncFunctionDef | None = (
+            self.generic_visit(node)
+        )
+
+        if (
+            self.optimizations_config.fold_simple_function_locals
+            and parsed_function is not None
+        ):
+            locals_folder = _FunctionLocalsFolder()
+            locals_folder.visit(parsed_function)
+            _FunctionUnusedLocalsSkipper(locals_folder.excludes).visit(parsed_function)
+
+        return parsed_function
 
     def _should_skip_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
@@ -825,39 +840,11 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return None if self.token_types_config.skip_generics else node
 
 
-class UnusedImportSkipper(AstNodeTransformerBase):
+class UnusedImportSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
     __slots__ = ("names_and_attrs",)
 
     def __init__(self, imports_to_preserve: Iterable[str]) -> None:
         self.names_and_attrs: set[str] = set(imports_to_preserve)
-
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        for field, old_value in ast.iter_fields(node):
-            if isinstance(old_value, list):
-                new_values = []
-                ast_removed: bool = False
-                for value in reversed(old_value):
-                    if isinstance(value, ast.AST):
-                        value = self.visit(value)  # noqa: PLW2901
-                        if value is None:
-                            ast_removed = True
-                            continue
-
-                    new_values.append(value)
-
-                if not isinstance(node, ast.Module) and not new_values and ast_removed:
-                    new_values.append(ast.Pass())
-
-                old_value[:] = reversed(new_values)
-
-            elif isinstance(old_value, ast.AST):
-                new_node = self.visit(old_value)
-                if new_node is None:
-                    delattr(node, field)
-                else:
-                    setattr(node, field, new_node)
-
-        return node
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
         filter_imports(node, self.names_and_attrs)
@@ -893,5 +880,89 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
     def visit_Call(self, node: ast.Call) -> ast.Call:
         if get_node_name(node.func) not in self.excludes:
             self.calls.append(node)
+
+        return node
+
+
+class _FunctionLocalsFolder(AstNodeTransformerBase):
+    def __init__(self) -> None:
+        self.foldable: dict[str, ast.Constant] = {}
+        self.excludes: set[str] = set()
+
+    def visit_Global(self, node: ast.Global) -> ast.Global:
+        self.excludes |= set(node.names)
+        return node
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> ast.Nonlocal:
+        self.excludes |= set(node.names)
+        return node
+
+    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+
+        parsed_node: ast.Assign = self.generic_visit(node)
+
+        if isinstance(parsed_node.value, ast.Constant) and isinstance(
+            parsed_node.value.value, int
+        ):
+            for target in parsed_node.targets:
+                if isinstance(target, ast.Name):
+                    self.foldable[target.id] = parsed_node.value
+
+        return parsed_node
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
+
+        parsed_node: ast.AnnAssign = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node.target, ast.Name)
+            and isinstance(parsed_node.value, ast.Constant)
+            and isinstance(parsed_node.value.value, int)
+        ):
+            self.foldable[parsed_node.target.id] = parsed_node.value
+
+        return parsed_node
+
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AugAssign:
+        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
+            del self.foldable[node.target.id]
+
+        return self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+        if node.id in self.foldable:
+            return self.foldable[node.id]
+
+        return node
+
+
+class _FunctionUnusedLocalsSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
+    def __init__(self, excludes: Iterable[str]) -> None:
+        self.excludes: Iterable[str] = excludes
+        self.found: set[str] = set()
+
+    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+
+        new_targets = [
+            target
+            for target in node.targets
+            if not isinstance(target, ast.Name) or target.id in self.found
+        ]
+
+        if not new_targets:
+            return None
+
+        node.targets = new_targets
+        return self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign | None:
+
+        if isinstance(node.target, ast.Name) and node.target.id not in self.found:
+            return None
+
+        return self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+        self.found.add(node.id)
 
         return node

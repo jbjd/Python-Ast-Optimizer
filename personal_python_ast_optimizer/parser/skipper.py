@@ -900,7 +900,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
         for target in node.targets:
-            if isinstance(target, ast.Name) and target.id in self.foldable[target.id]:
+            if isinstance(target, ast.Name) and target.id in self.foldable:
                 del self.foldable[target.id]
 
         parsed_node: ast.Assign = self.generic_visit(node)
@@ -916,10 +916,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
 
-        if (
-            isinstance(node.target, ast.Name)
-            and node.target.id in self.foldable[node.target.id]
-        ):
+        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
             del self.foldable[node.target.id]
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)

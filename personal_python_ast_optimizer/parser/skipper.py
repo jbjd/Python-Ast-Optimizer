@@ -937,6 +937,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
 
 
 class _FunctionUnusedLocalsSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
+    # TODO: handle walrus operator (NamedExpr)
     def __init__(self, excludes: Iterable[str]) -> None:
         self.excludes: Iterable[str] = excludes
         self.found: set[str] = set()

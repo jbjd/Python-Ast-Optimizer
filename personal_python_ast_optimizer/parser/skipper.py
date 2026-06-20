@@ -290,9 +290,9 @@ class AstNodeSkipper(AstNodeTransformerBase):
             self.optimizations_config.fold_simple_function_locals
             and parsed_function is not None
         ):
-            locals_folder = _FunctionLocalsFolder()
+            locals_folder = _FunctionFoldableLocalsFinder()
             locals_folder.visit(parsed_function)
-            _FunctionUnusedLocalsSkipper(locals_folder.excludes).visit(parsed_function)
+            _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
 
         return parsed_function
 
@@ -884,7 +884,8 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
         return node
 
 
-class _FunctionLocalsFolder(AstNodeTransformerBase):
+class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
+    # TODO: handle walrus operator (NamedExpr), AugAssign
     def __init__(self) -> None:
         self.foldable: dict[str, ast.Constant] = {}
         self.excludes: set[str] = set()
@@ -905,63 +906,44 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
         for target in node.targets:
-            if isinstance(target, ast.Name) and target.id in self.foldable:
-                del self.foldable[target.id]
-                self.excludes(target.id)
+            if isinstance(target, ast.Name):
+                if target.id in self.foldable:
+                    del self.foldable[target.id]
+                    self.excludes(target.id)
+                elif (
+                    target.id not in self.excludes
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, int)
+                ):
+                    self.foldable[target.id] = node.value
 
-        parsed_node: ast.Assign = self.generic_visit(node)
-
-        if isinstance(parsed_node.value, ast.Constant) and isinstance(
-            parsed_node.value.value, int
-        ):
-            for target in parsed_node.targets:
-                if isinstance(target, ast.Name):
-                    self.foldable[target.id] = parsed_node.value
-
-        return parsed_node
+        return self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
 
         if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
             del self.foldable[node.target.id]
             self.excludes(node.target.id)
-
-        parsed_node: ast.AnnAssign = self.generic_visit(node)
-
-        if (
-            isinstance(parsed_node.target, ast.Name)
-            and isinstance(parsed_node.value, ast.Constant)
-            and isinstance(parsed_node.value.value, int)
+        elif (
+            node.target.id not in self.excludes
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, int)
         ):
-            self.foldable[parsed_node.target.id] = parsed_node.value
-
-        return parsed_node
-
-    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AugAssign:
-        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
-            del self.foldable[node.target.id]
+            self.foldable[node.target.id] = node.value
 
         return self.generic_visit(node)
 
-    def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
-        if node.id in self.foldable:
-            return self.foldable[node.id]
 
-        return node
-
-
-class _FunctionUnusedLocalsSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
-    # TODO: handle walrus operator (NamedExpr)
-    def __init__(self, excludes: Iterable[str]) -> None:
-        self.excludes: Iterable[str] = excludes
-        self.found: set[str] = set()
+class _FunctionLocalsFolder(AstNodeTransformerBase):
+    def __init__(self, folds: dict[str, ast.Constant]) -> None:
+        self.folds: dict[str, ast.Constant] = folds
 
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
         new_targets = [
             target
             for target in node.targets
-            if not isinstance(target, ast.Name) or target.id in self.found
+            if not isinstance(target, ast.Name) or target.id not in self.folds
         ]
 
         if not new_targets:
@@ -978,6 +960,7 @@ class _FunctionUnusedLocalsSkipper(AstNodeTransformerReverse, AstNodeTransformer
         return self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
-        self.found.add(node.id)
+        if node.id in self.folds:
+            return self.folds[node.id]
 
         return node

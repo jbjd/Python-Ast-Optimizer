@@ -295,7 +295,10 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 {a.arg for a in node.args.args}
             )
             locals_folder.visit(parsed_function)
-            _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
+
+            if locals_folder.foldable:
+                # TODO: Need to fold ifs / ops again
+                _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
 
         return parsed_function
 

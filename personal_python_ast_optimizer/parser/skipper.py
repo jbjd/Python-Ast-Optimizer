@@ -898,11 +898,6 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
         self._excludes |= set(node.names)
         return node
 
-    # TODO: Needs complete rewrite to
-    # 1. find all assigns of int constant (that never prevously appeared)
-    # 2. Pass that data to new class that uses it to do folding
-    # This version can't handle simple syntax like if _:a=1 elif _:a=2
-
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
         for target in node.targets:
@@ -921,15 +916,16 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
 
-        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
-            del self.foldable[node.target.id]
-            self._excludes.add(node.target.id)
-        elif (
-            node.target.id not in self._excludes
-            and isinstance(node.value, ast.Constant)
-            and isinstance(node.value.value, int)
-        ):
-            self.foldable[node.target.id] = node.value
+        if isinstance(node.target, ast.Name):
+            if node.target.id in self.foldable:
+                del self.foldable[node.target.id]
+                self._excludes.add(node.target.id)
+            elif (
+                node.target.id not in self._excludes
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, int)
+            ):
+                self.foldable[node.target.id] = node.value
 
         return self.generic_visit(node)
 

@@ -290,7 +290,9 @@ class AstNodeSkipper(AstNodeTransformerBase):
             self.optimizations_config.fold_simple_function_locals
             and parsed_function is not None
         ):
-            locals_folder = _FunctionFoldableLocalsFinder()
+            locals_folder = _FunctionFoldableLocalsFinder(
+                {a.arg for a in node.args.args}
+            )
             locals_folder.visit(parsed_function)
             _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
 
@@ -886,9 +888,9 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
 
 class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
     # TODO: handle walrus operator (NamedExpr)
-    def __init__(self) -> None:
+    def __init__(self, excludes: set[str]) -> None:
         self.foldable: dict[str, ast.Constant] = {}
-        self._excludes: set[str] = set()
+        self._excludes: set[str] = excludes
 
     def visit_Global(self, node: ast.Global) -> ast.Global:
         self._excludes |= set(node.names)

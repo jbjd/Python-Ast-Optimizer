@@ -8,6 +8,7 @@ from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
     AstNodeTransformerReverse,
+    AstNodeVisitorBase,
 )
 from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
@@ -842,7 +843,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
         return None if self.token_types_config.skip_generics else node
 
 
-class UnusedImportSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
+class UnusedImportSkipper(AstNodeTransformerReverse):
     __slots__ = ("names_and_attrs",)
 
     def __init__(self, imports_to_preserve: Iterable[str]) -> None:
@@ -868,7 +869,7 @@ class UnusedImportSkipper(AstNodeTransformerReverse, AstNodeTransformerBase):
         return self.generic_visit(node)
 
 
-class _DanglingExprCallFinder(AstNodeTransformerBase):
+class _DanglingExprCallFinder(AstNodeVisitorBase):
     """Finds all calls in a given dangling expression
     except for a subset of builtin functions that have
     no side effects."""
@@ -886,8 +887,7 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
         return node
 
 
-class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
-    # TODO: handle walrus operator (NamedExpr)
+class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
     def __init__(self, excludes: set[str]) -> None:
         self.foldable: dict[str, ast.Constant] = {}
         self._excludes: set[str] = excludes
@@ -900,55 +900,56 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
         self._excludes |= set(node.names)
         return node
 
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> ast.AST:
+        self._handle_possible_foldable(node.target.id)
+        return self.generic_visit(node)
+
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
+        targets: list[ast.AST]
+        value: ast.AST | None
         if isinstance(node.targets[0], ast.Tuple):
             # For now, not considering any of these for folding
-            for target in node.targets[0].elts:
-                if isinstance(target, ast.Name):
-                    if target.id in self.foldable:
-                        del self.foldable[target.id]
-                    self._excludes.add(target.id)
+            targets = node.targets[0].elts
+            value = None
         else:
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    if target.id in self.foldable:
-                        del self.foldable[target.id]
-                    elif (
-                        target.id not in self._excludes
-                        and isinstance(node.value, ast.Constant)
-                        and isinstance(node.value.value, int)
-                    ):
-                        self.foldable[target.id] = node.value
+            targets = node.targets
+            value = node.value
 
-                    self._excludes.add(target.id)
+        for target in targets:
+            if isinstance(target, ast.Name):
+                self._handle_possible_foldable(target.id, value)
 
         return self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
 
         if isinstance(node.target, ast.Name):
-            if node.target.id in self.foldable:
-                del self.foldable[node.target.id]
-            elif (
-                node.target.id not in self._excludes
-                and isinstance(node.value, ast.Constant)
-                and isinstance(node.value.value, int)
-            ):
-                self.foldable[node.target.id] = node.value
-
-            self._excludes.add(node.target.id)
+            self._handle_possible_foldable(node.target.id, node.value)
 
         return self.generic_visit(node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
 
         if isinstance(node.target, ast.Name):
-            self._excludes.add(node.target.id)
-            if node.target.id in self.foldable:
-                del self.foldable[node.target.id]
+            self._handle_possible_foldable(node.target.id)
 
         return self.generic_visit(node)
+
+    def _handle_possible_foldable(
+        self, node_id: str, value: ast.AST | None = None
+    ) -> None:
+        if node_id in self.foldable:
+            del self.foldable[node_id]
+        elif (
+            value is not None
+            and node_id not in self._excludes
+            and isinstance(value, ast.Constant)
+            and isinstance(value.value, int)
+        ):
+            self.foldable[node_id] = value
+
+        self._excludes.add(node_id)
 
 
 class _FunctionLocalsFolder(AstNodeTransformerBase):

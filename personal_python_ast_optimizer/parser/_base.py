@@ -1,7 +1,44 @@
 import ast
 
 
-class AstNodeTransformerReverse(ast.NodeTransformer):
+class AstNodeVisitorBase(ast.NodeVisitor):
+    """Base class for ast node visitors. Intended for internal use."""
+
+    __slots__ = ()
+
+    # Nodes that do not need to be fully visited
+    def visit_alias(self, node: ast.alias) -> ast.alias:
+        return node
+
+    def visit_Break(self, node: ast.Break) -> ast.Break:
+        return node
+
+    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+        return node
+
+    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
+        return node
+
+    def visit_Pass(self, node: ast.Pass) -> ast.Pass:
+        return node
+
+    def visit_Global(self, node: ast.Global) -> ast.Global:
+        return node
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> ast.Nonlocal:
+        return node
+
+
+class AstNodeTransformerBase(AstNodeVisitorBase, ast.NodeTransformer):
+    """Base class for ast node transformers. Intended for internal use."""
+
+    __slots__ = ()
+
+
+class AstNodeTransformerReverse(AstNodeTransformerBase):
+    """Base class for ast node transformers that operator in reverse.
+    Intended for internal use."""
+
     def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
@@ -28,32 +65,4 @@ class AstNodeTransformerReverse(ast.NodeTransformer):
                 else:
                     setattr(node, field, new_node)
 
-        return node
-
-
-class AstNodeTransformerBase(ast.NodeTransformer):
-    """Base class for ast node transformers. Intended for internal use."""
-
-    __slots__ = ()
-
-    # Nodes that do not need to be fully visited
-    def visit_alias(self, node: ast.alias) -> ast.alias:
-        return node
-
-    def visit_Break(self, node: ast.Break) -> ast.Break:
-        return node
-
-    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
-        return node
-
-    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
-        return node
-
-    def visit_Pass(self, node: ast.Pass) -> ast.Pass:
-        return node
-
-    def visit_Global(self, node: ast.Global) -> ast.Global:
-        return node
-
-    def visit_Nonlocal(self, node: ast.Nonlocal) -> ast.Nonlocal:
         return node

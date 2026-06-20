@@ -904,13 +904,14 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
             if isinstance(target, ast.Name):
                 if target.id in self.foldable:
                     del self.foldable[target.id]
-                    self._excludes.add(target.id)
                 elif (
                     target.id not in self._excludes
                     and isinstance(node.value, ast.Constant)
                     and isinstance(node.value.value, int)
                 ):
                     self.foldable[target.id] = node.value
+
+                self._excludes.add(target.id)
 
         return self.generic_visit(node)
 
@@ -919,13 +920,14 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
         if isinstance(node.target, ast.Name):
             if node.target.id in self.foldable:
                 del self.foldable[node.target.id]
-                self._excludes.add(node.target.id)
             elif (
                 node.target.id not in self._excludes
                 and isinstance(node.value, ast.Constant)
                 and isinstance(node.value.value, int)
             ):
                 self.foldable[node.target.id] = node.value
+
+            self._excludes.add(node.target.id)
 
         return self.generic_visit(node)
 

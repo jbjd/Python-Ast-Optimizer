@@ -885,7 +885,7 @@ class _DanglingExprCallFinder(AstNodeTransformerBase):
 
 
 class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
-    # TODO: handle walrus operator (NamedExpr), AugAssign
+    # TODO: handle walrus operator (NamedExpr)
     def __init__(self) -> None:
         self.foldable: dict[str, ast.Constant] = {}
         self._excludes: set[str] = set()
@@ -930,6 +930,13 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
             and isinstance(node.value.value, int)
         ):
             self.foldable[node.target.id] = node.value
+
+        return self.generic_visit(node)
+
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
+        self._excludes.add(node.target.id)
+        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
+            del self.foldable[node.target.id]
 
         return self.generic_visit(node)
 

@@ -888,14 +888,14 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
     # TODO: handle walrus operator (NamedExpr), AugAssign
     def __init__(self) -> None:
         self.foldable: dict[str, ast.Constant] = {}
-        self.excludes: set[str] = set()
+        self._excludes: set[str] = set()
 
     def visit_Global(self, node: ast.Global) -> ast.Global:
-        self.excludes |= set(node.names)
+        self._excludes |= set(node.names)
         return node
 
     def visit_Nonlocal(self, node: ast.Nonlocal) -> ast.Nonlocal:
-        self.excludes |= set(node.names)
+        self._excludes |= set(node.names)
         return node
 
     # TODO: Needs complete rewrite to
@@ -909,9 +909,9 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
             if isinstance(target, ast.Name):
                 if target.id in self.foldable:
                     del self.foldable[target.id]
-                    self.excludes(target.id)
+                    self._excludes.add(target.id)
                 elif (
-                    target.id not in self.excludes
+                    target.id not in self._excludes
                     and isinstance(node.value, ast.Constant)
                     and isinstance(node.value.value, int)
                 ):
@@ -923,9 +923,9 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
 
         if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
             del self.foldable[node.target.id]
-            self.excludes(node.target.id)
+            self._excludes.add(node.target.id)
         elif (
-            node.target.id not in self.excludes
+            node.target.id not in self._excludes
             and isinstance(node.value, ast.Constant)
             and isinstance(node.value.value, int)
         ):

@@ -934,9 +934,11 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
         return self.generic_visit(node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
-        self._excludes.add(node.target.id)
-        if isinstance(node.target, ast.Name) and node.target.id in self.foldable:
-            del self.foldable[node.target.id]
+
+        if isinstance(node.target, ast.Name):
+            self._excludes.add(node.target.id)
+            if node.target.id in self.foldable:
+                del self.foldable[node.target.id]
 
         return self.generic_visit(node)
 

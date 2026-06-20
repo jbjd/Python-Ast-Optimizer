@@ -19,3 +19,21 @@ def get_byte_display(size_in_bytes):
         BeforeAndAfter(before, after),
         optimizations_config=OptimizationsConfig(fold_simple_function_locals=True),
     )
+
+
+def test_fold_if_else_unpack():
+    before: str = """
+def asdf(a,scaling):
+    if a:limit=1
+    else:scaling,limit=scaling
+    print(limit)
+"""
+    after: str = """def asdf(a,scaling):
+\tif a:limit=1
+\telse:scaling,limit=scaling
+\tprint(limit)"""
+
+    run_minifier_and_assert_correct(
+        BeforeAndAfter(before, after),
+        optimizations_config=OptimizationsConfig(fold_simple_function_locals=True),
+    )

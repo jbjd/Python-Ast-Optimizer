@@ -902,18 +902,26 @@ class _FunctionFoldableLocalsFinder(AstNodeTransformerBase):
 
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
-        for target in node.targets:
-            if isinstance(target, ast.Name):
-                if target.id in self.foldable:
-                    del self.foldable[target.id]
-                elif (
-                    target.id not in self._excludes
-                    and isinstance(node.value, ast.Constant)
-                    and isinstance(node.value.value, int)
-                ):
-                    self.foldable[target.id] = node.value
+        if isinstance(node.targets[0], ast.Tuple):
+            # For now, not considering any of these for folding
+            for target in node.targets[0].elts:
+                if isinstance(target, ast.Name):
+                    if target.id in self.foldable:
+                        del self.foldable[target.id]
+                    self._excludes.add(target.id)
+        else:
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    if target.id in self.foldable:
+                        del self.foldable[target.id]
+                    elif (
+                        target.id not in self._excludes
+                        and isinstance(node.value, ast.Constant)
+                        and isinstance(node.value.value, int)
+                    ):
+                        self.foldable[target.id] = node.value
 
-                self._excludes.add(target.id)
+                    self._excludes.add(target.id)
 
         return self.generic_visit(node)
 

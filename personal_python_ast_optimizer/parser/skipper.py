@@ -284,7 +284,7 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 node.body.pop()
 
         parsed_function: ast.FunctionDef | ast.AsyncFunctionDef | None = (
-            self.generic_visit(node)
+            self.generic_visit(node)  # type: ignore[assignment]
         )
 
         if (
@@ -911,7 +911,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
 
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
 
-        targets: list[ast.AST]
+        targets: list[ast.expr]
         value: ast.AST | None
         if isinstance(node.targets[0], ast.Tuple):
             # For now, not considering any of these for folding
@@ -963,7 +963,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
     def __init__(self, folds: dict[str, ast.Constant]) -> None:
         self.folds: dict[str, ast.Constant] = folds
 
-    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
 
         new_targets = [
             target
@@ -977,7 +977,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
         node.targets = new_targets
         return self.generic_visit(node)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign | None:
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
 
         if isinstance(node.target, ast.Name) and node.target.id in self.folds:
             return None

@@ -891,6 +891,8 @@ class _DanglingExprCallFinder(AstNodeVisitorBase):
 
 
 class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
+    __slots__ = ("_excludes", "foldable")
+
     def __init__(self, excludes: set[str]) -> None:
         self.foldable: dict[str, ast.Constant] = {}
         self._excludes: set[str] = excludes
@@ -956,6 +958,8 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
 
 
 class _FunctionLocalsFolder(AstNodeTransformerBase):
+    __slots__ = ("folds",)
+
     def __init__(self, folds: dict[str, ast.Constant]) -> None:
         self.folds: dict[str, ast.Constant] = folds
 
@@ -975,7 +979,7 @@ class _FunctionLocalsFolder(AstNodeTransformerBase):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign | None:
 
-        if isinstance(node.target, ast.Name) and node.target.id not in self.found:
+        if isinstance(node.target, ast.Name) and node.target.id in self.folds:
             return None
 
         return self.generic_visit(node)

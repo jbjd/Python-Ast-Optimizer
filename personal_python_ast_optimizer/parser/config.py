@@ -126,6 +126,7 @@ class OptimizationsConfig:
         "collection_concat_to_unpack",
         "enums_to_fold",
         "fold_constants",
+        "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
         "remove_typing_cast",
         "remove_unused_imports",
@@ -150,6 +151,7 @@ class OptimizationsConfig:
         remove_typing_cast: bool = True,
         collection_concat_to_unpack: bool = False,
         fold_constants: bool = False,
+        fold_simple_function_locals: bool = False,
         assume_this_machine: bool = False,
         simplify_named_tuples: bool = False,
     ) -> None:
@@ -179,6 +181,7 @@ class OptimizationsConfig:
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.assume_this_machine: bool = assume_this_machine
         self.fold_constants: bool = fold_constants
+        self.fold_simple_function_locals: bool = fold_simple_function_locals
         self.simplify_named_tuples: bool = simplify_named_tuples
 
     @staticmethod

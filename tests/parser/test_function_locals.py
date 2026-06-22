@@ -95,3 +95,17 @@ def asdf():
         BeforeAndAfter(before, after),
         optimizations_config=OptimizationsConfig(fold_simple_function_locals=True),
     )
+
+
+def test_fold_none():
+    before: str = """
+def asdf():
+    a=None
+    return a or 3
+"""
+    after: str = """def asdf():return 3"""
+
+    run_minifier_and_assert_correct(
+        BeforeAndAfter(before, after),
+        optimizations_config=OptimizationsConfig(fold_simple_function_locals=True),
+    )

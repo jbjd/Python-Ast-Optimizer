@@ -40,24 +40,192 @@ class _NodeContext(Enum):
     FUNCTION = 2
 
 
-class AstNodeSkipper(AstNodeTransformerBase):
+class _OpFolder(AstNodeTransformerBase):
+    __slots__ = ("optimizations_config",)
+
+    def __init__(self, optimizations_config: OptimizationsConfig) -> None:
+        self.optimizations_config: OptimizationsConfig = optimizations_config
+
+    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.BinOp):
+            if (
+                self.optimizations_config.fold_constants
+                and isinstance(parsed_node.left, ast.Constant)
+                and isinstance(parsed_node.right, ast.Constant)
+            ):
+                return self._ast_constants_operation(
+                    parsed_node.left, parsed_node.right, parsed_node.op
+                )
+
+            if (
+                self.optimizations_config.collection_concat_to_unpack
+                and isinstance(parsed_node.op, ast.Add)
+                and (
+                    isinstance(parsed_node.left, (ast.Tuple, ast.List))
+                    or isinstance(parsed_node.right, (ast.Tuple, ast.List))
+                )
+            ):
+                if (
+                    isinstance(parsed_node.left, ast.Tuple)
+                    and isinstance(parsed_node.right, ast.Tuple)
+                ) or (
+                    isinstance(parsed_node.left, ast.List)
+                    and isinstance(parsed_node.right, ast.List)
+                ):
+                    parsed_node.left.elts += parsed_node.right.elts
+                elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
+                    parsed_node.left.elts.append(ast.Starred(parsed_node.right))
+                else:
+                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
+                    return parsed_node.right
+
+                return parsed_node.left
+
+        return parsed_node
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
+        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore[assignment]
+
+        if isinstance(parsed_node.op, (ast.Or, ast.And)):
+            # For And nodes left values that are Truthy and const can be removed
+            # and vice versa
+            remove_if: bool = isinstance(parsed_node.op, ast.And)
+            self._left_remove_constants(parsed_node, remove_if)
+
+            left: ast.AST = parsed_node.values[0]
+            if isinstance(left, ast.Constant) and bool(left.value) is not remove_if:
+                return left
+
+        return parsed_node
+
+    @staticmethod
+    def _left_remove_constants(node: ast.BoolOp, remove_if: bool) -> None:
+        index: int = 0
+        end: int = len(node.values) - 1
+        while index < end:
+            left: ast.expr = node.values[index]
+            if isinstance(left, ast.Constant) and bool(left.value) is remove_if:
+                index += 1
+            else:
+                break
+
+        if index > 0:
+            node.values = node.values[index:]
+
+    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
+        parsed_node = self.generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.Compare)
+            and isinstance(parsed_node.left, ast.Constant)
+            and len(parsed_node.comparators) == 1
+            and isinstance(parsed_node.comparators[0], ast.Constant)
+        ):
+            return self._ast_constants_operation(
+                parsed_node.left, parsed_node.comparators[0], parsed_node.ops[0]
+            )
+
+        return parsed_node
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
+        parsed_node = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.UnaryOp) and isinstance(
+            parsed_node.operand, ast.Constant
+        ):
+            if isinstance(parsed_node.op, ast.Not):
+                return ast.Constant(not parsed_node.operand.value)
+            if isinstance(parsed_node.op, ast.Invert):
+                return ast.Constant(~parsed_node.operand.value)  # type: ignore[operator]
+            if isinstance(parsed_node.op, ast.UAdd):
+                return parsed_node.operand
+
+        return parsed_node
+
+    @staticmethod
+    def _ast_constants_operation(  # noqa: C901, PLR0912
+        left: ast.Constant,
+        right: ast.Constant,
+        operation: ast.operator | ast.cmpop,
+    ) -> ast.Constant:
+        """Given two ast.Constant values, performs an operation on their underlying
+        values and returns a new ast.Constant of the new value.
+
+        :param left: ast.Constant in the left of the operation.
+        :param right: ast.Constant in the right of the operation.
+        :param operation: One of the ast classes representing an operation."""
+
+        left_value: ast._ConstantValue = left.value
+        right_value: ast._ConstantValue = right.value
+        result: ast._ConstantValue
+
+        match operation:
+            case ast.Add():
+                result = left_value + right_value  # type: ignore[operator]
+            case ast.Sub():
+                result = left_value - right_value  # type: ignore[operator]
+            case ast.Mult():
+                result = left_value * right_value  # type: ignore[operator]
+            case ast.Div():
+                result = left_value / right_value  # type: ignore[operator]
+            case ast.FloorDiv():
+                result = left_value // right_value  # type: ignore[operator]
+            case ast.Mod():
+                result = left_value % right_value  # type: ignore[operator]
+            case ast.Pow():
+                result = left_value**right_value  # type: ignore[operator]
+            case ast.LShift():
+                result = left_value << right_value  # type: ignore[operator]
+            case ast.RShift():
+                result = left_value >> right_value  # type: ignore[operator]
+            case ast.BitOr():
+                result = left_value | right_value  # type: ignore[operator]
+            case ast.BitXor():
+                result = left_value ^ right_value  # type: ignore[operator]
+            case ast.BitAnd():
+                result = left_value & right_value  # type: ignore[operator]
+            case ast.Eq():
+                result = left_value == right_value
+            case ast.NotEq():
+                result = left_value != right_value
+            case ast.Lt():
+                result = left_value < right_value  # type: ignore[operator]
+            case ast.LtE():
+                result = left_value <= right_value  # type: ignore[operator]
+            case ast.Gt():
+                result = left_value > right_value  # type: ignore[operator]
+            case ast.GtE():
+                result = left_value >= right_value  # type: ignore[operator]
+            case ast.Is():
+                result = left_value is right_value
+            case ast.IsNot():
+                result = left_value is not right_value
+            case _:
+                raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
+
+        return ast.Constant(result)
+
+
+class AstNodeSkipper(_OpFolder):
     __slots__ = (
         "_has_imports",
         "_node_context_skippable_futures",
         "_simplified_named_tuple",
         "module_name",
-        "optimizations_config",
         "target_python_version",
         "token_types_config",
         "tokens_config",
     )
 
     def __init__(self, config: SkipConfig) -> None:
+        super().__init__(config.optimizations_config)
+
         self.module_name: str = config.module_name
         self.target_python_version: tuple[int, int] | None = (
             config.target_python_version
         )
-        self.optimizations_config: OptimizationsConfig = config.optimizations_config
         self.token_types_config: TokenTypesConfig = config.token_types_config
         self.tokens_config: TokensConfig = config.tokens_config
 
@@ -297,8 +465,8 @@ class AstNodeSkipper(AstNodeTransformerBase):
             locals_folder.visit(parsed_function)
 
             if locals_folder.foldable:
-                # TODO: Need to fold ifs / ops again
                 _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
+                _OpFolder(self.optimizations_config).visit(parsed_function)
 
         return parsed_function
 
@@ -621,77 +789,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
 
         return self.generic_visit(node)
 
-    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
-        parsed_node = self.generic_visit(node)
-
-        if (
-            isinstance(parsed_node, ast.Compare)
-            and isinstance(parsed_node.left, ast.Constant)
-            and len(parsed_node.comparators) == 1
-            and isinstance(parsed_node.comparators[0], ast.Constant)
-        ):
-            return self._ast_constants_operation(
-                parsed_node.left, parsed_node.comparators[0], parsed_node.ops[0]
-            )
-
-        return parsed_node
-
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.UnaryOp) and isinstance(
-            parsed_node.operand, ast.Constant
-        ):
-            if isinstance(parsed_node.op, ast.Not):
-                return ast.Constant(not parsed_node.operand.value)
-            if isinstance(parsed_node.op, ast.Invert):
-                return ast.Constant(~parsed_node.operand.value)  # type: ignore[operator]
-            if isinstance(parsed_node.op, ast.UAdd):
-                return parsed_node.operand
-
-        return parsed_node
-
-    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
-        # Need to visit first since a BinOp might contain a Binop
-        # and constants need to be folded depth first
-        parsed_node: ast.AST = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.BinOp):
-            if (
-                self.optimizations_config.fold_constants
-                and isinstance(parsed_node.left, ast.Constant)
-                and isinstance(parsed_node.right, ast.Constant)
-            ):
-                return self._ast_constants_operation(
-                    parsed_node.left, parsed_node.right, parsed_node.op
-                )
-
-            if (
-                self.optimizations_config.collection_concat_to_unpack
-                and isinstance(parsed_node.op, ast.Add)
-                and (
-                    isinstance(parsed_node.left, (ast.Tuple, ast.List))
-                    or isinstance(parsed_node.right, (ast.Tuple, ast.List))
-                )
-            ):
-                if (
-                    isinstance(parsed_node.left, ast.Tuple)
-                    and isinstance(parsed_node.right, ast.Tuple)
-                ) or (
-                    isinstance(parsed_node.left, ast.List)
-                    and isinstance(parsed_node.right, ast.List)
-                ):
-                    parsed_node.left.elts += parsed_node.right.elts
-                elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
-                    parsed_node.left.elts.append(ast.Starred(parsed_node.right))
-                else:
-                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
-                    return parsed_node.right
-
-                return parsed_node.left
-
-        return parsed_node
-
     def visit_arg(self, node: ast.arg) -> ast.AST:
         if self.token_types_config.skip_type_hints:
             node.annotation = None
@@ -707,35 +804,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 node.vararg.annotation = None
 
         return self.generic_visit(node)
-
-    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
-        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore[assignment]
-
-        if isinstance(parsed_node.op, (ast.Or, ast.And)):
-            # For And nodes left values that are Truthy and const can be removed
-            # and vice versa
-            remove_if: bool = isinstance(parsed_node.op, ast.And)
-            self._left_remove_constants(parsed_node, remove_if)
-
-            left: ast.AST = parsed_node.values[0]
-            if isinstance(left, ast.Constant) and bool(left.value) is not remove_if:
-                return left
-
-        return parsed_node
-
-    @staticmethod
-    def _left_remove_constants(node: ast.BoolOp, remove_if: bool) -> None:
-        index: int = 0
-        end: int = len(node.values) - 1
-        while index < end:
-            left: ast.expr = node.values[index]
-            if isinstance(left, ast.Constant) and bool(left.value) is remove_if:
-                index += 1
-            else:
-                break
-
-        if index > 0:
-            node.values = node.values[index:]
 
     def _is_assign_of_folded_constant(self, target: ast.expr) -> bool:
         """Returns if node is assignment of a value that we are folding. In this case,
@@ -769,69 +837,6 @@ class AstNodeSkipper(AstNodeTransformerBase):
                 f"{not_found_tokens} but was not found",
                 stacklevel=2,
             )
-
-    @staticmethod
-    def _ast_constants_operation(  # noqa: C901, PLR0912
-        left: ast.Constant,
-        right: ast.Constant,
-        operation: ast.operator | ast.cmpop,
-    ) -> ast.Constant:
-        """Given two ast.Constant values, performs an operation on their underlying
-        values and returns a new ast.Constant of the new value.
-
-        :param left: ast.Constant in the left of the operation.
-        :param right: ast.Constant in the right of the operation.
-        :param operation: One of the ast classes representing an operation."""
-
-        left_value: ast._ConstantValue = left.value
-        right_value: ast._ConstantValue = right.value
-        result: ast._ConstantValue
-
-        match operation:
-            case ast.Add():
-                result = left_value + right_value  # type: ignore[operator]
-            case ast.Sub():
-                result = left_value - right_value  # type: ignore[operator]
-            case ast.Mult():
-                result = left_value * right_value  # type: ignore[operator]
-            case ast.Div():
-                result = left_value / right_value  # type: ignore[operator]
-            case ast.FloorDiv():
-                result = left_value // right_value  # type: ignore[operator]
-            case ast.Mod():
-                result = left_value % right_value  # type: ignore[operator]
-            case ast.Pow():
-                result = left_value**right_value  # type: ignore[operator]
-            case ast.LShift():
-                result = left_value << right_value  # type: ignore[operator]
-            case ast.RShift():
-                result = left_value >> right_value  # type: ignore[operator]
-            case ast.BitOr():
-                result = left_value | right_value  # type: ignore[operator]
-            case ast.BitXor():
-                result = left_value ^ right_value  # type: ignore[operator]
-            case ast.BitAnd():
-                result = left_value & right_value  # type: ignore[operator]
-            case ast.Eq():
-                result = left_value == right_value
-            case ast.NotEq():
-                result = left_value != right_value
-            case ast.Lt():
-                result = left_value < right_value  # type: ignore[operator]
-            case ast.LtE():
-                result = left_value <= right_value  # type: ignore[operator]
-            case ast.Gt():
-                result = left_value > right_value  # type: ignore[operator]
-            case ast.GtE():
-                result = left_value >= right_value  # type: ignore[operator]
-            case ast.Is():
-                result = left_value is right_value
-            case ast.IsNot():
-                result = left_value is not right_value
-            case _:
-                raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
-
-        return ast.Constant(result)
 
     def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
         return None if self.token_types_config.skip_generics else node
@@ -950,7 +955,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
             value is not None
             and node_id not in self._excludes
             and isinstance(value, ast.Constant)
-            and isinstance(value.value, int)
+            and (value.value is None or isinstance(value.value, int))
         ):
             self.foldable[node_id] = value
 

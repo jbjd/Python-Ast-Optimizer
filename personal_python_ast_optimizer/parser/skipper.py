@@ -465,8 +465,9 @@ class AstNodeSkipper(_OpFolder):
             locals_folder.visit(parsed_function)
 
             if locals_folder.foldable:
-                _FunctionLocalsFolder(locals_folder.foldable).visit(parsed_function)
-                _OpFolder(self.optimizations_config).visit(parsed_function)
+                _FunctionLocalsFolder(
+                    self.optimizations_config, locals_folder.foldable
+                ).visit(parsed_function)
 
         return parsed_function
 
@@ -962,10 +963,13 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
         self._excludes.add(node_id)
 
 
-class _FunctionLocalsFolder(AstNodeTransformerBase):
+class _FunctionLocalsFolder(_OpFolder):
     __slots__ = ("folds",)
 
-    def __init__(self, folds: dict[str, ast.Constant]) -> None:
+    def __init__(
+        self, optimizations_config: OptimizationsConfig, folds: dict[str, ast.Constant]
+    ) -> None:
+        super().__init__(optimizations_config)
         self.folds: dict[str, ast.Constant] = folds
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:

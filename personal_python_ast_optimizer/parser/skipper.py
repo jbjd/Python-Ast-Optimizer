@@ -7,7 +7,6 @@ from typing import Self
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
-    AstNodeTransformerReverse,
     AstNodeVisitorBase,
 )
 from personal_python_ast_optimizer.parser.config import (
@@ -44,6 +43,7 @@ class _OpFolder(AstNodeTransformerBase):
     __slots__ = ("optimizations_config",)
 
     def __init__(self, optimizations_config: OptimizationsConfig) -> None:
+        super().__init__()
         self.optimizations_config: OptimizationsConfig = optimizations_config
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
@@ -211,8 +211,9 @@ class _OpFolder(AstNodeTransformerBase):
 class AstNodeSkipper(_OpFolder):
     __slots__ = (
         "_has_imports",
-        "_node_context_skippable_futures",
+        "_node_context",
         "_simplified_named_tuple",
+        "_skippable_futures",
         "module_name",
         "target_python_version",
         "token_types_config",
@@ -852,10 +853,11 @@ class AstNodeSkipper(_OpFolder):
         return None if self.token_types_config.skip_generics else node
 
 
-class UnusedImportSkipper(AstNodeTransformerReverse):
+class UnusedImportSkipper(AstNodeTransformerBase):
     __slots__ = ("names_and_attrs",)
 
     def __init__(self, imports_to_preserve: Iterable[str]) -> None:
+        super().__init__(reverse=True)
         self.names_and_attrs: set[str] = set(imports_to_preserve)
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:

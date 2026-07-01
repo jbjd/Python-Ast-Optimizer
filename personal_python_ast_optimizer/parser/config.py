@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Iterator
-from enum import Enum, EnumType
+from enum import Enum, EnumType, StrEnum
 from types import EllipsisType
 
 from personal_python_ast_optimizer.python_info import (
@@ -18,27 +18,32 @@ class TypeHintsToSkip(Enum):
         return self != TypeHintsToSkip.NONE
 
 
-class TokensToSkip(dict[str, int]):
-    __slots__ = ("token_type",)
+class _SkippableTokenTypes(StrEnum):
+    CLASS = "class"
+    DECORATOR = "decorator"
+    DICT_KEYS = "dict keys"
+    FROM_IMPORTS = "from imports"
+    FUNCTION = "functions"
+    MODULE_IMPORTS = "module imports"
+    VARIABLES = "variables"
 
-    def __init__(self, tokens_to_skip: Iterable[str] | None, token_type: str) -> None:
-        tokens_and_counts: dict[str, int] = dict.fromkeys(tokens_to_skip or [], 0)
-        super().__init__(tokens_and_counts)
 
-        self.token_type: str = token_type
+class TokensToSkip:
+    __slots__ = ("_found", "_tokens_to_skip", "token_type")
 
-    def __contains__(self, key: str) -> bool:  # type: ignore[override]
-        """Returns if token is marked to skip and
-        increments internal counter when True is returned"""
-        contains: bool = super().__contains__(key)
+    def __init__(
+        self, tokens_to_skip: set[str] | None, token_type: _SkippableTokenTypes
+    ) -> None:
+        self._tokens_to_skip: set[str] = tokens_to_skip or set()
+        self._found: set[str] = set()
+        self.token_type: _SkippableTokenTypes = token_type
 
-        if contains:
-            self[key] += 1
-
-        return contains
+    def __contains__(self, key: str) -> bool:
+        self._found.add(key)
+        return self._tokens_to_skip.__contains__(key)
 
     def get_not_found_tokens(self) -> set[str]:
-        return {token for token, found_count in self.items() if found_count == 0}
+        return self._tokens_to_skip - self._found
 
 
 class TokensConfig:
@@ -56,40 +61,49 @@ class TokensConfig:
     def __init__(  # noqa: PLR0913
         self,
         *,
+        classes_to_skip: set[str] | None = None,
+        decorators_to_skip: set[str] | None = None,
+        dict_keys_to_skip: set[str] | None = None,
         from_imports_to_skip: set[str] | None = None,
         functions_to_skip: set[str] | None = None,
-        variables_to_skip: set[str] | None = None,
-        classes_to_skip: set[str] | None = None,
-        dict_keys_to_skip: set[str] | None = None,
-        decorators_to_skip: set[str] | None = None,
         module_imports_to_skip: set[str] | None = None,
+        variables_to_skip: set[str] | None = None,
         no_warn: set[str] | None = None,
     ) -> None:
-        self.from_imports_to_skip = TokensToSkip(from_imports_to_skip, "from imports")
-        self.functions_to_skip = TokensToSkip(functions_to_skip, "functions")
-        self.variables_to_skip = TokensToSkip(variables_to_skip, "variables")
-        self.classes_to_skip = TokensToSkip(classes_to_skip, "classes")
-        self.dict_keys_to_skip = TokensToSkip(dict_keys_to_skip, "dict keys")
-        self.decorators_to_skip = TokensToSkip(decorators_to_skip, "decorators")
-        self.module_imports_to_skip = TokensToSkip(
-            module_imports_to_skip, "module imports"
+        self.classes_to_skip = TokensToSkip(classes_to_skip, _SkippableTokenTypes.CLASS)
+        self.decorators_to_skip = TokensToSkip(
+            decorators_to_skip, _SkippableTokenTypes.DECORATOR
         )
-        self._no_warn: set[str] = no_warn if no_warn is not None else set()
-
-    def __iter__(self) -> Iterator[TokensToSkip]:
-        for attr in self.__slots__:
-            if attr != "_no_warn":
-                yield getattr(self, attr)
+        self.dict_keys_to_skip = TokensToSkip(
+            dict_keys_to_skip, _SkippableTokenTypes.DICT_KEYS
+        )
+        self.from_imports_to_skip = TokensToSkip(
+            from_imports_to_skip, _SkippableTokenTypes.FROM_IMPORTS
+        )
+        self.functions_to_skip = TokensToSkip(
+            functions_to_skip, _SkippableTokenTypes.FUNCTION
+        )
+        self.module_imports_to_skip = TokensToSkip(
+            module_imports_to_skip, _SkippableTokenTypes.MODULE_IMPORTS
+        )
+        self.variables_to_skip = TokensToSkip(
+            variables_to_skip, _SkippableTokenTypes.VARIABLES
+        )
+        self._no_warn: set[str] = set() if no_warn is None else no_warn
 
     def get_missing_tokens_iter(self) -> Iterator[tuple[str, str]]:
-        for tokens_to_skip in self:
-            not_found_tokens: list[str] = [
+        for attr in self.__slots__:
+            if attr == "_no_warn":
+                continue
+
+            tokens_to_skip: TokensToSkip = getattr(self, attr)
+            formatted_not_found_tokens: str = ",".join(
                 t
                 for t in tokens_to_skip.get_not_found_tokens()
                 if t not in self._no_warn
-            ]
-            if not_found_tokens:
-                yield (tokens_to_skip.token_type, ",".join(not_found_tokens))
+            )
+            if formatted_not_found_tokens != "":
+                yield (tokens_to_skip.token_type, formatted_not_found_tokens)
 
 
 class TokenTypesConfig:
@@ -168,8 +182,9 @@ class OptimizationsConfig:
         )
 
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
-            functions_safe_to_exclude_in_test_expr
-            or default_functions_safe_to_exclude_in_test_expr
+            default_functions_safe_to_exclude_in_test_expr
+            if functions_safe_to_exclude_in_test_expr is None
+            else functions_safe_to_exclude_in_test_expr
         )
         self.unused_imports_to_preserve: Iterable[str] = (
             unused_imports_to_preserve or []

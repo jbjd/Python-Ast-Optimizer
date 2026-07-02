@@ -124,8 +124,11 @@ _collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
 def test_collection_concat_to_unpack(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
+    # Had a weird bug where this broke when dict_keys_to_skip was set to anything
+    to_skip: set[str] = {"foobar"}
+
     optimize_and_assert_correct(
         before_and_after,
-        tokens_config=TokensConfig(dict_keys_to_skip={"foobar"}),
+        tokens_config=TokensConfig(dict_keys_to_skip=to_skip, no_warn=to_skip),
         optimizations_config=OptimizationsConfig(collection_concat_to_unpack=True),
     )

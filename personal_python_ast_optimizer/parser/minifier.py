@@ -1,12 +1,51 @@
 import ast
+from ast import _Precedence  # type: ignore[attr-defined]
 from collections.abc import Callable, Iterable, Iterator
 from typing import Literal, LiteralString
 
-from personal_python_ast_optimizer.python_info import (
-    chars_that_dont_need_whitespace,
-    comparison_and_conjunctions,
-    operators_and_separators,
-)
+_chars_that_dont_need_whitespace: list[str] = [
+    "'",
+    '"',
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    "*",
+]
+
+_ast_comparisons: dict[str, str] = {
+    "Eq": "==",
+    "NotEq": "!=",
+    "Lt": "<",
+    "LtE": "<=",
+    "Gt": ">",
+    "GtE": ">=",
+    "Is": " is ",
+    "IsNot": " is not ",
+    "In": " in ",
+    "NotIn": " not in ",
+}
+
+
+_ast_operators_to_strip: list[str] = [
+    ", ",
+    ": ",
+    " + ",
+    " - ",
+    " * ",
+    " ** ",
+    " @ ",
+    " / ",
+    " // ",
+    " % ",
+    " << ",
+    " >> ",
+    " | ",
+    " & ",
+    " ^ ",
+]
 
 
 class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
@@ -57,6 +96,21 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             if self._indent > 0:
                 self._source.append("\t" * self._indent)
 
+    def _get_line_splitter(self) -> Literal["", "\n", ";"]:
+        """Get character that starts the next line of code with the shortest
+        possible whitespace. Either a new line, semicolon, or nothing."""
+        if self.can_write_body_in_one_line:
+            return ""
+
+        if (
+            self._indent > 0
+            and self.previous_node_in_body is not None
+            and self._node_inlineable(self.previous_node_in_body)
+        ):
+            return ";"
+
+        return "\n"
+
     def write(self, *text: str) -> None:
         """Write text, with some mapping replacements"""
         text = tuple(self._yield_updated_text(text))
@@ -66,7 +120,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
         first_letter_to_write: str = text[0][:1]
         if (
-            first_letter_to_write in chars_that_dont_need_whitespace
+            first_letter_to_write in _chars_that_dont_need_whitespace
             and self._source
             and self._source[-1][-1] == " "
         ):
@@ -78,14 +132,17 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         """Give text to be written, replace some specific occurrences
         and yield new results if not empty strings"""
         for text in text_iter:
-            if text in operators_and_separators:
+            if text in _ast_operators_to_strip:
                 yield text.strip()
-            elif text in comparison_and_conjunctions and (
+                continue
+
+            if text[:1] == " " and (
                 not self._source
-                or self._source[-1][-1] in chars_that_dont_need_whitespace
+                or self._source[-1][-1] in _chars_that_dont_need_whitespace
             ):
-                yield text[1:]
-            elif text != "":
+                text = text[1:]  # noqa: PLW2901
+
+            if text != "":
                 yield text
 
     def _traverse_node(self, node: ast.AST) -> None:
@@ -158,8 +215,15 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
     def visit_Expr(self, node: ast.Expr) -> None:
         self.fill_splitter()
-        self.set_precedence(ast._Precedence.YIELD, node.value)  # type: ignore[attr-defined]
+        self.set_precedence(_Precedence.YIELD, node.value)
         self.traverse(node.value)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        with self.require_parens(_Precedence.NAMED_EXPR, node):
+            self.set_precedence(_Precedence.ATOM, node.target, node.value)
+            self.traverse(node.target)
+            self._source.append(":=")
+            self.traverse(node.value)
 
     def visit_Import(self, node: ast.Import) -> None:
         self.fill_literal("import ")
@@ -192,7 +256,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         self.fill_splitter()
 
         for target in node.targets:
-            self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore[attr-defined]
+            self.set_precedence(_Precedence.TUPLE, target)  # type: ignore[attr-defined]
             self._traverse_node(target)
             self._source.append("=")
 
@@ -247,6 +311,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             self.fill_literal_new_line("@")
             self.traverse(deco)
 
+    def visit_TypeAlias(self, node: ast.TypeAlias) -> None:
+        self.fill("type ")
+        self.traverse(node.name)
+        self._type_params_helper(node.type_params)
+        self.write("=")
+        self.traverse(node.value)
+
     def visit_List(self, node: ast.List) -> None:
         with self.delimit("[", "]"):
             self._traverse_comma_delimitated_body(node.elts)
@@ -258,20 +329,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         else:
             self._source.append("set()")
 
-    def _get_line_splitter(self) -> Literal["", "\n", ";"]:
-        """Get character that starts the next line of code with the shortest
-        possible whitespace. Either a new line, semicolon, or nothing."""
-        if self.can_write_body_in_one_line:
-            return ""
-
-        if (
-            self._indent > 0
-            and self.previous_node_in_body is not None
-            and self._node_inlineable(self.previous_node_in_body)
-        ):
-            return ";"
-
-        return "\n"
+    def visit_Compare(self, node: ast.Compare) -> None:
+        with self.require_parens(_Precedence.CMP, node):
+            self.set_precedence(_Precedence.CMP.next(), node.left, *node.comparators)
+            self.traverse(node.left)
+            for op, comparator in zip(node.ops, node.comparators, strict=True):
+                self.write(_ast_comparisons[op.__class__.__name__])
+                self.traverse(comparator)
 
     def _traverse_comma_delimitated_body(
         self, body: list[ast.alias] | list[ast.expr] | list[ast.keyword]

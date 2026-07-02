@@ -1,6 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import OptimizationsConfig
+from personal_python_ast_optimizer.parser.config import (
+    OptimizationsConfig,
+    TokensConfig,
+)
 from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
 
 
@@ -110,6 +113,10 @@ _collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
         "a = b + [2] + [3]",
         "a=[*b,2,3]",
     ),
+    (
+        "def asdf(im):encoderinfo={**im.a,**e};return encoderinfo",
+        "def asdf(im):encoderinfo={**im.a,**e};return encoderinfo",
+    ),
 ]
 
 
@@ -119,5 +126,6 @@ def test_collection_concat_to_unpack(before: str, after: str):
 
     run_minifier_and_assert_correct(
         before_and_after,
+        tokens_config=TokensConfig(dict_keys_to_skip={"foobar"}),
         optimizations_config=OptimizationsConfig(collection_concat_to_unpack=True),
     )

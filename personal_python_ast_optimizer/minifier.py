@@ -1,3 +1,5 @@
+"""Minification of Python AST."""
+
 import ast
 from ast import _Precedence  # type: ignore[attr-defined]
 from collections.abc import Callable, Iterable, Iterator
@@ -49,6 +51,8 @@ _ast_operators_to_strip: list[str] = [
 
 
 class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
+    """Turns a Python AST into source code in a minfied format."""
+
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:

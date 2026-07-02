@@ -2,6 +2,8 @@
 
 
 class Future:
+    """Represents a __future__ import with its name and mandatory version."""
+
     __slots__ = ("mandatory_version", "name")
 
     def __init__(self, name: str, mandatory_version: tuple[int, int]) -> None:
@@ -9,7 +11,7 @@ class Future:
         self.mandatory_version: tuple[int, int] = mandatory_version
 
 
-future_to_mandatory_versions: list[Future] = [
+mandatory_futures: list[Future] = [
     Future("nested_scopes", (2, 2)),
     Future("generators", (2, 3)),
     Future("with_statement", (2, 6)),
@@ -29,6 +31,6 @@ def get_unneeded_futures(python_version: tuple[int, int]) -> list[str]:
     :returns: List of __future__ imports that can be removed"""
     return [
         future.name
-        for future in future_to_mandatory_versions
+        for future in mandatory_futures
         if python_version >= future.mandatory_version
     ]

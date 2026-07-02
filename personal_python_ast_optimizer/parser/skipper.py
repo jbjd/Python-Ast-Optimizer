@@ -660,16 +660,25 @@ class AstNodeSkipper(_OpFolder):
         return node
 
     def visit_Dict(self, node: ast.Dict) -> ast.AST:
-        if self.tokens_config.dict_keys_to_skip:
-            new_dict = {
-                k: v
-                for k, v in zip(node.keys, node.values, strict=True)
-                if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
-            }
+        if self.tokens_config.dict_keys_to_skip and any(
+            k
+            for k in node.keys
+            if isinstance(k, ast.Constant)
+            and k.value in self.tokens_config.dict_keys_to_skip
+        ):
+            new_keys: list[str] = []
+            new_values: list[str] = []
 
-            if len(new_dict) < len(node.keys):
-                node.keys = list(new_dict.keys())
-                node.values = list(new_dict.values())
+            for k, v in zip(node.keys, node.values, strict=True):
+                if (
+                    not isinstance(k, ast.Constant)
+                    or k.value not in self.tokens_config.dict_keys_to_skip
+                ):
+                    new_keys.append(k)
+                    new_values.append(v)
+
+            node.keys = new_keys
+            node.values = new_values
 
         return self.generic_visit(node)
 

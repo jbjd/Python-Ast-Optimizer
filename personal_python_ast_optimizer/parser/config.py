@@ -38,6 +38,9 @@ class TokensToSkip:
         self._found: set[str] = set()
         self.token_type: _SkippableTokenTypes = token_type
 
+    def __bool__(self) -> bool:
+        return bool(self._tokens_to_skip)
+
     def __contains__(self, key: str) -> bool:
         self._found.add(key)
         return self._tokens_to_skip.__contains__(key)

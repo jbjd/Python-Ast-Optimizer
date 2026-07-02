@@ -1,7 +1,7 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import (
-    TokenTypesConfig,
+from personal_python_ast_optimizer.config import (
+    TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
@@ -31,7 +31,7 @@ class C:a:str""",
 
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(skip_type_hints=TypeHintsToSkip.NONE),
+        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.NONE),
     )
 
 
@@ -52,7 +52,7 @@ def test_remove_all_type_hints():
 
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(skip_type_hints=TypeHintsToSkip.ALL),
+        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
 
 
@@ -62,13 +62,6 @@ def test_type_alias():
         "type Url=str",
     )
     optimize_and_assert_correct(before_and_after)
-
-
-def test_generics_config():
-    with pytest.raises(
-        ValueError, match="Can't skip Generics if not skipping type hints"
-    ):
-        TokenTypesConfig(skip_type_hints=TypeHintsToSkip.NONE, skip_generics=True)
 
 
 def test_generics_keep():
@@ -105,7 +98,7 @@ class A:\n\tdef __init__(self,a):self.a=a""",
 
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(
+        token_types_config=TokenTypesToSkipConfig(
             skip_type_hints=skip_type_hints, skip_generics=True
         ),
     )

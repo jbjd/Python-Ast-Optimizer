@@ -4,17 +4,19 @@ from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Self
 
+from personal_python_ast_optimizer.config import (
+    CodeToFoldConfig,
+    CodeToSkipConfig,
+    ExtraOptimizationsConfig,
+    OptimizeConfig,
+    TokenTypesToSkipConfig,
+    TypeHintsToSkip,
+    UserTokensToSkipConfig,
+)
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
     AstNodeVisitorBase,
-)
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    SkipConfig,
-    TokensConfig,
-    TokenTypesConfig,
-    TypeHintsToSkip,
 )
 from personal_python_ast_optimizer.parser.machine_info import (
     machine_dependent_attributes,
@@ -40,18 +42,23 @@ class _NodeContext(Enum):
 
 
 class _OpFolder(AstNodeTransformerBase):
-    __slots__ = ("optimizations_config",)
+    __slots__ = ("code_to_fold_config", "optimizations_config")
 
-    def __init__(self, optimizations_config: OptimizationsConfig) -> None:
+    def __init__(
+        self,
+        code_to_fold_config: CodeToFoldConfig,
+        optimizations_config: ExtraOptimizationsConfig,
+    ) -> None:
         super().__init__()
-        self.optimizations_config: OptimizationsConfig = optimizations_config
+        self.code_to_fold_config: CodeToFoldConfig = code_to_fold_config
+        self.optimizations_config: ExtraOptimizationsConfig = optimizations_config
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         parsed_node: ast.AST = self.generic_visit(node)
 
         if isinstance(parsed_node, ast.BinOp):
             if (
-                self.optimizations_config.fold_constants
+                self.code_to_fold_config.fold_constants
                 and isinstance(parsed_node.left, ast.Constant)
                 and isinstance(parsed_node.right, ast.Constant)
             ):
@@ -214,21 +221,23 @@ class AstNodeSkipper(_OpFolder):
         "_node_context",
         "_simplified_named_tuple",
         "_skippable_futures",
+        "code_to_skip_config",
         "module_name",
         "target_python_version",
         "token_types_config",
         "tokens_config",
     )
 
-    def __init__(self, config: SkipConfig) -> None:
-        super().__init__(config.optimizations_config)
+    def __init__(self, module_name: str, config: OptimizeConfig) -> None:
+        super().__init__(config.code_to_fold_config, config.optimizations_config)
 
-        self.module_name: str = config.module_name
+        self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = (
-            config.target_python_version
+            config.optimizations_config.target_python_version
         )
-        self.token_types_config: TokenTypesConfig = config.token_types_config
-        self.tokens_config: TokensConfig = config.tokens_config
+        self.code_to_skip_config: CodeToSkipConfig = config.code_to_skip_config
+        self.token_types_config: TokenTypesToSkipConfig = config.token_types_config
+        self.tokens_config: UserTokensToSkipConfig = config.tokens_config
 
         self._has_imports: bool = False
         self._simplified_named_tuple: bool = False
@@ -346,9 +355,9 @@ class AstNodeSkipper(_OpFolder):
                 else:
                     import_to_update.names.append(alias)
 
-        if self.optimizations_config.remove_unused_imports and self._has_imports:
+        if self.code_to_skip_config.skip_unused_imports and self._has_imports:
             import_filter = UnusedImportSkipper(
-                self.optimizations_config.unused_imports_to_preserve
+                self.code_to_skip_config.unused_imports_to_preserve
             )
             import_filter.visit(node)
 
@@ -360,9 +369,7 @@ class AstNodeSkipper(_OpFolder):
         if node.name in self.tokens_config.classes_to_skip:
             return None
 
-        if self._use_version_optimization((3, 0)):
-            skip_base_classes(node, ["object"])
-
+        skip_base_classes(node, ["object"])
         skip_base_classes(node, self.tokens_config.classes_to_skip)
         skip_decorators(node, self.tokens_config.decorators_to_skip)
 
@@ -457,7 +464,7 @@ class AstNodeSkipper(_OpFolder):
         )
 
         if (
-            self.optimizations_config.fold_simple_function_locals
+            self.code_to_fold_config.fold_simple_function_locals
             and parsed_function is not None
         ):
             locals_folder = _FunctionFoldableLocalsFinder(
@@ -467,7 +474,9 @@ class AstNodeSkipper(_OpFolder):
 
             if locals_folder.foldable:
                 _FunctionLocalsFolder(
-                    self.optimizations_config, locals_folder.foldable
+                    self.code_to_fold_config,
+                    self.optimizations_config,
+                    locals_folder.foldable,
                 ).visit(parsed_function)
 
         return parsed_function
@@ -477,7 +486,7 @@ class AstNodeSkipper(_OpFolder):
     ) -> bool:
         """Determines if a function node should be skipped."""
         return node.name in self.tokens_config.functions_to_skip or (
-            self.token_types_config.skip_overload_functions
+            self.code_to_skip_config.skip_overload_functions
             and is_overload_function(node)
         )
 
@@ -507,7 +516,7 @@ class AstNodeSkipper(_OpFolder):
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if isinstance(node.value, ast.Name):
-            if node.attr in self.optimizations_config.enums_to_fold.get(
+            if node.attr in self.code_to_fold_config.enums_to_fold.get(
                 node.value.id, []
             ):
                 return self._get_enum_value_as_AST(node.value.id, node.attr)
@@ -519,7 +528,7 @@ class AstNodeSkipper(_OpFolder):
 
         if isinstance(
             node.value, ast.Attribute
-        ) and node.attr in self.optimizations_config.enums_to_fold.get(
+        ) and node.attr in self.code_to_fold_config.enums_to_fold.get(
             node.value.attr, []
         ):
             return self._get_enum_value_as_AST(node.value.attr, node.attr)
@@ -528,7 +537,7 @@ class AstNodeSkipper(_OpFolder):
 
     def _get_enum_value_as_AST(self, class_name: str, value_name: str) -> ast.Constant:
         return ast.Constant(
-            self.optimizations_config.enums_to_fold[class_name][value_name].value
+            self.code_to_fold_config.enums_to_fold[class_name][value_name].value
         )
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
@@ -652,8 +661,8 @@ class AstNodeSkipper(_OpFolder):
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
-        if node.id in self.optimizations_config.vars_to_fold:
-            constant_value = self.optimizations_config.vars_to_fold[node.id]
+        if node.id in self.code_to_fold_config.vars_to_fold:
+            constant_value = self.code_to_fold_config.vars_to_fold[node.id]
 
             return ast.Constant(constant_value)
 
@@ -717,7 +726,7 @@ class AstNodeSkipper(_OpFolder):
 
                     parsed_node.body = parsed_node.body[0].body
 
-            elif self.optimizations_config.remove_useless_else and isinstance(
+            elif self.code_to_skip_config.skip_useless_else and isinstance(
                 parsed_node.body[-1], (ast.Raise, ast.Return)
             ):
                 denested_else: list[ast.stmt] = parsed_node.orelse
@@ -782,7 +791,7 @@ class AstNodeSkipper(_OpFolder):
                 return ast.Constant(machine_dependent_functions[function_call_key])
 
         if (
-            self.optimizations_config.remove_typing_cast
+            self.code_to_skip_config.skip_typing_cast
             and isinstance(node.func, ast.Name)
             and node.func.id == "cast"
             and len(node.args) == 2  # noqa: PLR2004
@@ -822,14 +831,7 @@ class AstNodeSkipper(_OpFolder):
 
         return (
             isinstance(target, ast.Name)
-            and target.id in self.optimizations_config.vars_to_fold
-        )
-
-    def _use_version_optimization(self, min_version: tuple[int, int]) -> bool:
-        return (
-            False
-            if self.target_python_version is None
-            else self.target_python_version >= min_version
+            and target.id in self.code_to_fold_config.vars_to_fold
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:
@@ -978,9 +980,12 @@ class _FunctionLocalsFolder(_OpFolder):
     __slots__ = ("folds",)
 
     def __init__(
-        self, optimizations_config: OptimizationsConfig, folds: dict[str, ast.Constant]
+        self,
+        code_to_fold_config: CodeToFoldConfig,
+        optimizations_config: ExtraOptimizationsConfig,
+        folds: dict[str, ast.Constant],
     ) -> None:
-        super().__init__(optimizations_config)
+        super().__init__(code_to_fold_config, optimizations_config)
         self.folds: dict[str, ast.Constant] = folds
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:

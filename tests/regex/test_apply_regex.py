@@ -17,11 +17,7 @@ _re_cases = [
         "Some series of things. A real series.",
         "Some wonder of things. A real wonder.",
     ),
-    (
-        RegexReplacement("series", "wonder"),
-        "Fox",
-        "Fox",
-    ),
+    (RegexReplacement("series", "wonder"), "Fox", "Fox"),
 ]
 
 

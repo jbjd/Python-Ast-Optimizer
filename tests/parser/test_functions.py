@@ -1,7 +1,4 @@
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    TokenTypesConfig,
-)
+from personal_python_ast_optimizer.config import CodeToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
@@ -77,7 +74,7 @@ def test_overload(a: float) -> int: do_something()
     )
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(skip_overload_functions=True),
+        code_to_skip_config=CodeToSkipConfig(skip_overload_functions=True),
     )
 
 
@@ -92,7 +89,7 @@ a = cast(str, 1)
     )
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(remove_typing_cast=True),
+        code_to_skip_config=CodeToSkipConfig(skip_typing_cast=True),
     )
 
 
@@ -107,5 +104,5 @@ a = cast(str, 1)
     )
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(remove_typing_cast=False),
+        code_to_skip_config=CodeToSkipConfig(skip_typing_cast=False),
     )

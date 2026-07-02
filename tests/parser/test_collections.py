@@ -1,8 +1,8 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    TokensConfig,
+from personal_python_ast_optimizer.config import (
+    ExtraOptimizationsConfig,
+    UserTokensToSkipConfig,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
@@ -73,7 +73,7 @@ def test_simplify_named_tuple(before: str, after: str):
 
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
+        optimizations_config=ExtraOptimizationsConfig(simplify_named_tuples=True),
     )
 
 
@@ -96,7 +96,7 @@ class A(NamedTuple):
     ):
         optimize_and_assert_correct(
             before_and_after,
-            optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
+            optimizations_config=ExtraOptimizationsConfig(simplify_named_tuples=True),
         )
 
 
@@ -129,6 +129,8 @@ def test_collection_concat_to_unpack(before: str, after: str):
 
     optimize_and_assert_correct(
         before_and_after,
-        tokens_config=TokensConfig(dict_keys_to_skip=to_skip, no_warn=to_skip),
-        optimizations_config=OptimizationsConfig(collection_concat_to_unpack=True),
+        tokens_config=UserTokensToSkipConfig(
+            dict_keys_to_skip=to_skip, no_warn=to_skip
+        ),
+        optimizations_config=ExtraOptimizationsConfig(collection_concat_to_unpack=True),
     )

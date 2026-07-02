@@ -6,7 +6,7 @@ class AstNodeVisitorBase:
 
     __slots__ = ()
 
-    def visit(self, node: ast.AST) -> ast.AST | None:
+    def visit(self, node: ast.AST) -> ast.AST:
         """Visits `node`."""
         method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
@@ -58,6 +58,9 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
 
     def __init__(self, reverse: bool = False) -> None:
         self.reverse = reverse
+
+    def visit(self, node: ast.AST) -> ast.AST | None:  # type: ignore[override]
+        return super().visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):

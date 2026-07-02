@@ -1,4 +1,4 @@
-from personal_python_ast_optimizer.parser.config import OptimizationsConfig
+from personal_python_ast_optimizer.config import CodeToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
@@ -64,5 +64,5 @@ if b==1:
     )
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
     )

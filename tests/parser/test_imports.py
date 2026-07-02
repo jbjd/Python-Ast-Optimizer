@@ -1,8 +1,9 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    TokenTypesConfig,
+from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
+    ExtraOptimizationsConfig,
+    TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
@@ -14,15 +15,15 @@ from __future__ import unicode_literals
 from __future__ import with_statement
 """
 
-_futures_imports_inline: str = (
-    "from __future__ import annotations,generator_stop,unicode_literals,with_statement"
-)
-
 
 @pytest.mark.parametrize(
     ("version", "skip_type_hints", "after"),
     [
-        (None, TypeHintsToSkip.NONE, _futures_imports_inline),
+        (
+            None,
+            TypeHintsToSkip.NONE,
+            "from __future__ import annotations,generator_stop",
+        ),
         ((3, 7), TypeHintsToSkip.NONE, "from __future__ import annotations"),
         ((3, 7), TypeHintsToSkip.ALL, ""),
     ],
@@ -32,10 +33,16 @@ def test_futures_imports(
 ):
     before_and_after = BeforeAndAfter(_futures_imports, after)
 
+    optimizations_config = (
+        ExtraOptimizationsConfig()
+        if version is None
+        else ExtraOptimizationsConfig(target_python_version=version)
+    )
+
     optimize_and_assert_correct(
         before_and_after,
-        target_python_version=version,
-        token_types_config=TokenTypesConfig(skip_type_hints=skip_type_hints),
+        optimizations_config=optimizations_config,
+        token_types_config=TokenTypesToSkipConfig(skip_type_hints=skip_type_hints),
     )
 
 
@@ -58,7 +65,7 @@ def i():import a,d;from b import c,d as e;from .b import f;print();import e""",
     )
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -69,7 +76,7 @@ def test_import_star():
     )
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(remove_unused_imports=False),
+        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -131,5 +138,5 @@ bar()
 def test_remove_unused_import(before_and_after: BeforeAndAfter):
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(unused_imports_to_preserve=["asdf"]),
+        code_to_skip_config=CodeToSkipConfig(unused_imports_to_preserve=["asdf"]),
     )

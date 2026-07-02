@@ -1,10 +1,12 @@
 import ast
 
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    SkipConfig,
-    TokensConfig,
-    TokenTypesConfig,
+from personal_python_ast_optimizer.config import (
+    CodeToFoldConfig,
+    CodeToSkipConfig,
+    ExtraOptimizationsConfig,
+    OptimizeConfig,
+    TokenTypesToSkipConfig,
+    UserTokensToSkipConfig,
 )
 from personal_python_ast_optimizer.run import optimize_source_and_minify
 
@@ -21,16 +23,17 @@ class BeforeAndAfter:
 
 def optimize_and_assert_correct(
     before_and_after: BeforeAndAfter,
-    target_python_version: tuple[int, int] | None = None,
-    token_types_config: TokenTypesConfig | None = None,
-    tokens_config: TokensConfig | None = None,
-    optimizations_config: OptimizationsConfig | None = None,
+    code_to_fold_config: CodeToFoldConfig | None = None,
+    code_to_skip_config: CodeToSkipConfig | None = None,
+    token_types_config: TokenTypesToSkipConfig | None = None,
+    tokens_config: UserTokensToSkipConfig | None = None,
+    optimizations_config: ExtraOptimizationsConfig | None = None,
 ):
     minified_code: str = optimize_source_and_minify(
         before_and_after.before,
-        SkipConfig(
-            "",
-            target_python_version=target_python_version,
+        OptimizeConfig(
+            code_to_fold_config=code_to_fold_config,
+            code_to_skip_config=code_to_skip_config,
             tokens_config=tokens_config,
             token_types_config=token_types_config,
             optimizations_config=optimizations_config,

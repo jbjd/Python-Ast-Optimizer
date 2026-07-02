@@ -1,5 +1,5 @@
-from personal_python_ast_optimizer.parser.config import (
-    TokenTypesConfig,
+from personal_python_ast_optimizer.config import (
+    TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
@@ -38,7 +38,7 @@ class SomeTuple:
     )
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(
+        token_types_config=TokenTypesToSkipConfig(
             skip_type_hints=TypeHintsToSkip.ALL_BUT_CLASS_VARS
         ),
     )
@@ -63,5 +63,17 @@ class SomeTuple():
     )
     optimize_and_assert_correct(
         before_and_after,
-        token_types_config=TokenTypesConfig(skip_type_hints=TypeHintsToSkip.ALL),
+        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
+
+
+def test_class_ignorable_bases():
+    before_and_after = BeforeAndAfter(
+        """
+class Foo(object):
+    pass
+""",
+        "class Foo:pass",
+    )
+
+    optimize_and_assert_correct(before_and_after)

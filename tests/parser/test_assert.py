@@ -1,4 +1,4 @@
-from personal_python_ast_optimizer.parser.config import TokenTypesConfig
+from personal_python_ast_optimizer.config import TokenTypesToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
@@ -27,5 +27,5 @@ while 1:
     )
 
     optimize_and_assert_correct(
-        before_and_after, token_types_config=TokenTypesConfig(skip_asserts=True)
+        before_and_after, token_types_config=TokenTypesToSkipConfig(skip_asserts=True)
     )

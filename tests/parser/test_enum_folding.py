@@ -2,7 +2,7 @@ from enum import IntEnum, StrEnum
 
 import pytest
 
-from personal_python_ast_optimizer.parser.config import OptimizationsConfig
+from personal_python_ast_optimizer.config import CodeToFoldConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
@@ -47,7 +47,7 @@ print(somewhere.someModule._SomeStrEnum.C)""",
 def test_fold_enum(before_and_after: BeforeAndAfter):
     optimize_and_assert_correct(
         before_and_after,
-        optimizations_config=OptimizationsConfig(
+        code_to_fold_config=CodeToFoldConfig(
             enums_to_fold={_SomeIntEnum, _SomeStrEnum}
         ),
     )

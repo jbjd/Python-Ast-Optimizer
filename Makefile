@@ -1,3 +1,6 @@
+format:
+	ruff check . --fix
+
 validate:
 	ruff check .
 	ruff format --check

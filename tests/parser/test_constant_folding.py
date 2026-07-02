@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.parser.config import OptimizationsConfig
+from personal_python_ast_optimizer.config import CodeToFoldConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _binary_op_folding_cases = [
@@ -19,7 +19,7 @@ _binary_op_folding_cases = [
 @pytest.mark.parametrize("before_and_after", _binary_op_folding_cases)
 def test_binary_op_folding(before_and_after: BeforeAndAfter):
     optimize_and_assert_correct(
-        before_and_after, optimizations_config=OptimizationsConfig(fold_constants=True)
+        before_and_after, code_to_fold_config=CodeToFoldConfig(fold_constants=True)
     )
 
 

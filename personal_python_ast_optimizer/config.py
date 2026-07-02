@@ -51,7 +51,7 @@ class TokensToSkip:
         return self._tokens_to_skip - self._found
 
 
-class TokensConfig:
+class UserTokensToSkipConfig:
     __slots__ = (
         "_no_warn",
         "classes_to_skip",
@@ -111,12 +111,11 @@ class TokensConfig:
                 yield (tokens_to_skip.token_type, formatted_not_found_tokens)
 
 
-class TokenTypesConfig:
+class TokenTypesToSkipConfig:
     __slots__ = (
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_generics",
-        "skip_overload_functions",
         "skip_type_hints",
     )
 
@@ -127,7 +126,6 @@ class TokenTypesConfig:
         skip_type_hints: TypeHintsToSkip = TypeHintsToSkip.ALL_BUT_CLASS_VARS,
         skip_generics: bool = False,
         skip_asserts: bool = False,
-        skip_overload_functions: bool = False,
     ) -> None:
         if skip_generics and not skip_type_hints:
             raise ValueError("Can't skip Generics if not skipping type hints")
@@ -136,7 +134,80 @@ class TokenTypesConfig:
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
+
+
+_NO_IMPORTS_TO_PRESERVE: list[str] = []
+
+
+class CodeToSkipConfig:
+    __slots__ = (
+        "skip_overload_functions",
+        "skip_typing_cast",
+        "skip_unused_imports",
+        "skip_useless_else",
+        "unused_imports_to_preserve",
+    )
+
+    def __init__(
+        self,
+        *,
+        skip_overload_functions: bool = False,
+        skip_typing_cast: bool = True,
+        skip_useless_else: bool = True,
+        skip_unused_imports: bool = True,
+        unused_imports_to_preserve: Iterable[str] | None = None,
+    ) -> None:
+        if unused_imports_to_preserve and not skip_unused_imports:
+            raise ValueError("Can't preserve imports if skip_unused_imports is False")
+
         self.skip_overload_functions: bool = skip_overload_functions
+        self.skip_typing_cast: bool = skip_typing_cast
+        self.skip_useless_else: bool = skip_useless_else
+        self.skip_unused_imports: bool = skip_unused_imports
+        self.unused_imports_to_preserve: Iterable[str] = (
+            _NO_IMPORTS_TO_PRESERVE
+            if unused_imports_to_preserve is None
+            else unused_imports_to_preserve
+        )
+
+
+type FoldableConstant = str | bytes | bool | int | float | complex | None | EllipsisType
+
+
+class CodeToFoldConfig:
+    __slots__ = (
+        "enums_to_fold",
+        "fold_constants",
+        "fold_simple_function_locals",
+        "vars_to_fold",
+    )
+
+    def __init__(
+        self,
+        *,
+        enums_to_fold: Iterable[EnumType] | None = None,
+        fold_constants: bool = False,
+        fold_simple_function_locals: bool = False,
+        vars_to_fold: dict[str, FoldableConstant] | None = None,
+    ) -> None:
+        self.enums_to_fold: dict[str, dict[str, Enum]] = (
+            {}
+            if enums_to_fold is None
+            else self._format_enums_to_fold_as_dict(enums_to_fold)
+        )
+
+        self.fold_constants: bool = fold_constants
+        self.fold_simple_function_locals: bool = fold_simple_function_locals
+
+        self.vars_to_fold: dict[str, FoldableConstant] = (
+            {} if vars_to_fold is None else vars_to_fold
+        )
+
+    @staticmethod
+    def _format_enums_to_fold_as_dict(
+        enums: Iterable[EnumType],
+    ) -> dict[str, dict[str, Enum]]:
+        return {enum.__name__: enum._member_map_ for enum in enums}
 
 
 # Functions that have no side effects and thus are safe to remove
@@ -152,105 +223,77 @@ default_functions_safe_to_exclude_in_test_expr: set[str] = {
 }
 
 
-class OptimizationsConfig:
+class ExtraOptimizationsConfig:
     __slots__ = (
         "assume_this_machine",
         "collection_concat_to_unpack",
-        "enums_to_fold",
-        "fold_constants",
-        "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
-        "remove_typing_cast",
-        "remove_unused_imports",
-        "remove_useless_else",
         "simplify_named_tuples",
-        "unused_imports_to_preserve",
-        "vars_to_fold",
+        "target_python_version",
     )
+
+    MIN_TARGET_PYTHON: tuple[int, int] = (3, 0)
 
     def __init__(
         self,
         *,
-        vars_to_fold: dict[
-            str, str | bytes | bool | int | float | complex | None | EllipsisType
-        ]
-        | None = None,
-        enums_to_fold: Iterable[EnumType] | None = None,
-        functions_safe_to_exclude_in_test_expr: set[str] | None = None,
-        remove_unused_imports: bool = True,
-        unused_imports_to_preserve: Iterable[str] | None = None,
-        remove_useless_else: bool = True,
-        remove_typing_cast: bool = True,
-        collection_concat_to_unpack: bool = False,
-        fold_constants: bool = False,
-        fold_simple_function_locals: bool = False,
         assume_this_machine: bool = False,
+        collection_concat_to_unpack: bool = False,
+        functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         simplify_named_tuples: bool = False,
+        target_python_version: tuple[int, int] = MIN_TARGET_PYTHON,
     ) -> None:
-        if unused_imports_to_preserve and not remove_unused_imports:
-            raise ValueError("Can't preserve imports if remove_unused_imports is False")
+        if target_python_version < self.MIN_TARGET_PYTHON:
+            raise ValueError("Target Python version must be at least 3.0")
 
-        self.vars_to_fold: dict[
-            str, str | bytes | bool | int | float | complex | None | EllipsisType
-        ] = {} if vars_to_fold is None else vars_to_fold
-        self.enums_to_fold: dict[str, dict[str, Enum]] = (
-            {}
-            if enums_to_fold is None
-            else self._format_enums_to_fold_as_dict(enums_to_fold)
-        )
+        self.assume_this_machine: bool = assume_this_machine
+        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
 
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
             default_functions_safe_to_exclude_in_test_expr
             if functions_safe_to_exclude_in_test_expr is None
             else functions_safe_to_exclude_in_test_expr
         )
-        self.unused_imports_to_preserve: Iterable[str] = (
-            unused_imports_to_preserve or []
-        )
 
-        self.remove_unused_imports: bool = remove_unused_imports
-        self.remove_useless_else: bool = remove_useless_else
-        self.remove_typing_cast: bool = remove_typing_cast
-        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
-        self.assume_this_machine: bool = assume_this_machine
-        self.fold_constants: bool = fold_constants
-        self.fold_simple_function_locals: bool = fold_simple_function_locals
         self.simplify_named_tuples: bool = simplify_named_tuples
-
-    @staticmethod
-    def _format_enums_to_fold_as_dict(
-        enums: Iterable[EnumType],
-    ) -> dict[str, dict[str, Enum]]:
-        """Given an Iterable of type Enum, turn them into a dict for quick lookup
-        Where key is the Enum's class name and it points to a dict of strings
-        mapping member name to value."""
-        return {enum.__name__: enum._member_map_ for enum in enums}
+        self.target_python_version: tuple[int, int] = target_python_version
 
 
-class SkipConfig:
+class OptimizeConfig:
     __slots__ = (
-        "module_name",
+        "code_to_fold_config",
+        "code_to_skip_config",
         "optimizations_config",
-        "target_python_version",
         "token_types_config",
         "tokens_config",
     )
 
     def __init__(
         self,
-        module_name: str,
         *,
-        target_python_version: tuple[int, int] | None = None,
-        tokens_config: TokensConfig | None = None,
-        token_types_config: TokenTypesConfig | None = None,
-        optimizations_config: OptimizationsConfig | None = None,
+        code_to_fold_config: CodeToFoldConfig | None = None,
+        code_to_skip_config: CodeToSkipConfig | None = None,
+        tokens_config: UserTokensToSkipConfig | None = None,
+        token_types_config: TokenTypesToSkipConfig | None = None,
+        optimizations_config: ExtraOptimizationsConfig | None = None,
     ) -> None:
-        self.module_name: str = module_name
-        self.target_python_version: tuple[int, int] | None = target_python_version
-        self.tokens_config: TokensConfig = tokens_config or TokensConfig()
-        self.token_types_config: TokenTypesConfig = (
-            token_types_config or TokenTypesConfig()
+
+        self.code_to_fold_config: CodeToFoldConfig = (
+            CodeToFoldConfig() if code_to_fold_config is None else code_to_fold_config
         )
-        self.optimizations_config: OptimizationsConfig = (
-            optimizations_config or OptimizationsConfig()
+        self.code_to_skip_config: CodeToSkipConfig = (
+            CodeToSkipConfig() if code_to_skip_config is None else code_to_skip_config
+        )
+        self.tokens_config: UserTokensToSkipConfig = (
+            UserTokensToSkipConfig() if tokens_config is None else tokens_config
+        )
+        self.token_types_config: TokenTypesToSkipConfig = (
+            TokenTypesToSkipConfig()
+            if token_types_config is None
+            else token_types_config
+        )
+        self.optimizations_config: ExtraOptimizationsConfig = (
+            ExtraOptimizationsConfig()
+            if optimizations_config is None
+            else optimizations_config
         )

@@ -41,9 +41,15 @@ class TokensToSkip:
     def __bool__(self) -> bool:
         return bool(self._tokens_to_skip)
 
-    def __contains__(self, key: str) -> bool:
-        self._found.add(key)
-        return self._tokens_to_skip.__contains__(key)
+    def __contains__(self, key: object) -> bool:
+        if not isinstance(key, str):
+            return False
+
+        contains: bool = self._tokens_to_skip.__contains__(key)
+        if contains:
+            self._found.add(key)
+
+        return contains
 
     def get_not_found_tokens(self) -> set[str]:
         return self._tokens_to_skip - self._found

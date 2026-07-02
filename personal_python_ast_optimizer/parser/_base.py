@@ -23,6 +23,8 @@ class AstNodeVisitorBase:
             elif isinstance(value, ast.AST):
                 self.visit(value)
 
+        return node
+
     # Start - Nodes that do not need to be fully visited
 
     def visit_alias(self, node: ast.alias) -> ast.alias:
@@ -57,7 +59,7 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
     def __init__(self, reverse: bool = False) -> None:
         self.reverse = reverse
 
-    def generic_visit(self, node: ast.AST) -> ast.AST | None:
+    def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 to_visit = reversed(old_value) if self.reverse else old_value

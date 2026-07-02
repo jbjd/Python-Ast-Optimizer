@@ -666,8 +666,8 @@ class AstNodeSkipper(_OpFolder):
             if isinstance(k, ast.Constant)
             and k.value in self.tokens_config.dict_keys_to_skip
         ):
-            new_keys: list[str] = []
-            new_values: list[str] = []
+            new_keys: list[ast.expr | None] = []
+            new_values: list[ast.expr] = []
 
             for k, v in zip(node.keys, node.values, strict=True):
                 if (
@@ -926,7 +926,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
         self._handle_possible_foldable(node.target.id)
         return self.generic_visit(node)
 
-    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+    def visit_Assign(self, node: ast.Assign) -> ast.AST:
 
         targets: list[ast.expr]
         value: ast.AST | None
@@ -944,7 +944,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
 
         return self.generic_visit(node)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST:
 
         if isinstance(node.target, ast.Name):
             self._handle_possible_foldable(node.target.id, node.value)

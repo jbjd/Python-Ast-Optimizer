@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 @pytest.mark.parametrize(
@@ -17,4 +17,4 @@ class Foo(object):
         after,
     )
 
-    run_minifier_and_assert_correct(before_and_after, target_python_version=version)
+    optimize_and_assert_correct(before_and_after, target_python_version=version)

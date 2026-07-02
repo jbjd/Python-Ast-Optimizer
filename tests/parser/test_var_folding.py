@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.parser.config import OptimizationsConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _fold_var_cases = [
     BeforeAndAfter(
@@ -67,7 +67,7 @@ FAVORITE_NUMBER,TEST=4,5
 
 @pytest.mark.parametrize("before_and_after", _fold_var_cases)
 def test_fold_var(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(
             vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test", "__name__": "__main__"}

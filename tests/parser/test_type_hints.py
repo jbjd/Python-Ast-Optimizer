@@ -2,7 +2,7 @@ from personal_python_ast_optimizer.parser.config import (
     TokenTypesConfig,
     TypeHintsToSkip,
 )
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _TYPE_HINT_EXAMPLE: str = """
 import some_type
@@ -27,7 +27,7 @@ def b()->None:c:int=3;print(c)
 class C:a:str""",
     )
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         token_types_config=TokenTypesConfig(skip_type_hints=TypeHintsToSkip.NONE),
     )
@@ -39,7 +39,7 @@ def test_removes_type_hints_all_but_class_var():
         "def b():c=3;print(c)\nclass C:a:str",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_remove_all_type_hints():
@@ -48,7 +48,7 @@ def test_remove_all_type_hints():
         "def b():c=3;print(c)\nclass C:pass",
     )
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         token_types_config=TokenTypesConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )

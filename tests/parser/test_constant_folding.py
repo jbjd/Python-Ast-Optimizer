@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.parser.config import OptimizationsConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _binary_op_folding_cases = [
     BeforeAndAfter("a=3+4*2", "a=11"),
@@ -18,7 +18,7 @@ _binary_op_folding_cases = [
 
 @pytest.mark.parametrize("before_and_after", _binary_op_folding_cases)
 def test_binary_op_folding(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after, optimizations_config=OptimizationsConfig(fold_constants=True)
     )
 
@@ -32,4 +32,4 @@ a = (
 )""",
         "a='ab'",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

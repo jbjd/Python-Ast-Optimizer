@@ -4,7 +4,7 @@ from personal_python_ast_optimizer.parser.config import (
     TokenTypesConfig,
     TypeHintsToSkip,
 )
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_generics_config():
@@ -27,7 +27,7 @@ class A[FOO]:
 class A[FOO]:\n\tdef __init__(self,a):self.a=a""",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ class A[FOO]:
 class A:\n\tdef __init__(self,a):self.a=a""",
     )
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         token_types_config=TokenTypesConfig(
             skip_type_hints=skip_type_hints, skip_generics=True

@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_or_useless():
@@ -10,7 +10,7 @@ def test_foo():
         "def test_foo():return 2",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_or_all_false():
@@ -22,7 +22,7 @@ def test_foo():
         "def test_foo():return 0",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_and_useless():
@@ -34,7 +34,7 @@ def test_foo():
         "def test_foo():return 0",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_and_all_true():
@@ -46,4 +46,4 @@ def test_foo():
         "def test_foo():return 3",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

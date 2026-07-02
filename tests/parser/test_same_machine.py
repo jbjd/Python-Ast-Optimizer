@@ -4,7 +4,7 @@ import sys
 import pytest
 
 from personal_python_ast_optimizer.parser.config import OptimizationsConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _cpu_count_example: str = """
 def get_cpu_count():
@@ -42,7 +42,7 @@ print(sys.platform == 'a')
 def test_assume_this_machine(assume_this_machine: bool, before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(
             assume_this_machine=assume_this_machine

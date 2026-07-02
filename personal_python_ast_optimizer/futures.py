@@ -1,3 +1,6 @@
+"""Details information about __future__ imports in Python."""
+
+
 class Future:
     __slots__ = ("mandatory_version", "name")
 
@@ -20,7 +23,10 @@ future_to_mandatory_versions: list[Future] = [
 
 def get_unneeded_futures(python_version: tuple[int, int]) -> list[str]:
     """Returns __future__ imports that are unneeded in provided
-    python version"""
+    python version.
+
+    :param python_version: Version to compare against
+    :returns: List of __future__ imports that can be removed"""
     return [
         future.name
         for future in future_to_mandatory_versions

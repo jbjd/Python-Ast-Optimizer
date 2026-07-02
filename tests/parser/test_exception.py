@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_almost_useful_try():
@@ -15,7 +15,7 @@ finally:
         "print(1)",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_useless_try():
@@ -31,7 +31,7 @@ finally:
         "",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_raise_same_line():
@@ -45,4 +45,4 @@ except (Exception, ValueError) as e:
         "try:a+=1\nexcept(Exception,ValueError)as e:raise ValueError('a')from e",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

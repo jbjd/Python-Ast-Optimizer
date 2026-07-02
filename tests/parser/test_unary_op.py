@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.parser.config import OptimizationsConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _not_cases = [
     BeforeAndAfter("print(not 3)", "print(False)"),
@@ -13,7 +13,7 @@ _not_cases = [
 
 @pytest.mark.parametrize("before_and_after", _not_cases)
 def test_not(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(vars_to_fold={"__debug__": False}),
     )
@@ -27,7 +27,7 @@ _bitwise_not_cases = [
 
 @pytest.mark.parametrize("before_and_after", _bitwise_not_cases)
 def test_bitwise_not(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 _plus_cases = [
@@ -38,4 +38,4 @@ _plus_cases = [
 
 @pytest.mark.parametrize("before_and_after", _plus_cases)
 def test_plus(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

@@ -1,15 +1,15 @@
 from personal_python_ast_optimizer.parser.config import OptimizationsConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_empty():
     empty_script = BeforeAndAfter("", "")
-    run_minifier_and_assert_correct(empty_script)
+    optimize_and_assert_correct(empty_script)
 
 
 def test_script_with_annotations():
     before_and_after = BeforeAndAfter("a: int;b: int = 2;b -= 1", "b=2\nb-=1")
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_one_line_if():
@@ -27,7 +27,7 @@ a='a'
 b='b'
 """.strip(),
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_module_doc_string():
@@ -37,7 +37,7 @@ foo = 5
 """,
         "foo=5",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_inline_all():
@@ -62,7 +62,7 @@ if b==1:
             "from spam import eggs;raise Exception;return 0"
         ),
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )

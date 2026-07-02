@@ -2,7 +2,7 @@ from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     TokenTypesConfig,
 )
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_function_dangling_constants():
@@ -17,7 +17,7 @@ def foo(bar: str) -> None:
 """,
         "def foo(bar):pass",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_function_with_many_args():
@@ -29,7 +29,7 @@ def foo(bar, spam, eggs):
 """,
         "def foo(bar,spam,eggs):a=1;return a",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_function_with_many_returns():
@@ -46,7 +46,7 @@ def foo(bar):
 \treturn 1
 """.strip(),
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_function_call_same_line():
@@ -59,7 +59,7 @@ if a==b:
 """,
         "if a==b:a();b();c()",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_function_overload():
@@ -75,7 +75,7 @@ def test_overload(a: float) -> int: do_something()
 """,
         "def test_overload(a):do_something()",
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         token_types_config=TokenTypesConfig(skip_overload_functions=True),
     )
@@ -90,7 +90,7 @@ a = cast(str, 1)
 """,
         "a=1",
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_typing_cast=True),
     )
@@ -105,7 +105,7 @@ a = cast(str, 1)
 """,
         "from typing import cast\na=cast(str,1)",
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_typing_cast=False),
     )

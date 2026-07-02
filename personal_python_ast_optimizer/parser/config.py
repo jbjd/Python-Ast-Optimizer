@@ -2,10 +2,6 @@ from collections.abc import Iterable, Iterator
 from enum import Enum, EnumType, StrEnum
 from types import EllipsisType
 
-from personal_python_ast_optimizer.python_info import (
-    default_functions_safe_to_exclude_in_test_expr,
-)
-
 
 class TypeHintsToSkip(Enum):
     NONE = 0
@@ -141,6 +137,19 @@ class TokenTypesConfig:
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
         self.skip_overload_functions: bool = skip_overload_functions
+
+
+# Functions that have no side effects and thus are safe to remove
+# if a test expression is found to be useless. For example:
+# if "str(a) == 'a':pass" will be turned into just "str(a) == 'a'"
+# but if its known str has no side effects then it can be fully removed
+default_functions_safe_to_exclude_in_test_expr: set[str] = {
+    "int",
+    "str",
+    "isinstance",
+    "getattr",
+    "hasattr",
+}
 
 
 class OptimizationsConfig:

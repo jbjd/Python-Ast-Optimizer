@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _if_cases = [
     BeforeAndAfter(
@@ -84,7 +84,7 @@ if test():pass""",
 
 @pytest.mark.parametrize("before_and_after", _if_cases)
 def test_if(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 _nested_if_cases = [
@@ -144,7 +144,7 @@ if a < b:
 
 @pytest.mark.parametrize("before_and_after", _nested_if_cases)
 def test_nested_if(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_if_return():
@@ -162,4 +162,4 @@ def a(foo):
 \tif foo<9:return 6
 \treturn 7""",
     )
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

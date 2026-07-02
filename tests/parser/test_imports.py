@@ -5,7 +5,7 @@ from personal_python_ast_optimizer.parser.config import (
     TokenTypesConfig,
     TypeHintsToSkip,
 )
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 _futures_imports: str = """
 from __future__ import annotations
@@ -32,7 +32,7 @@ def test_futures_imports(
 ):
     before_and_after = BeforeAndAfter(_futures_imports, after)
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         target_python_version=version,
         token_types_config=TokenTypesConfig(skip_type_hints=skip_type_hints),
@@ -56,7 +56,7 @@ def i():
         """import test,test2
 def i():import a,d;from b import c,d as e;from .b import f;print();import e""",
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )
@@ -67,7 +67,7 @@ def test_import_star():
         "from ctypes import *",
         "from ctypes import*",
     )
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(remove_unused_imports=False),
     )
@@ -129,7 +129,7 @@ bar()
 
 @pytest.mark.parametrize("before_and_after", _unused_import_test_cases)
 def test_remove_unused_import(before_and_after: BeforeAndAfter):
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(unused_imports_to_preserve=["asdf"]),
     )

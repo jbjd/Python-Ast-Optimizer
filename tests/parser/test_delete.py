@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_assert_same_line():
@@ -12,4 +12,4 @@ def test_foo(a,b,c):
         "def test_foo(a,b,c):del a;del b;del c",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

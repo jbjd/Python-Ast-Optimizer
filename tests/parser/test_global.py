@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_global_same_line():
@@ -13,7 +13,7 @@ def test():
         "a=1\nb=2\ndef test():global a,b;print(a)",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_nonlocal_same_line():
@@ -33,4 +33,4 @@ def test():
 \ti()""".strip(),
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)

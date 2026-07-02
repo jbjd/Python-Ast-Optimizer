@@ -1,5 +1,5 @@
 from personal_python_ast_optimizer.parser.config import TokenTypesConfig
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_assert_same_line():
@@ -13,7 +13,7 @@ def test_foo():
         "def test_foo():assert 1;assert 2,'bar';assert 3",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 def test_skip_assert():
@@ -26,6 +26,6 @@ while 1:
         "while 1:foo()",
     )
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after, token_types_config=TokenTypesConfig(skip_asserts=True)
     )

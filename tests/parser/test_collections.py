@@ -4,7 +4,7 @@ from personal_python_ast_optimizer.parser.config import (
     OptimizationsConfig,
     TokensConfig,
 )
-from tests.utils import BeforeAndAfter, run_minifier_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correct
 
 
 def test_tuple_whitespace():
@@ -16,7 +16,7 @@ if a in (1,2):
         "if a in(1,2):print()",
     )
 
-    run_minifier_and_assert_correct(before_and_after)
+    optimize_and_assert_correct(before_and_after)
 
 
 _simplify_named_tuple_test_cases: list[tuple[str, str]] = [
@@ -71,7 +71,7 @@ class A(NamedTuple):
 def test_simplify_named_tuple(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
     )
@@ -94,7 +94,7 @@ class A(NamedTuple):
         ValueError,
         match='Non-default namedtuple "A" field "bar" cannot follow default field',
     ):
-        run_minifier_and_assert_correct(
+        optimize_and_assert_correct(
             before_and_after,
             optimizations_config=OptimizationsConfig(simplify_named_tuples=True),
         )
@@ -124,7 +124,7 @@ _collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
 def test_collection_concat_to_unpack(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
-    run_minifier_and_assert_correct(
+    optimize_and_assert_correct(
         before_and_after,
         tokens_config=TokensConfig(dict_keys_to_skip={"foobar"}),
         optimizations_config=OptimizationsConfig(collection_concat_to_unpack=True),

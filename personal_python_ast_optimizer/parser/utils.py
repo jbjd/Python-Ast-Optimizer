@@ -1,10 +1,10 @@
 import ast
-from collections.abc import Iterable
-
-from personal_python_ast_optimizer.parser.config import TokensToSkip
+from collections.abc import Container
 
 
-def exclude_imports(node: ast.Import | ast.ImportFrom, excludes: Iterable[str]) -> None:
+def exclude_imports(
+    node: ast.Import | ast.ImportFrom, excludes: Container[str]
+) -> None:
     if excludes:
         node.names = [
             alias
@@ -13,7 +13,7 @@ def exclude_imports(node: ast.Import | ast.ImportFrom, excludes: Iterable[str]) 
         ]
 
 
-def filter_imports(node: ast.Import | ast.ImportFrom, includes: Iterable[str]) -> None:
+def filter_imports(node: ast.Import | ast.ImportFrom, includes: Container[str]) -> None:
     node.names = [
         alias for alias in node.names if (alias.asname or alias.name) in includes
     ]
@@ -39,9 +39,7 @@ def is_return_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
-def skip_base_classes(
-    node: ast.ClassDef, classes_to_ignore: Iterable[str] | TokensToSkip
-) -> None:
+def skip_base_classes(node: ast.ClassDef, classes_to_ignore: Container[str]) -> None:
     if classes_to_ignore:
         node.bases = [
             base
@@ -52,7 +50,7 @@ def skip_base_classes(
 
 def skip_decorators(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-    decorators_to_ignore: Iterable[str] | TokensToSkip,
+    decorators_to_ignore: Container[str],
 ) -> None:
     if decorators_to_ignore:
         node.decorator_list = [

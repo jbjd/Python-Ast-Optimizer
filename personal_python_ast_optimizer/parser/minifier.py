@@ -67,7 +67,8 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         first_letter_to_write: str = text[0][:1]
         if (
             first_letter_to_write in chars_that_dont_need_whitespace
-            and self._last_char_is(" ")
+            and self._source
+            and self._source[-1][-1] == " "
         ):
             self._source[-1] = self._source[-1][:-1]
 
@@ -79,38 +80,33 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         for text in text_iter:
             if text in operators_and_separators:
                 yield text.strip()
-            elif text in comparison_and_conjunctions:
-                yield self._get_space_before_write() + text[1:]
+            elif text in comparison_and_conjunctions and (
+                not self._source
+                or self._source[-1][-1] in chars_that_dont_need_whitespace
+            ):
+                yield text[1:]
             elif text != "":
                 yield text
 
-    def visit_node(
-        self,
-        node: ast.AST,
-        can_write_body_in_one_line: bool = False,
-        last_visited_node: ast.stmt | None = None,
-    ) -> None:
+    def _traverse_node(self, node: ast.AST) -> None:
         method: str = "visit_" + node.__class__.__name__
         visitor: Callable = getattr(self, method, self.generic_visit)  # type: ignore[assignment]
-
-        self.can_write_body_in_one_line = can_write_body_in_one_line
-        self.previous_node_in_body = last_visited_node
-
         return visitor(node)
 
     def traverse(self, node: list[ast.stmt] | ast.AST) -> None:
         if isinstance(node, list):
-            last_visited_node: ast.stmt | None = None
-            can_write_body_in_one_line = (
+            self.can_write_body_in_one_line = (
                 all(self._node_inlineable(sub_node) for sub_node in node)
                 or len(node) == 1
             )
+            self.previous_node_in_body = None
 
             for sub_node in node:
-                self.visit_node(sub_node, can_write_body_in_one_line, last_visited_node)
-                last_visited_node = sub_node
+                self._traverse_node(sub_node)
+                self.can_write_body_in_one_line = False
+                self.previous_node_in_body = sub_node
         else:
-            self.visit_node(node)
+            self._traverse_node(node)
 
     def visit_Break(self, _: ast.Break) -> None:
         self.fill_literal("break")
@@ -136,7 +132,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
     def _write_scope(self, scope: LiteralString, names: list[str]) -> None:
         self.fill_literal(scope)
-        self.interleave(lambda: self._source.append(","), self._source.extend, names)
+        self.interleave(lambda: self._source.append(","), self._source.append, names)
 
     def visit_Delete(self, node: ast.Delete) -> None:
         self.fill_literal("del ")
@@ -149,14 +145,11 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             self.traverse(node.value)
 
     def visit_Raise(self, node: ast.Raise) -> None:
-        self.fill_literal("raise")
-
         if not node.exc:
-            if node.cause:
-                raise ValueError("Node can't use cause without an exception.")
+            self.fill_literal("raise")
             return
 
-        self._source.append(" ")
+        self.fill_literal("raise ")
         self.traverse(node.exc)
 
         if node.cause:
@@ -174,9 +167,8 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         self.fill_literal("from ")
-        level_dots: str = "." * (node.level or 0)
-        if level_dots != "":
-            self._source.append(level_dots)
+        if node.level > 0:
+            self._source.append("." * node.level)
         if node.module:
             self._source.append(node.module)
         self._source.append(" import ")
@@ -194,24 +186,24 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
         if node.value is not None:
             self._source.append("=")
-            self.visit_node(node.value)
+            self._traverse_node(node.value)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.fill_splitter()
 
         for target in node.targets:
             self.set_precedence(ast._Precedence.TUPLE, target)  # type: ignore[attr-defined]
-            self.visit_node(target)
+            self._traverse_node(target)
             self._source.append("=")
 
-        self.visit_node(node.value)
+        self._traverse_node(node.value)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self.fill_splitter()
 
-        self.visit_node(node.target)
+        self._traverse_node(node.target)
         self._source.append(self.binop[node.op.__class__.__name__] + "=")
-        self.visit_node(node.value)
+        self._traverse_node(node.value)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self._write_decorators(node)
@@ -239,11 +231,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             self._type_params_helper(node.type_params)
 
         with self.delimit("(", ")"):
-            self.visit_node(node.args)
-
-        if node.returns:
-            self._source.append("->")
-            self.visit_node(node.returns)
+            self._traverse_node(node.args)
 
         with self.block(extra=self.get_type_comment(node)):
             self._write_docstring_and_traverse_body(node)
@@ -255,21 +243,21 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             self.fill_literal_new_line("@")
             self.traverse(deco)
 
-    def _last_char_is(self, char_to_check: str) -> bool:
-        return bool(self._source) and self._source[-1][-1] == char_to_check
+    def visit_List(self, node: ast.List) -> None:
+        with self.delimit("[", "]"):
+            self._traverse_comma_delimitated_body(node.elts)
 
-    def _get_space_before_write(self) -> str:
-        return (
-            ""
-            if not self._source
-            or self._source[-1][-1] in chars_that_dont_need_whitespace
-            else " "
-        )
+    def visit_Set(self, node: ast.Set) -> None:
+        if node.elts:
+            with self.delimit("{", "}"):
+                self._traverse_comma_delimitated_body(node.elts)
+        else:
+            self._source.append("set()")
 
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         """Get character that starts the next line of code with the shortest
         possible whitespace. Either a new line, semicolon, or nothing."""
-        if self._source and self._source[-1] == ":" and self.can_write_body_in_one_line:
+        if self.can_write_body_in_one_line:
             return ""
 
         if (

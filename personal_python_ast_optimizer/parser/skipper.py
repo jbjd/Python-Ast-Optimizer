@@ -7,7 +7,6 @@ from typing import Self
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
-    AstNodeTransformerReverse,
     AstNodeVisitorBase,
 )
 from personal_python_ast_optimizer.parser.config import (
@@ -44,6 +43,7 @@ class _OpFolder(AstNodeTransformerBase):
     __slots__ = ("optimizations_config",)
 
     def __init__(self, optimizations_config: OptimizationsConfig) -> None:
+        super().__init__()
         self.optimizations_config: OptimizationsConfig = optimizations_config
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
@@ -211,8 +211,9 @@ class _OpFolder(AstNodeTransformerBase):
 class AstNodeSkipper(_OpFolder):
     __slots__ = (
         "_has_imports",
-        "_node_context_skippable_futures",
+        "_node_context",
         "_simplified_named_tuple",
+        "_skippable_futures",
         "module_name",
         "target_python_version",
         "token_types_config",
@@ -659,16 +660,25 @@ class AstNodeSkipper(_OpFolder):
         return node
 
     def visit_Dict(self, node: ast.Dict) -> ast.AST:
-        if self.tokens_config.dict_keys_to_skip:
-            new_dict = {
-                k: v
-                for k, v in zip(node.keys, node.values, strict=True)
-                if getattr(k, "value", "") not in self.tokens_config.dict_keys_to_skip
-            }
+        if self.tokens_config.dict_keys_to_skip and any(
+            k
+            for k in node.keys
+            if isinstance(k, ast.Constant)
+            and k.value in self.tokens_config.dict_keys_to_skip
+        ):
+            new_keys: list[ast.expr | None] = []
+            new_values: list[ast.expr] = []
 
-            if len(new_dict) < len(node.keys):
-                node.keys = list(new_dict.keys())
-                node.values = list(new_dict.values())
+            for k, v in zip(node.keys, node.values, strict=True):
+                if (
+                    not isinstance(k, ast.Constant)
+                    or k.value not in self.tokens_config.dict_keys_to_skip
+                ):
+                    new_keys.append(k)
+                    new_values.append(v)
+
+            node.keys = new_keys
+            node.values = new_values
 
         return self.generic_visit(node)
 
@@ -852,10 +862,11 @@ class AstNodeSkipper(_OpFolder):
         return None if self.token_types_config.skip_generics else node
 
 
-class UnusedImportSkipper(AstNodeTransformerReverse):
+class UnusedImportSkipper(AstNodeTransformerBase):
     __slots__ = ("names_and_attrs",)
 
     def __init__(self, imports_to_preserve: Iterable[str]) -> None:
+        super().__init__(reverse=True)
         self.names_and_attrs: set[str] = set(imports_to_preserve)
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
@@ -915,7 +926,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
         self._handle_possible_foldable(node.target.id)
         return self.generic_visit(node)
 
-    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+    def visit_Assign(self, node: ast.Assign) -> ast.AST:
 
         targets: list[ast.expr]
         value: ast.AST | None
@@ -933,7 +944,7 @@ class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):
 
         return self.generic_visit(node)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST:
 
         if isinstance(node.target, ast.Name):
             self._handle_possible_foldable(node.target.id, node.value)

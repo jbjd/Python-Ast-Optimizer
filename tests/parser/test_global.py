@@ -5,11 +5,12 @@ def test_global_same_line():
     before_and_after = BeforeAndAfter(
         """
 a = 1
+b=2
 def test():
-    global a
+    global a,b
     print(a)
 """,
-        "a=1\ndef test():global a;print(a)",
+        "a=1\nb=2\ndef test():global a,b;print(a)",
     )
 
     run_minifier_and_assert_correct(before_and_after)

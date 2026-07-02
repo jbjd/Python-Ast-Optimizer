@@ -2,14 +2,18 @@
 
 import ast
 
+from personal_python_ast_optimizer._optimize.transformers import UnusedImportSkipper
 from personal_python_ast_optimizer._typing import Unparser
 from personal_python_ast_optimizer.config import OptimizeConfig
 from personal_python_ast_optimizer.minifier import MinifyUnparser
-from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper
+
+# from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper # noqa: ERA001
 
 
 def optimize_module(
-    module: ast.Module, skip_config: OptimizeConfig, file_name: str = "<unknown>"
+    module: ast.Module,
+    skip_config: OptimizeConfig,
+    file_name: str = "<unknown>",  # noqa: ARG001
 ) -> None:
     """Optimizes a Python AST by removing unneeded node, replacements of slower
     code, etc.
@@ -17,7 +21,11 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    AstNodeSkipper(file_name, skip_config).visit(module)
+    if skip_config.code_to_skip_config.skip_unused_imports:
+        UnusedImportSkipper(
+            skip_config.code_to_skip_config.unused_imports_to_preserve
+        ).visit(module)
+    # AstNodeSkipper(file_name, skip_config).visit(module)  # noqa: ERA001
 
 
 def optimize_source(

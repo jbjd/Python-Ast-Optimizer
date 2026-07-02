@@ -67,7 +67,7 @@ class TokensConfig:
         "variables_to_skip",
     )
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         classes_to_skip: set[str] | None = None,
@@ -159,7 +159,7 @@ class OptimizationsConfig:
         "vars_to_fold",
     )
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         vars_to_fold: dict[

@@ -11,21 +11,21 @@ select = ["ALL"]
 # EM: Error messages
 # FBT: Boolean Trap (Slower)
 # FIX002: Resolve TODO
+# N802: Uppercase function names
+# PLR0913: Too many args
 # PTH: Use Pathlib (Wants slower API used)
 # SLF001: Private member access
 # TD002: TODO author
 # TD003: TODO issue link
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["COM812", "D", "EM", "FBT", "FIX002", "PTH", "SLF001", "TD002", "TD003", "TRY003"]
+ignore = ["COM812", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PTH", "SLF001", "TD002", "TD003", "TRY003"]
 
 [lint.extend-per-file-ignores]
 
-# N802: Uppercase function names
-"personal_python_ast_optimizer/parser/*" = ["N802"]
-
 # ANN201: Missing return type
+# PLR2004: Magic Numbers
 # S101: Assert
-"tests/*" = ["ANN201", "S101"]
+"tests/*" = ["ANN201", "PLR2004", "S101"]
 
 [format]
 quote-style = "double"

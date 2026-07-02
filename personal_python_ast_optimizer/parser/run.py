@@ -1,5 +1,6 @@
 import ast
 
+from personal_python_ast_optimizer._typing import Unparser
 from personal_python_ast_optimizer.parser.config import SkipConfig
 from personal_python_ast_optimizer.parser.minifier import MinifyUnparser
 from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper
@@ -7,7 +8,7 @@ from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper
 
 def run_unparser(
     source: str,
-    unparser: ast._Unparser | None = None,  # type: ignore[name-defined]
+    unparser: Unparser | None = None,
     skip_config: SkipConfig | None = None,
 ) -> str:
     module: ast.Module = ast.parse(source)

@@ -233,6 +233,10 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         with self.delimit("(", ")"):
             self._traverse_node(node.args)
 
+        if node.returns:
+            self._source.append("->")
+            self._traverse_node(node.returns)
+
         with self.block(extra=self.get_type_comment(node)):
             self._write_docstring_and_traverse_body(node)
 

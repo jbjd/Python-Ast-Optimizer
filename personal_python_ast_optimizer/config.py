@@ -152,16 +152,15 @@ class CodeToSkipConfig:
     def __init__(
         self,
         *,
-        skip_overload_functions: bool = False,
         skip_typing_cast: bool = True,
         skip_useless_else: bool = True,
         skip_unused_imports: bool = True,
         unused_imports_to_preserve: Iterable[str] | None = None,
+        skip_overload_functions: bool = False,
     ) -> None:
         if unused_imports_to_preserve and not skip_unused_imports:
             raise ValueError("Can't preserve imports if skip_unused_imports is False")
 
-        self.skip_overload_functions: bool = skip_overload_functions
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_useless_else: bool = skip_useless_else
         self.skip_unused_imports: bool = skip_unused_imports
@@ -170,6 +169,7 @@ class CodeToSkipConfig:
             if unused_imports_to_preserve is None
             else unused_imports_to_preserve
         )
+        self.skip_overload_functions: bool = skip_overload_functions
 
 
 class CodeToFoldConfig:

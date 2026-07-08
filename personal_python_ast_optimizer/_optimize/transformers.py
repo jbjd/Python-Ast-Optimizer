@@ -15,14 +15,16 @@ class _NodeContext(Enum):
 
 class FirstPassOptimizer(AstNodeTransformerBase):
     """Removes All nodes that only need to be removed once and can't be
-    optimized into removal later."""
+    optimized into removal later. Intened to be called once as a first pass."""
 
     __slots__ = (
         "_node_context",
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_generics",
+        "skip_overload_functions",
         "skip_type_hints",
+        "skip_typing_cast",
     )
 
     def __init__(
@@ -31,11 +33,15 @@ class FirstPassOptimizer(AstNodeTransformerBase):
         skip_type_hints: TypeHintsToSkip,
         skip_generics: bool,
         skip_asserts: bool,
+        skip_typing_cast: bool,
+        skip_overload_functions: bool,
     ) -> None:
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
+        self.skip_typing_cast: bool = skip_typing_cast
+        self.skip_overload_functions: bool = skip_overload_functions
         self._node_context: _NodeContext = _NodeContext.NONE
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST:
@@ -44,7 +50,12 @@ class FirstPassOptimizer(AstNodeTransformerBase):
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         return self._handle_function(node)
 
-    def _handle_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> ast.AST:
+    def _handle_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> ast.AST | None:
+        if self.skip_overload_functions and self._is_overload_function(node):
+            return None
+
         if self.skip_type_hints:
             node.returns = None
 
@@ -58,6 +69,17 @@ class FirstPassOptimizer(AstNodeTransformerBase):
             node.annotation = None
 
         return node
+
+    def visit_Call(self, node: ast.Call) -> ast.AST | None:
+        if (
+            self.skip_typing_cast
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "cast"
+            and len(node.args) == 2  # noqa: PLR2004
+        ):
+            return self.generic_visit(node.args[1])
+
+        return self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         if self.skip_type_hints == TypeHintsToSkip.ALL or (
@@ -94,6 +116,7 @@ class FirstPassOptimizer(AstNodeTransformerBase):
             or bool(self.skip_type_hints)
             or self.skip_generics
             or self.skip_asserts
+            or self.skip_typing_cast
         )
 
     def _visit_with_context(self, node: ast.AST, context: _NodeContext) -> ast.AST:
@@ -103,6 +126,14 @@ class FirstPassOptimizer(AstNodeTransformerBase):
             return self.generic_visit(node)
         finally:
             self._node_context = previous_value
+
+    @staticmethod
+    def _is_overload_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        return (
+            len(node.decorator_list) == 1
+            and isinstance(node.decorator_list[0], ast.Name)
+            and node.decorator_list[0].id == "overload"
+        )
 
 
 class UnusedImportSkipper(AstNodeTransformerBase):
@@ -143,10 +174,10 @@ class UnusedImportSkipper(AstNodeTransformerBase):
         ]
 
     @override
+    def _has_work(self) -> bool:
+        return self.skip_unused_imports
+
+    @override
     @staticmethod
     def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
         return reversed(ast_list)
-
-    @override
-    def _has_work(self) -> bool:
-        return self.skip_unused_imports

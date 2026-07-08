@@ -6,7 +6,11 @@ from personal_python_ast_optimizer._optimize.transformers import (
     FirstPassOptimizer,
     UnusedImportSkipper,
 )
-from personal_python_ast_optimizer.config import OptimizeConfig, TokenTypesToSkipConfig
+from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
+    OptimizeConfig,
+    TokenTypesToSkipConfig,
+)
 from personal_python_ast_optimizer.minifier import MinifyUnparser
 from personal_python_ast_optimizer.typing import Unparser
 
@@ -22,17 +26,20 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
+    code_to_skip_config: CodeToSkipConfig = skip_config.code_to_skip_config
     token_types_config: TokenTypesToSkipConfig = skip_config.token_types_config
     FirstPassOptimizer(
         token_types_config.skip_dangling_expressions,
         token_types_config.skip_type_hints,
         token_types_config.skip_generics,
         token_types_config.skip_asserts,
+        code_to_skip_config.skip_typing_cast,
+        code_to_skip_config.skip_overload_functions,
     ).visit_if_has_work(module)
 
     UnusedImportSkipper(
-        skip_config.code_to_skip_config.skip_unused_imports,
-        skip_config.code_to_skip_config.unused_imports_to_preserve,
+        code_to_skip_config.skip_unused_imports,
+        code_to_skip_config.unused_imports_to_preserve,
     ).visit_if_has_work(module)
 
 

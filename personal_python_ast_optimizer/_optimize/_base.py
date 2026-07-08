@@ -25,15 +25,6 @@ class AstNodeVisitorBase:
 
         return node
 
-    @staticmethod
-    def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
-        """Allows the list of nodes to be altered so orderings other then first to last
-        can be done by sub-classes.
-
-        :param ast_list: List of ASTs to visit
-        :returns: List of the same ASTs but with the order possibly altered"""
-        return ast_list
-
     # Start - Nodes that do not need to be fully visited
 
     def visit_alias(self, node: ast.alias) -> ast.alias:
@@ -58,6 +49,15 @@ class AstNodeVisitorBase:
         return node
 
     # End - Nodes that do not need to be fully visited
+
+    @staticmethod
+    def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
+        """Allows the list of nodes to be altered so orderings other then first to last
+        can be done by sub-classes.
+
+        :param ast_list: List of ASTs to visit
+        :returns: List of the same ASTs but with the order possibly altered"""
+        return ast_list
 
 
 class AstNodeTransformerBase(AstNodeVisitorBase):

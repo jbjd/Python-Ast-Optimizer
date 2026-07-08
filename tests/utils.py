@@ -21,6 +21,10 @@ class BeforeAndAfter:
         self.after: str = after
 
 
+class OptimizeOutputError(Exception):
+    pass
+
+
 def optimize_and_assert_correct(
     before_and_after: BeforeAndAfter,
     code_to_fold_config: CodeToFoldConfig | None = None,
@@ -39,11 +43,12 @@ def optimize_and_assert_correct(
             optimizations_config=optimizations_config,
         ),
     )
-    raise_if_python_code_invalid(minified_code)
+
+    try:
+        ast.parse(minified_code)
+    except SyntaxError as e:
+        raise OptimizeOutputError(f"Minified code invalid:\n\n{minified_code}") from e
+
     assert before_and_after.after == minified_code, (
         f"\n\n{before_and_after.after}\n\n--------\n\n{minified_code}"
     )
-
-
-def raise_if_python_code_invalid(python_code: str) -> None:
-    ast.parse(python_code)

@@ -135,6 +135,14 @@ class TokenTypesToSkipConfig:
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
 
+    def has_work(self) -> bool:
+        return (
+            self.skip_dangling_expressions
+            or bool(self.skip_type_hints)
+            or self.skip_generics
+            or self.skip_asserts
+        )
+
 
 _NO_IMPORTS_TO_PRESERVE: list[str] = []
 

@@ -70,19 +70,21 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
-                ast_removed: bool = False
                 for value in self.alter_node_list_visit_order(old_value):
                     if isinstance(value, ast.AST):
                         value = self.visit(value)  # noqa: PLW2901
                         if value is None:
-                            ast_removed = True
                             continue
                         if not isinstance(value, ast.AST):
                             new_values.extend(self.alter_node_list_visit_order(value))
                             continue
                     new_values.append(value)
 
-                if not isinstance(node, ast.Module) and not new_values and ast_removed:
+                if (
+                    not isinstance(node, ast.Module)
+                    and not new_values
+                    and field == "body"  # Kinda hacky, consider a better way to detect
+                ):
                     new_values.append(ast.Pass())
 
                 old_value[:] = self.alter_node_list_visit_order(new_values)

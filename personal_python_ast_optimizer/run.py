@@ -2,7 +2,10 @@
 
 import ast
 
-from personal_python_ast_optimizer._optimize.transformers import UnusedImportSkipper
+from personal_python_ast_optimizer._optimize.transformers import (
+    FirstPassOptimizer,
+    UnusedImportSkipper,
+)
 from personal_python_ast_optimizer._typing import Unparser
 from personal_python_ast_optimizer.config import OptimizeConfig
 from personal_python_ast_optimizer.minifier import MinifyUnparser
@@ -21,6 +24,9 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
+    if skip_config.token_types_config.has_work():
+        FirstPassOptimizer(skip_config.token_types_config).visit(module)
+
     if skip_config.code_to_skip_config.skip_unused_imports:
         UnusedImportSkipper(
             skip_config.code_to_skip_config.unused_imports_to_preserve

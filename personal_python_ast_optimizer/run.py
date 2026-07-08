@@ -4,7 +4,7 @@ import ast
 
 from personal_python_ast_optimizer._optimize.transformers import (
     FirstPassOptimizer,
-    UnusedImportSkipper,
+    LastPassOptimizer,
 )
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
@@ -35,12 +35,12 @@ def optimize_module(
         token_types_config.skip_asserts,
         code_to_skip_config.skip_typing_cast,
         code_to_skip_config.skip_overload_functions,
-    ).visit_if_has_work(module)
+    ).visit(module)
 
-    UnusedImportSkipper(
+    LastPassOptimizer(
         code_to_skip_config.skip_unused_imports,
         code_to_skip_config.unused_imports_to_preserve,
-    ).visit_if_has_work(module)
+    ).visit(module)
 
 
 def optimize_source(

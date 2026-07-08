@@ -116,16 +116,6 @@ class FirstPassOptimizer(AstNodeTransformerBase):
     def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.TypeAlias | None:
         return None if self.skip_generics else self.generic_visit(node)
 
-    @override
-    def _has_work(self) -> bool:
-        return (
-            self.skip_dangling_expressions
-            or bool(self.skip_type_hints)
-            or self.skip_generics
-            or self.skip_asserts
-            or self.skip_typing_cast
-        )
-
     def _visit_with_context(self, node: ast.AST, context: _NodeContext) -> ast.AST:
         previous_value: _NodeContext = self._node_context
         self._node_context = context
@@ -143,8 +133,8 @@ class FirstPassOptimizer(AstNodeTransformerBase):
         )
 
 
-class UnusedImportSkipper(AstNodeTransformerBase):
-    """Removes unused import nodes from AST."""
+class LastPassOptimizer(AstNodeTransformerBase):
+    """Removes unused import nodes from AST and other final touches."""
 
     __slots__ = ("_names_and_attrs", "skip_unused_imports")
 
@@ -155,11 +145,17 @@ class UnusedImportSkipper(AstNodeTransformerBase):
         self._names_and_attrs: set[str] = set(imports_to_preserve)
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
+        if not self.skip_unused_imports:
+            return node
+
         self._filter_imports(node)
 
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
+        if not self.skip_unused_imports:
+            return node
+
         if node.module != "__future__":
             self._filter_imports(node)
 
@@ -180,9 +176,13 @@ class UnusedImportSkipper(AstNodeTransformerBase):
             if (alias.asname or alias.name) in self._names_and_attrs
         ]
 
-    @override
-    def _has_work(self) -> bool:
-        return self.skip_unused_imports
+    def visit_While(self, node: ast.While) -> ast.AST:
+        if isinstance(node.test, ast.Constant) and node.test.value:
+            # 1 is faster than True in python 2
+            # They are the same in python 3, but less size
+            node.test.value = 1
+
+        return self.generic_visit(node)
 
     @override
     @staticmethod

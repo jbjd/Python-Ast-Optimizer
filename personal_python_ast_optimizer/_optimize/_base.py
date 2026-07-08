@@ -66,10 +66,6 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
     def visit(self, node: ast.AST) -> ast.AST | None:  # type: ignore[override]
         return super().visit(node)
 
-    def visit_if_has_work(self, node: ast.AST) -> ast.AST | None:
-        if self._has_work():
-            self.visit(node)
-
     def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
@@ -101,6 +97,3 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
                     setattr(node, field, new_node)
 
         return node
-
-    def _has_work(self) -> bool:
-        return True

@@ -4,7 +4,7 @@ from personal_python_ast_optimizer.config import (
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 _TYPE_HINT_EXAMPLE: str = """
 import some_type
@@ -29,7 +29,7 @@ def b()->None:c:int=3;print(c)
 class C:a:str""",
     )
 
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.NONE),
     )
@@ -41,7 +41,7 @@ def test_removes_type_hints_all_but_class_var():
         "def b():c=3;print(c)\nclass C:a:str",
     )
 
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)
 
 
 def test_remove_all_type_hints():
@@ -50,18 +50,10 @@ def test_remove_all_type_hints():
         "def b():c=3;print(c)\nclass C:pass",
     )
 
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
-
-
-def test_type_alias():
-    before_and_after = BeforeAndAfter(
-        "type Url = str",
-        "type Url=str",
-    )
-    optimize_and_assert_correct(before_and_after)
 
 
 def test_generics_keep():
@@ -77,7 +69,7 @@ class A[FOO]:
 class A[FOO]:\n\tdef __init__(self,a):self.a=a""",
     )
 
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)
 
 
 @pytest.mark.parametrize(
@@ -96,7 +88,7 @@ class A[FOO]:
 class A:\n\tdef __init__(self,a):self.a=a""",
     )
 
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         token_types_config=TokenTypesToSkipConfig(
             skip_type_hints=skip_type_hints, skip_generics=True

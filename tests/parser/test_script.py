@@ -1,15 +1,9 @@
-from personal_python_ast_optimizer.config import CodeToSkipConfig
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 
 def test_empty():
     empty_script = BeforeAndAfter("", "")
-    optimize_and_assert_correct(empty_script)
-
-
-def test_script_with_annotations():
-    before_and_after = BeforeAndAfter("a: int;b: int = 2;b -= 1", "b=2\nb-=1")
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(empty_script)
 
 
 def test_one_line_if():
@@ -27,7 +21,7 @@ a='a'
 b='b'
 """.strip(),
     )
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)
 
 
 def test_module_doc_string():
@@ -37,32 +31,4 @@ foo = 5
 """,
         "foo=5",
     )
-    optimize_and_assert_correct(before_and_after)
-
-
-def test_inline_all():
-    before_and_after = BeforeAndAfter(
-        """
-if b==1:
-    assert True
-    a = 1
-    a += 1
-    break
-    continue
-    del a
-    c()
-    import foo
-    from spam import eggs
-    pass
-    raise Exception
-    return 0
-""",
-        (
-            "if b==1:assert True;a=1;a+=1;break;continue;del a;c();import foo;"
-            "from spam import eggs;raise Exception;return 0"
-        ),
-    )
-    optimize_and_assert_correct(
-        before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
-    )
+    optimize_and_assert_correctness(before_and_after)

@@ -94,6 +94,13 @@ class FirstPassOptimizer(AstNodeTransformerBase):
 
         return self.generic_visit(node)
 
+    def visit_Return(self, node: ast.Return) -> ast.AST:
+        if isinstance(node.value, ast.Constant) and node.value.value is None:
+            node.value = None
+            return node
+
+        return self.generic_visit(node)
+
     def visit_Assert(self, node: ast.Assert) -> ast.AST | None:
         return None if self.skip_asserts else self.generic_visit(node)
 

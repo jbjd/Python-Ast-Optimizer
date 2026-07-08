@@ -4,7 +4,7 @@ from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     UserTokensToSkipConfig,
 )
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 
 def test_exclude_classes():
@@ -18,7 +18,7 @@ class B:
 """,
         "class A:pass",
     )
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(classes_to_skip={"ABC", "B"}),
     )
@@ -29,7 +29,7 @@ def test_exclude_dict_keys():
         "a = {'a': 1, 'b': 2}",
         "a={'a':1}",
     )
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(dict_keys_to_skip={"b"}),
     )
@@ -85,7 +85,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_assign_cases)
 def test_exclude_assign(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(variables_to_skip={"foo"}),
     )
@@ -112,7 +112,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_def_cases)
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
@@ -140,7 +140,7 @@ test=1
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_call_cases)
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
@@ -165,7 +165,7 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_assign_cases)
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
@@ -183,7 +183,7 @@ import a as c
 """,
         "import a as c",
     )
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(
             module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
@@ -205,7 +205,7 @@ is_cid = re.compile('').match
 """,
         "from ._util import DeferredError\nis_cid=re.compile('').match",
     )
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}

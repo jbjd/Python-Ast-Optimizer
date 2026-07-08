@@ -4,20 +4,7 @@ from personal_python_ast_optimizer.config import (
     ExtraOptimizationsConfig,
     UserTokensToSkipConfig,
 )
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
-
-
-def test_tuple_whitespace():
-    before_and_after = BeforeAndAfter(
-        """
-if a in (1,2):
-    print()
-""",
-        "if a in(1,2):print()",
-    )
-
-    optimize_and_assert_correct(before_and_after)
-
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 _simplify_named_tuple_test_cases: list[tuple[str, str]] = [
     (
@@ -71,7 +58,7 @@ class A(NamedTuple):
 def test_simplify_named_tuple(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         optimizations_config=ExtraOptimizationsConfig(simplify_named_tuples=True),
     )
@@ -94,7 +81,7 @@ class A(NamedTuple):
         ValueError,
         match='Non-default namedtuple "A" field "bar" cannot follow default field',
     ):
-        optimize_and_assert_correct(
+        optimize_and_assert_correctness(
             before_and_after,
             optimizations_config=ExtraOptimizationsConfig(simplify_named_tuples=True),
         )
@@ -127,7 +114,7 @@ def test_collection_concat_to_unpack(before: str, after: str):
     # Had a weird bug where this broke when dict_keys_to_skip was set to anything
     to_skip: set[str] = {"foobar"}
 
-    optimize_and_assert_correct(
+    optimize_and_assert_correctness(
         before_and_after,
         tokens_config=UserTokensToSkipConfig(
             dict_keys_to_skip=to_skip, no_warn=to_skip

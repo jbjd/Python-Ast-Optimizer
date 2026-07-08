@@ -1,7 +1,7 @@
 """Real cases of minified code that broken at some point.
 They are added here to ensure regression does not occur."""
 
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 
 def test_image_viewer_constants():
@@ -25,4 +25,4 @@ class ImageFormats(StrEnum):
         """from enum import StrEnum
 class ImageFormats(StrEnum):DDS='DDS';GIF='GIF';JPEG='JPEG';PNG='PNG';WEBP='WebP'""",
     )
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)

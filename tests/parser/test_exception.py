@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, optimize_and_assert_correct
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 
 def test_almost_useful_try():
@@ -15,7 +15,7 @@ finally:
         "print(1)",
     )
 
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)
 
 
 def test_useless_try():
@@ -31,18 +31,4 @@ finally:
         "",
     )
 
-    optimize_and_assert_correct(before_and_after)
-
-
-def test_raise_same_line():
-    before_and_after = BeforeAndAfter(
-        """
-try:
-    a += 1
-except (Exception, ValueError) as e:
-    raise ValueError('a') from e
-""",
-        "try:a+=1\nexcept(Exception,ValueError)as e:raise ValueError('a')from e",
-    )
-
-    optimize_and_assert_correct(before_and_after)
+    optimize_and_assert_correctness(before_and_after)

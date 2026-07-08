@@ -56,12 +56,18 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:
-        self._source: list[str]  # type: ignore[misc]
+        self._source: list[str] = []
         self._indent: int  # type: ignore[misc]
         super().__init__()
 
         self.previous_node_in_body: ast.stmt | None = None
         self.can_write_body_in_one_line: bool = False
+
+    def visit(self, node: ast.AST) -> str:
+        """Outputs a source code string that, if converted back to an ast
+        (using ast.parse) will generate an AST equivalent to *node*"""
+        self.traverse(node)
+        return "".join(self._source)
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
         """Overrides super fill to use tabs over spaces and different line splitters."""

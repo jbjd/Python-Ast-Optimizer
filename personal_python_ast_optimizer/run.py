@@ -5,8 +5,10 @@ import ast
 from personal_python_ast_optimizer._optimize.transformers import (
     FirstPassOptimizer,
     LastPassOptimizer,
+    OptimizationPass,
 )
 from personal_python_ast_optimizer.config import (
+    CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
     TokenTypesToSkipConfig,
@@ -26,20 +28,27 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    code_to_skip_config: CodeToSkipConfig = skip_config.code_to_skip_config
-    token_types_config: TokenTypesToSkipConfig = skip_config.token_types_config
+    code_to_fold: CodeToFoldConfig = skip_config.code_to_fold_config
+    code_to_skip: CodeToSkipConfig = skip_config.code_to_skip_config
+    token_types: TokenTypesToSkipConfig = skip_config.token_types_config
+
     FirstPassOptimizer(
-        token_types_config.skip_dangling_expressions,
-        token_types_config.skip_type_hints,
-        token_types_config.skip_generics,
-        token_types_config.skip_asserts,
-        code_to_skip_config.skip_typing_cast,
-        code_to_skip_config.skip_overload_functions,
+        code_to_fold.fold_constants,
+        token_types.skip_dangling_expressions,
+        token_types.skip_type_hints,
+        token_types.skip_generics,
+        token_types.skip_asserts,
+        code_to_skip.skip_typing_cast,
+        code_to_skip.skip_overload_functions,
     ).visit(module)
 
+    optimization_passes = OptimizationPass(code_to_fold.fold_constants)
+    while optimization_passes.has_work():
+        optimization_passes.visit_Module(module)
+
     LastPassOptimizer(
-        code_to_skip_config.skip_unused_imports,
-        code_to_skip_config.unused_imports_to_preserve,
+        code_to_skip.skip_unused_imports,
+        code_to_skip.unused_imports_to_preserve,
     ).visit(module)
 
 

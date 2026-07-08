@@ -50,6 +50,6 @@ def a():
 """
     after = (
         "def a():global b;nonlocal c;assert True;a=1;a+=1;break;continue;del a;"
-        "some_func();import foo;from spam import eggs;pass;raise Exception;return 0",
+        "some_func();import foo;from spam import eggs;pass;raise Exception;return 0"
     )
     minify_and_validate_syntax(before, after)

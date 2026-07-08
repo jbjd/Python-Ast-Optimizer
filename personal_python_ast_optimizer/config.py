@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Iterable, Iterator
 from enum import Enum, StrEnum
 
@@ -228,7 +229,9 @@ class ExtraOptimizationsConfig:
         target_python_version: tuple[int, int] = MIN_TARGET_PYTHON,
     ) -> None:
         if target_python_version < self.MIN_TARGET_PYTHON:
-            raise ValueError("Target Python version must be at least 3.0")
+            raise ValueError("Can't target Python version below 3.0")
+        if target_python_version > sys.version_info:
+            raise ValueError("Can't target python version above current interpreter")
 
         self.assume_this_machine: bool = assume_this_machine
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack

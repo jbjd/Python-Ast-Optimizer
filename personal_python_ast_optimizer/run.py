@@ -6,11 +6,9 @@ from personal_python_ast_optimizer._optimize.transformers import (
     FirstPassOptimizer,
     UnusedImportSkipper,
 )
-from personal_python_ast_optimizer._typing import Unparser
-from personal_python_ast_optimizer.config import OptimizeConfig
+from personal_python_ast_optimizer.config import OptimizeConfig, TokenTypesToSkipConfig
 from personal_python_ast_optimizer.minifier import MinifyUnparser
-
-# from personal_python_ast_optimizer.parser.skipper import AstNodeSkipper # noqa: ERA001
+from personal_python_ast_optimizer.typing import Unparser
 
 
 def optimize_module(
@@ -24,14 +22,18 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    if skip_config.token_types_config.has_work():
-        FirstPassOptimizer(skip_config.token_types_config).visit(module)
+    token_types_config: TokenTypesToSkipConfig = skip_config.token_types_config
+    FirstPassOptimizer(
+        token_types_config.skip_dangling_expressions,
+        token_types_config.skip_type_hints,
+        token_types_config.skip_generics,
+        token_types_config.skip_asserts,
+    ).visit_if_has_work(module)
 
-    if skip_config.code_to_skip_config.skip_unused_imports:
-        UnusedImportSkipper(
-            skip_config.code_to_skip_config.unused_imports_to_preserve
-        ).visit(module)
-    # AstNodeSkipper(file_name, skip_config).visit(module)  # noqa: ERA001
+    UnusedImportSkipper(
+        skip_config.code_to_skip_config.skip_unused_imports,
+        skip_config.code_to_skip_config.unused_imports_to_preserve,
+    ).visit_if_has_work(module)
 
 
 def optimize_source(

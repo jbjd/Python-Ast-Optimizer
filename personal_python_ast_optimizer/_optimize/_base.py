@@ -26,7 +26,7 @@ class AstNodeVisitorBase:
         return node
 
     @staticmethod
-    def alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
+    def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
         """Allows the list of nodes to be altered so orderings other then first to last
         can be done by sub-classes.
 
@@ -66,17 +66,21 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
     def visit(self, node: ast.AST) -> ast.AST | None:  # type: ignore[override]
         return super().visit(node)
 
+    def visit_if_has_work(self, node: ast.AST) -> ast.AST | None:
+        if self._has_work():
+            self.visit(node)
+
     def generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
-                for value in self.alter_node_list_visit_order(old_value):
+                for value in self._alter_node_list_visit_order(old_value):
                     if isinstance(value, ast.AST):
                         value = self.visit(value)  # noqa: PLW2901
                         if value is None:
                             continue
                         if not isinstance(value, ast.AST):
-                            new_values.extend(self.alter_node_list_visit_order(value))
+                            new_values.extend(self._alter_node_list_visit_order(value))
                             continue
                     new_values.append(value)
 
@@ -87,7 +91,7 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
                 ):
                     new_values.append(ast.Pass())
 
-                old_value[:] = self.alter_node_list_visit_order(new_values)
+                old_value[:] = self._alter_node_list_visit_order(new_values)
 
             elif isinstance(old_value, ast.AST):
                 new_node = self.visit(old_value)
@@ -97,3 +101,6 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
                     setattr(node, field, new_node)
 
         return node
+
+    def _has_work(self) -> bool:
+        return True

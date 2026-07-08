@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Iterator
-from enum import Enum, EnumType, StrEnum
-from types import EllipsisType
+from enum import Enum, StrEnum
+
+from personal_python_ast_optimizer.typing import FoldableConstant
 
 
 class TypeHintsToSkip(Enum):
@@ -135,14 +136,6 @@ class TokenTypesToSkipConfig:
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
         self.skip_asserts: bool = skip_asserts
 
-    def has_work(self) -> bool:
-        return (
-            self.skip_dangling_expressions
-            or bool(self.skip_type_hints)
-            or self.skip_generics
-            or self.skip_asserts
-        )
-
 
 _NO_IMPORTS_TO_PRESERVE: list[str] = []
 
@@ -179,12 +172,8 @@ class CodeToSkipConfig:
         )
 
 
-type FoldableConstant = str | bytes | bool | int | float | complex | None | EllipsisType
-
-
 class CodeToFoldConfig:
     __slots__ = (
-        "enums_to_fold",
         "fold_constants",
         "fold_simple_function_locals",
         "vars_to_fold",
@@ -193,29 +182,16 @@ class CodeToFoldConfig:
     def __init__(
         self,
         *,
-        enums_to_fold: Iterable[EnumType] | None = None,
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
         vars_to_fold: dict[str, FoldableConstant] | None = None,
     ) -> None:
-        self.enums_to_fold: dict[str, dict[str, Enum]] = (
-            {}
-            if enums_to_fold is None
-            else self._format_enums_to_fold_as_dict(enums_to_fold)
-        )
-
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
         self.vars_to_fold: dict[str, FoldableConstant] = (
             {} if vars_to_fold is None else vars_to_fold
         )
-
-    @staticmethod
-    def _format_enums_to_fold_as_dict(
-        enums: Iterable[EnumType],
-    ) -> dict[str, dict[str, Enum]]:
-        return {enum.__name__: enum._member_map_ for enum in enums}
 
 
 # Functions that have no side effects and thus are safe to remove

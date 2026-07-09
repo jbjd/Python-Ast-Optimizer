@@ -109,7 +109,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         """Get character that starts the next line of code with the shortest
         possible whitespace. Either a new line, semicolon, or nothing."""
-        if self.can_write_body_in_one_line:
+        if self._source and self._source[-1] == ":" and self.can_write_body_in_one_line:
             return ""
 
         if (
@@ -352,13 +352,6 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     ) -> None:
         """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self._source.append(","), self.traverse, body)
-
-    def _write_docstring(self, node: ast.Constant) -> None:
-        self.fill()
-        if node.kind == "u":
-            self.write("u")
-        self._write_str_avoiding_backslashes(node.value, quote_types=ast._MULTI_QUOTES)
-        self.fill()
 
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:

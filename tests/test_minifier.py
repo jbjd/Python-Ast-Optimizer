@@ -55,7 +55,7 @@ def a():
     minify_and_validate_syntax(before, after)
 
 
-def test_dangling_expression():
+def test_dangling_expression1():
     minify_and_validate_syntax(
         '''def a():
     """some doc string"""
@@ -65,4 +65,18 @@ def test_dangling_expression():
         '''def a():
 \t"""some doc string"""
 \tfoo=5;bar=6''',
+    )
+
+
+def test_dangling_expression2():
+    minify_and_validate_syntax(
+        '''def a():
+    """some
+doc string"""
+    if 1: print(1)
+''',
+        '''def a():
+\t"""some
+doc string"""
+\tif 1:print(1)''',
     )

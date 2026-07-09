@@ -540,16 +540,7 @@ class AstNodeSkipper(_OpFolder):
         if self._should_skip_function_assign(node):
             return None
 
-        if (
-            self._node_context == _NodeContext.CLASS
-            and len(node.targets) == 1
-            and get_node_name(node.targets[0]) == "__slots__"
-        ):
-            remove_duplicate_slots(node)
-
-        elif isinstance(node.targets[0], ast.Tuple) and isinstance(
-            node.value, ast.Tuple
-        ):
+        if isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple):
             # TODO: handle skipping Starred vars
             target_elts = node.targets[0].elts
             original_target_len = len(target_elts)

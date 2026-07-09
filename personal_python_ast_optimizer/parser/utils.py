@@ -60,23 +60,6 @@ def skip_decorators(
         ]
 
 
-def remove_duplicate_slots(node: ast.Assign | ast.AnnAssign) -> None:
-    if isinstance(node.value, (ast.Tuple, ast.List, ast.Set)):
-        found_values: set[str] = set()
-        unique_objects: list[ast.expr] = []
-        for const_value in node.value.elts:
-            if not isinstance(const_value, ast.Constant) or not isinstance(
-                const_value.value, str
-            ):
-                raise TypeError(f"Invalid slots value {const_value.__class__.__name__}")
-            if const_value.value not in found_values:
-                unique_objects.append(const_value)
-                found_values.add(const_value.value)
-
-        if len(node.value.elts) != len(unique_objects):
-            node.value.elts = unique_objects
-
-
 def first_occurrence_of_type(data: list, target_type: type) -> int:
     for index, element in enumerate(data):
         if isinstance(element, target_type):

@@ -353,6 +353,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self._source.append(","), self.traverse, body)
 
+    def _write_docstring(self, node: ast.Constant) -> None:
+        self.fill()
+        if node.kind == "u":
+            self.write("u")
+        self._write_str_avoiding_backslashes(node.value, quote_types=ast._MULTI_QUOTES)
+        self.fill()
+
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:
         return node.__class__.__name__ in [

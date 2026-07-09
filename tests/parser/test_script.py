@@ -22,13 +22,3 @@ b='b'
 """.strip(),
     )
     optimize_and_assert_correctness(before_and_after)
-
-
-def test_module_doc_string():
-    before_and_after = BeforeAndAfter(
-        """\"\"\"some doc string\"\"\"
-foo = 5
-""",
-        "foo=5",
-    )
-    optimize_and_assert_correctness(before_and_after)

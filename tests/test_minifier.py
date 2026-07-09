@@ -53,3 +53,16 @@ def a():
         "some_func();import foo;from spam import eggs;pass;raise Exception;return 0"
     )
     minify_and_validate_syntax(before, after)
+
+
+def test_dangling_expression():
+    minify_and_validate_syntax(
+        '''def a():
+    """some doc string"""
+    foo = 5
+    bar = 6
+''',
+        '''def a():
+\t"""some doc string"""
+\tfoo=5;bar=6''',
+    )

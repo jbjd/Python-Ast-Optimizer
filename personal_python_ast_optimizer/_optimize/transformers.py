@@ -436,3 +436,23 @@ class LastPassOptimizer(AstNodeTransformerBase):
     @staticmethod
     def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> list[ast.AST]:
         return reversed(ast_list)
+
+    @staticmethod
+    def _on_visited_node_add_to_new_values(
+        new_nodes: list[ast.AST], node: ast.AST
+    ) -> None:
+        if new_nodes:
+            previous_node: ast.AST = new_nodes[-1]
+            if (
+                isinstance(node, ast.Import) and isinstance(previous_node, ast.Import)
+            ) or (
+                isinstance(node, ast.ImportFrom)
+                and isinstance(previous_node, ast.ImportFrom)
+                and node.module == previous_node.module
+                and node.level == previous_node.level
+            ):
+                node.names += previous_node.names
+                new_nodes[-1] = node
+                return
+
+        new_nodes.append(node)

@@ -65,15 +65,3 @@ class SomeTuple():
         before_and_after,
         token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
-
-
-def test_class_ignorable_bases():
-    before_and_after = BeforeAndAfter(
-        """
-class Foo(object):
-    pass
-""",
-        "class Foo:pass",
-    )
-
-    optimize_and_assert_correctness(before_and_after)

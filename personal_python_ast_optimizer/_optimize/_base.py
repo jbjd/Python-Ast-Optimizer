@@ -78,7 +78,8 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
                         if not isinstance(value, ast.AST):
                             new_values.extend(self._alter_node_list_visit_order(value))
                             continue
-                    new_values.append(value)
+
+                    self._on_visited_node_add_to_new_values(new_values, value)
 
                 if (
                     not isinstance(node, ast.Module)
@@ -97,3 +98,9 @@ class AstNodeTransformerBase(AstNodeVisitorBase):
                     setattr(node, field, new_node)
 
         return node
+
+    @staticmethod
+    def _on_visited_node_add_to_new_values(
+        new_nodes: list[ast.AST], node: ast.AST
+    ) -> None:
+        new_nodes.append(node)

@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _assign_cases = [
     BeforeAndAfter(
@@ -48,4 +48,4 @@ else:
 
 @pytest.mark.parametrize("before_and_after", _assign_cases)
 def test_assign(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)

@@ -1,5 +1,5 @@
 from personal_python_ast_optimizer.config import CodeToFoldConfig
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_fold_function_locals():
@@ -15,7 +15,7 @@ def get_byte_display(size_in_bytes):
         "return f'{size_in_kb/1000:.2f}mb'if size_in_kb>999 else f'{size_in_kb}kb'"
     )
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -29,7 +29,7 @@ def asdf():
 """
     after: str = "def asdf():print(1)"
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -47,7 +47,7 @@ def asdf(a,scaling):
 \telse:scaling,limit=scaling
 \tprint(limit)"""
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -61,7 +61,7 @@ def asdf(a):
 """
     after: str = """def asdf(a):a=1;print(a)"""
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -76,7 +76,7 @@ def asdf():
 """
     after: str = """def asdf():a=2;a+=4;print(a)"""
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -91,7 +91,7 @@ def asdf():
 """
     after: str = """def asdf():a=2;print((a:=1));print(a)"""
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
@@ -105,7 +105,7 @@ def asdf():
 """
     after: str = """def asdf():return 3"""
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         BeforeAndAfter(before, after),
         code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )

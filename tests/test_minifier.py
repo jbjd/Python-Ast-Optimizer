@@ -1,4 +1,4 @@
-from tests.utils import minify_and_validate_syntax
+from tests.utils import minify_and_assert_correctness
 
 
 def test_long_script():
@@ -25,7 +25,7 @@ class File:
     def __init__(self,name:FileName)->None:self.name:FileName=name
 if __name__=='__main__':files=[File(str(n))for n in range(10)];print(files)
 """.strip().replace("    ", "\t")
-    minify_and_validate_syntax(before, after)
+    minify_and_assert_correctness(before, after)
 
 
 def test_inlining():
@@ -52,11 +52,11 @@ def a():
         "def a():global b;nonlocal c;assert True;a=1;a+=1;break;continue;del a;"
         "some_func();import foo;from spam import eggs;pass;raise Exception;return 0"
     )
-    minify_and_validate_syntax(before, after)
+    minify_and_assert_correctness(before, after)
 
 
 def test_dangling_expression1():
-    minify_and_validate_syntax(
+    minify_and_assert_correctness(
         '''def a():
     """some doc string"""
     foo = 5
@@ -69,7 +69,7 @@ def test_dangling_expression1():
 
 
 def test_dangling_expression2():
-    minify_and_validate_syntax(
+    minify_and_assert_correctness(
         '''def a():
     """some
 doc string"""

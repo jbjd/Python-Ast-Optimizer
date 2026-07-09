@@ -9,9 +9,9 @@ from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     OptimizeConfig,
     OtherOptimizationsConfig,
+    TokensToSkipConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
-    UserTokensToSkipConfig,
 )
 from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
@@ -29,7 +29,6 @@ from personal_python_ast_optimizer.parser.utils import (
     get_node_name,
     is_overload_function,
     is_return_none,
-    remove_duplicate_slots,
     skip_base_classes,
     skip_decorators,
 )
@@ -237,7 +236,7 @@ class AstNodeSkipper(_OpFolder):
         )
         self.code_to_skip: CodeToSkipConfig = config.code_to_skip
         self.token_types_to_skip: TokenTypesToSkipConfig = config.token_types_to_skip
-        self.tokens_to_skip: UserTokensToSkipConfig = config.tokens_to_skip
+        self.tokens_to_skip: TokensToSkipConfig = config.tokens_to_skip
 
         self._has_imports: bool = False
         self._simplified_named_tuple: bool = False
@@ -596,9 +595,6 @@ class AstNodeSkipper(_OpFolder):
             or self._is_assign_of_folded_constant(node.target)
         ):
             return None
-
-        if self._node_context == _NodeContext.CLASS and target_name == "__slots__":
-            remove_duplicate_slots(node)
 
         parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore[assignment]
 

@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.config import CodeToFoldConfig
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _binary_op_folding_cases = [
     BeforeAndAfter("a=3+4*2", "a=11"),
@@ -18,7 +18,7 @@ _binary_op_folding_cases = [
 
 @pytest.mark.parametrize("before_and_after", _binary_op_folding_cases)
 def test_binary_op_folding(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after, code_to_fold=CodeToFoldConfig(fold_constants=True)
     )
 
@@ -32,4 +32,4 @@ a = (
 )""",
         "a='ab'",
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)

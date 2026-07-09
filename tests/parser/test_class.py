@@ -2,7 +2,7 @@ from personal_python_ast_optimizer.config import (
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_class_only_docstring():
@@ -13,7 +13,7 @@ class Foo():
 """,
         "class Foo:pass",
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_class_preserves_type_hints():
@@ -36,7 +36,7 @@ class SomeTuple:
 \t\tclass B:thing3:None
 \t\treturn B""",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
         token_types_to_skip=TokenTypesToSkipConfig(
             skip_type_hints=TypeHintsToSkip.ALL_BUT_CLASS_VARS
@@ -61,7 +61,7 @@ class SomeTuple():
 \t\tclass B:pass
 \t\treturn B""",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
         token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )

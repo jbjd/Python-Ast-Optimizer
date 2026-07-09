@@ -1,5 +1,5 @@
 from personal_python_ast_optimizer.config import TokenTypesToSkipConfig
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_skip_assert():
@@ -12,6 +12,6 @@ while 1:
         "while 1:foo()",
     )
 
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after, token_types_to_skip=TokenTypesToSkipConfig(skip_asserts=True)
     )

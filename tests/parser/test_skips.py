@@ -2,9 +2,9 @@ import pytest
 
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
-    UserTokensToSkipConfig,
+    TokensToSkipConfig,
 )
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_exclude_classes():
@@ -18,9 +18,29 @@ class B:
 """,
         "class A:pass",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(classes_to_skip={"ABC", "B"}),
+        tokens_to_skip=TokensToSkipConfig(classes_to_skip={"ABC", "B"}),
+    )
+
+
+def test_exclude_decorators():
+    before_and_after = BeforeAndAfter(
+        """
+@some_dec
+class A:
+    pass
+
+@abc.abc
+@abc.abc.abc
+def B():
+    pass
+""",
+        "class A:pass\n@abc.abc.abc\ndef B():pass",
+    )
+    optimize_and_assert_correctness_old(
+        before_and_after,
+        tokens_to_skip=TokensToSkipConfig(decorators_to_skip={"some_dec", "abc.abc"}),
     )
 
 
@@ -29,9 +49,9 @@ def test_exclude_dict_keys():
         "a = {'a': 1, 'b': 2}",
         "a={'a':1}",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(dict_keys_to_skip={"b"}),
+        tokens_to_skip=TokensToSkipConfig(dict_keys_to_skip={"b"}),
     )
 
 
@@ -85,9 +105,9 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_assign_cases)
 def test_exclude_assign(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(variables_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(variables_to_skip={"foo"}),
     )
 
 
@@ -112,9 +132,9 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_def_cases)
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -140,9 +160,9 @@ test=1
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_call_cases)
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -165,9 +185,9 @@ def bar():
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_assign_cases)
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -183,9 +203,9 @@ import a as c
 """,
         "import a as c",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(
+        tokens_to_skip=TokensToSkipConfig(
             module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
@@ -205,9 +225,9 @@ is_cid = re.compile('').match
 """,
         "from ._util import DeferredError\nis_cid=re.compile('').match",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=UserTokensToSkipConfig(
+        tokens_to_skip=TokensToSkipConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),

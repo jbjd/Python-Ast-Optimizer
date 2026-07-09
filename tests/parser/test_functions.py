@@ -1,5 +1,5 @@
 from personal_python_ast_optimizer.config import CodeToSkipConfig
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_function_dangling_constants():
@@ -14,7 +14,7 @@ def foo(bar: str) -> None:
 """,
         "def foo(bar):pass",
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_function_with_many_args():
@@ -26,7 +26,7 @@ def foo(bar, spam, eggs):
 """,
         "def foo(bar,spam,eggs):a=1;return a",
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_function_with_many_returns():
@@ -43,7 +43,7 @@ def foo(bar):
 \treturn 1
 """.strip(),
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_function_overload():
@@ -59,7 +59,7 @@ def test_overload(a: float) -> int: do_something()
 """,
         "def test_overload(a):do_something()",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
         code_to_skip=CodeToSkipConfig(skip_overload_functions=True),
     )
@@ -74,7 +74,7 @@ a = cast(str, 1)
 """,
         "a=1",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
         code_to_skip=CodeToSkipConfig(skip_typing_cast=True),
     )
@@ -89,7 +89,7 @@ a = cast(str, 1)
 """,
         "from typing import cast\na=cast(str,1)",
     )
-    optimize_and_assert_correctness(
+    optimize_and_assert_correctness_old(
         before_and_after,
         code_to_skip=CodeToSkipConfig(skip_typing_cast=False),
     )

@@ -7,11 +7,13 @@ from personal_python_ast_optimizer._optimize.transformers import (
     LastPassOptimizer,
     OptimizationPass,
 )
+from personal_python_ast_optimizer._optimize.utils import UserTokensToSkipTracker
 from personal_python_ast_optimizer.config import (
     CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
     OtherOptimizationsConfig,
+    TokensToSkipConfig,
     TokenTypesToSkipConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
@@ -31,10 +33,21 @@ def optimize_module(
     :param file_name: Optionally used for logging"""
     code_to_fold: CodeToFoldConfig = skip_config.code_to_fold
     code_to_skip: CodeToSkipConfig = skip_config.code_to_skip
+    tokens_to_skip: TokensToSkipConfig = skip_config.tokens_to_skip
     token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
     other_optimizations: OtherOptimizationsConfig = skip_config.other_optimizations
 
     FirstPassOptimizer(
+        UserTokensToSkipTracker(
+            tokens_to_skip.assignments_to_skip,
+            tokens_to_skip.classes_to_skip,
+            tokens_to_skip.decorators_to_skip,
+            tokens_to_skip.dict_keys_to_skip,
+            tokens_to_skip.from_imports_to_skip,
+            tokens_to_skip.functions_to_skip,
+            tokens_to_skip.module_imports_to_skip,
+            tokens_to_skip.no_warn,
+        ),
         code_to_fold.fold_constants,
         token_types_to_skip.skip_dangling_expressions,
         token_types_to_skip.skip_type_hints,

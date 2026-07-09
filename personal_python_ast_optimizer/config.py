@@ -16,7 +16,7 @@ class TypeHintsToSkip(Enum):
         return self != TypeHintsToSkip.NONE
 
 
-class UserTokensToSkipConfig:
+class TokensToSkipConfig:
     __slots__ = (
         "assignments_to_skip",
         "classes_to_skip",
@@ -211,7 +211,7 @@ class OptimizeConfig:
         *,
         code_to_fold: CodeToFoldConfig | None = None,
         code_to_skip: CodeToSkipConfig | None = None,
-        tokens_to_skip: UserTokensToSkipConfig | None = None,
+        tokens_to_skip: TokensToSkipConfig | None = None,
         token_types_to_skip: TokenTypesToSkipConfig | None = None,
         other_optimizations: OtherOptimizationsConfig | None = None,
     ) -> None:
@@ -222,8 +222,8 @@ class OptimizeConfig:
         self.code_to_skip: CodeToSkipConfig = (
             CodeToSkipConfig() if code_to_skip is None else code_to_skip
         )
-        self.tokens_to_skip: UserTokensToSkipConfig = (
-            UserTokensToSkipConfig() if tokens_to_skip is None else tokens_to_skip
+        self.tokens_to_skip: TokensToSkipConfig = (
+            TokensToSkipConfig() if tokens_to_skip is None else tokens_to_skip
         )
         self.token_types_to_skip: TokenTypesToSkipConfig = (
             TokenTypesToSkipConfig()

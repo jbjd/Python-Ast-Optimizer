@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_almost_useful_try():
@@ -15,7 +15,7 @@ finally:
         "print(1)",
     )
 
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_useless_try():
@@ -31,4 +31,4 @@ finally:
         "",
     )
 
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)

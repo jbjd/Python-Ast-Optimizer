@@ -1,9 +1,9 @@
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_empty():
     empty_script = BeforeAndAfter("", "")
-    optimize_and_assert_correctness(empty_script)
+    optimize_and_assert_correctness_old(empty_script)
 
 
 def test_one_line_if():
@@ -21,4 +21,4 @@ a='a'
 b='b'
 """.strip(),
     )
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)

@@ -1,4 +1,4 @@
-from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
+from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
 def test_useless_while():
@@ -7,7 +7,7 @@ def test_useless_while():
         "",
     )
 
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)
 
 
 def test_while_true():
@@ -16,4 +16,4 @@ def test_while_true():
         "while 1:foo()",
     )
 
-    optimize_and_assert_correctness(before_and_after)
+    optimize_and_assert_correctness_old(before_and_after)

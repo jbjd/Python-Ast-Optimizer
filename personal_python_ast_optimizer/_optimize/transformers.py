@@ -4,7 +4,11 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import override
 
-from personal_python_ast_optimizer._optimize._base import AstNodeTransformerBase
+from personal_python_ast_optimizer._optimize.base import AstNodeTransformerBase
+from personal_python_ast_optimizer._optimize.utils import (
+    UserTokensToSkipTracker,
+    get_name_or_full_attribute,
+)
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 from personal_python_ast_optimizer.futures import (
     FUTURE_IMPORT_NAME,
@@ -249,10 +253,12 @@ class FirstPassOptimizer(OptimizationPass):
         "skip_overload_functions",
         "skip_type_hints",
         "skip_typing_cast",
+        "user_tokens_to_skip",
     )
 
     def __init__(
         self,
+        user_tokens_to_skip: UserTokensToSkipTracker,
         fold_constants: bool,
         skip_dangling_expressions: bool,
         skip_type_hints: TypeHintsToSkip,
@@ -263,6 +269,7 @@ class FirstPassOptimizer(OptimizationPass):
         target_python_version: tuple[int, int],
     ) -> None:
         super().__init__(fold_constants)
+        self.user_tokens_to_skip: UserTokensToSkipTracker = user_tokens_to_skip
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_generics: bool = skip_generics and bool(skip_type_hints)
@@ -292,9 +299,16 @@ class FirstPassOptimizer(OptimizationPass):
         if self.skip_type_hints:
             node.returns = None
 
+        self._skip_decorators(node)
+
         return self._visit_with_context(node, _NodeContext.FUNCTION)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
+        if self.user_tokens_to_skip.classes.should_skip(node.name):
+            return None
+
+        self._skip_decorators(node)
+
         return self._visit_with_context(node, _NodeContext.CLASS)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
@@ -371,6 +385,19 @@ class FirstPassOptimizer(OptimizationPass):
             return self.generic_visit(node)
         finally:
             self._node_context = previous_value
+
+    def _skip_decorators(
+        self,
+        node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        if self.user_tokens_to_skip.decorators:
+            node.decorator_list = [
+                n
+                for n in node.decorator_list
+                if not self.user_tokens_to_skip.decorators.should_skip(
+                    get_name_or_full_attribute(n)
+                )
+            ]
 
     @staticmethod
     def _is_overload_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

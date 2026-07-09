@@ -5,8 +5,8 @@ from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     OptimizeConfig,
     OtherOptimizationsConfig,
+    TokensToSkipConfig,
     TokenTypesToSkipConfig,
-    UserTokensToSkipConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
 from personal_python_ast_optimizer.run import optimize_source_and_minify
@@ -26,16 +26,37 @@ class OptimizeOutputError(Exception):
     pass
 
 
-def optimize_and_assert_correctness(
+# TODO: deprecate BeforeAndAfter
+def optimize_and_assert_correctness_old(
     before_and_after: BeforeAndAfter,
     code_to_fold: CodeToFoldConfig | None = None,
     code_to_skip: CodeToSkipConfig | None = None,
     token_types_to_skip: TokenTypesToSkipConfig | None = None,
-    tokens_to_skip: UserTokensToSkipConfig | None = None,
+    tokens_to_skip: TokensToSkipConfig | None = None,
+    other_optimizations: OtherOptimizationsConfig | None = None,
+):
+    optimize_and_assert_correctness(
+        before_and_after.before,
+        before_and_after.after,
+        code_to_fold,
+        code_to_skip,
+        token_types_to_skip,
+        tokens_to_skip,
+        other_optimizations,
+    )
+
+
+def optimize_and_assert_correctness(
+    source: str,
+    expected: str,
+    code_to_fold: CodeToFoldConfig | None = None,
+    code_to_skip: CodeToSkipConfig | None = None,
+    token_types_to_skip: TokenTypesToSkipConfig | None = None,
+    tokens_to_skip: TokensToSkipConfig | None = None,
     other_optimizations: OtherOptimizationsConfig | None = None,
 ):
     optimized_code: str = optimize_source_and_minify(
-        before_and_after.before,
+        source,
         OptimizeConfig(
             code_to_fold=code_to_fold,
             code_to_skip=code_to_skip,
@@ -45,16 +66,16 @@ def optimize_and_assert_correctness(
         ),
     )
 
-    _validate_correctness(optimized_code, before_and_after.after)
+    _assert_correctness(optimized_code, expected)
 
 
-def minify_and_validate_syntax(before: str, after: str) -> None:
-    module: ast.Module = ast.parse(before)
+def minify_and_assert_correctness(source: str, expected: str) -> None:
+    module: ast.Module = ast.parse(source)
     minified_code: str = MinifyUnparser().visit(module)
-    _validate_correctness(minified_code, after)
+    _assert_correctness(minified_code, expected)
 
 
-def _validate_correctness(code_to_check: str, expected_code: str) -> None:
+def _assert_correctness(code_to_check: str, expected_code: str) -> None:
     try:
         ast.parse(code_to_check)
     except SyntaxError as e:

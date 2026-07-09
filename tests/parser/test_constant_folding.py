@@ -19,7 +19,7 @@ _binary_op_folding_cases = [
 @pytest.mark.parametrize("before_and_after", _binary_op_folding_cases)
 def test_binary_op_folding(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
-        before_and_after, code_to_fold_config=CodeToFoldConfig(fold_constants=True)
+        before_and_after, code_to_fold=CodeToFoldConfig(fold_constants=True)
     )
 
 

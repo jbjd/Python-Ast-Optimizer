@@ -38,7 +38,7 @@ class SomeTuple:
     )
     optimize_and_assert_correctness(
         before_and_after,
-        token_types_config=TokenTypesToSkipConfig(
+        token_types_to_skip=TokenTypesToSkipConfig(
             skip_type_hints=TypeHintsToSkip.ALL_BUT_CLASS_VARS
         ),
     )
@@ -63,7 +63,7 @@ class SomeTuple():
     )
     optimize_and_assert_correctness(
         before_and_after,
-        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
+        token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
 
 

@@ -69,7 +69,7 @@ FAVORITE_NUMBER,TEST=4,5
 def test_fold_var(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_fold_config=CodeToFoldConfig(
+        code_to_fold=CodeToFoldConfig(
             vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test", "__name__": "__main__"}
         ),
     )

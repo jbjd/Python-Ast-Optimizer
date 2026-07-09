@@ -2,7 +2,7 @@ import pytest
 
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
-    ExtraOptimizationsConfig,
+    OtherOptimizationsConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
@@ -33,16 +33,16 @@ def test_futures_imports(
 ):
     before_and_after = BeforeAndAfter(_futures_imports, after)
 
-    optimizations_config = (
-        ExtraOptimizationsConfig()
+    other_optimizations = (
+        OtherOptimizationsConfig()
         if version is None
-        else ExtraOptimizationsConfig(target_python_version=version)
+        else OtherOptimizationsConfig(target_python_version=version)
     )
 
     optimize_and_assert_correctness(
         before_and_after,
-        optimizations_config=optimizations_config,
-        token_types_config=TokenTypesToSkipConfig(skip_type_hints=skip_type_hints),
+        other_optimizations=other_optimizations,
+        token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=skip_type_hints),
     )
 
 
@@ -65,7 +65,7 @@ def i():import a,d;from .b import f;from b import c,d as e;print();from b import
     )
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -76,7 +76,7 @@ def test_import_star():
     )
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -138,5 +138,5 @@ bar()
 def test_remove_unused_import(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(unused_imports_to_preserve=["asdf"]),
+        code_to_skip=CodeToSkipConfig(unused_imports_to_preserve=["asdf"]),
     )

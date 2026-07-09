@@ -15,7 +15,7 @@ _not_cases = [
 def test_not(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_fold_config=CodeToFoldConfig(vars_to_fold={"__debug__": False}),
+        code_to_fold=CodeToFoldConfig(vars_to_fold={"__debug__": False}),
     )
 
 

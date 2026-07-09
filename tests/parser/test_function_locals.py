@@ -17,7 +17,7 @@ def get_byte_display(size_in_bytes):
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -31,7 +31,7 @@ def asdf():
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -49,7 +49,7 @@ def asdf(a,scaling):
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -63,7 +63,7 @@ def asdf(a):
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -78,7 +78,7 @@ def asdf():
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -93,7 +93,7 @@ def asdf():
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )
 
 
@@ -107,5 +107,5 @@ def asdf():
 
     optimize_and_assert_correctness(
         BeforeAndAfter(before, after),
-        code_to_fold_config=CodeToFoldConfig(fold_simple_function_locals=True),
+        code_to_fold=CodeToFoldConfig(fold_simple_function_locals=True),
     )

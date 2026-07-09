@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from personal_python_ast_optimizer.config import ExtraOptimizationsConfig
+from personal_python_ast_optimizer.config import OtherOptimizationsConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness
 
 _cpu_count_example: str = """
@@ -44,7 +44,7 @@ def test_assume_this_machine(assume_this_machine: bool, before: str, after: str)
 
     optimize_and_assert_correctness(
         before_and_after,
-        optimizations_config=ExtraOptimizationsConfig(
+        other_optimizations=OtherOptimizationsConfig(
             assume_this_machine=assume_this_machine
         ),
     )

@@ -31,7 +31,9 @@ class C:a:str""",
 
     optimize_and_assert_correctness(
         before_and_after,
-        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.NONE),
+        token_types_to_skip=TokenTypesToSkipConfig(
+            skip_type_hints=TypeHintsToSkip.NONE
+        ),
     )
 
 
@@ -52,7 +54,7 @@ def test_remove_all_type_hints():
 
     optimize_and_assert_correctness(
         before_and_after,
-        token_types_config=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
+        token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
 
 
@@ -90,7 +92,7 @@ class A:\n\tdef __init__(self,a):self.a=a""",
 
     optimize_and_assert_correctness(
         before_and_after,
-        token_types_config=TokenTypesToSkipConfig(
+        token_types_to_skip=TokenTypesToSkipConfig(
             skip_type_hints=skip_type_hints, skip_generics=True
         ),
     )

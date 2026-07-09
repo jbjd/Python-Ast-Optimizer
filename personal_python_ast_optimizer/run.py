@@ -11,6 +11,7 @@ from personal_python_ast_optimizer.config import (
     CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
+    OtherOptimizationsConfig,
     TokenTypesToSkipConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
@@ -28,18 +29,20 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    code_to_fold: CodeToFoldConfig = skip_config.code_to_fold_config
-    code_to_skip: CodeToSkipConfig = skip_config.code_to_skip_config
-    token_types: TokenTypesToSkipConfig = skip_config.token_types_config
+    code_to_fold: CodeToFoldConfig = skip_config.code_to_fold
+    code_to_skip: CodeToSkipConfig = skip_config.code_to_skip
+    token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
+    other_optimizations: OtherOptimizationsConfig = skip_config.other_optimizations
 
     FirstPassOptimizer(
         code_to_fold.fold_constants,
-        token_types.skip_dangling_expressions,
-        token_types.skip_type_hints,
-        token_types.skip_generics,
-        token_types.skip_asserts,
+        token_types_to_skip.skip_dangling_expressions,
+        token_types_to_skip.skip_type_hints,
+        token_types_to_skip.skip_generics,
+        token_types_to_skip.skip_asserts,
         code_to_skip.skip_typing_cast,
         code_to_skip.skip_overload_functions,
+        other_optimizations.target_python_version,
     ).visit(module)
 
     optimization_passes = OptimizationPass(code_to_fold.fold_constants)

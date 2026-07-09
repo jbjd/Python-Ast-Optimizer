@@ -1,5 +1,7 @@
 """Details information about __future__ imports in Python."""
 
+FUTURE_IMPORT_NAME: str = "__future__"
+
 
 class Future:
     """Represents a __future__ import with its name and mandatory version."""

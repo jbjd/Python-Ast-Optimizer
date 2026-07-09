@@ -6,6 +6,11 @@ from typing import override
 
 from personal_python_ast_optimizer._optimize._base import AstNodeTransformerBase
 from personal_python_ast_optimizer.config import TypeHintsToSkip
+from personal_python_ast_optimizer.futures import (
+    FUTURE_IMPORT_NAME,
+    Future,
+    get_unneeded_futures,
+)
 
 
 class OptimizationPass(AstNodeTransformerBase):
@@ -237,6 +242,7 @@ class FirstPassOptimizer(OptimizationPass):
 
     __slots__ = (
         "_node_context",
+        "_unneeded_futures",
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_generics",
@@ -254,6 +260,7 @@ class FirstPassOptimizer(OptimizationPass):
         skip_asserts: bool,
         skip_typing_cast: bool,
         skip_overload_functions: bool,
+        target_python_version: tuple[int, int],
     ) -> None:
         super().__init__(fold_constants)
         self.skip_dangling_expressions: bool = skip_dangling_expressions
@@ -263,6 +270,12 @@ class FirstPassOptimizer(OptimizationPass):
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_overload_functions: bool = skip_overload_functions
         self._node_context: _NodeContext = _NodeContext.NONE
+
+        self._unneeded_futures: list[Future] = get_unneeded_futures(
+            target_python_version
+        )
+        if skip_type_hints:
+            self._unneeded_futures.append("annotations")
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         return self._handle_function(node)
@@ -283,6 +296,16 @@ class FirstPassOptimizer(OptimizationPass):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
         return self._visit_with_context(node, _NodeContext.CLASS)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
+        if node.module == FUTURE_IMPORT_NAME:
+            node.names = [
+                alias
+                for alias in node.names
+                if alias.name not in self._unneeded_futures
+            ]
+
+        return node if node.names else None
 
     def visit_arg(self, node: ast.arg) -> ast.arg:
         if self.skip_type_hints:

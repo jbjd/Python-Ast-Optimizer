@@ -61,7 +61,7 @@ def test_overload(a: float) -> int: do_something()
     )
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_overload_functions=True),
+        code_to_skip=CodeToSkipConfig(skip_overload_functions=True),
     )
 
 
@@ -76,7 +76,7 @@ a = cast(str, 1)
     )
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_typing_cast=True),
+        code_to_skip=CodeToSkipConfig(skip_typing_cast=True),
     )
 
 
@@ -91,5 +91,5 @@ a = cast(str, 1)
     )
     optimize_and_assert_correctness(
         before_and_after,
-        code_to_skip_config=CodeToSkipConfig(skip_typing_cast=False),
+        code_to_skip=CodeToSkipConfig(skip_typing_cast=False),
     )

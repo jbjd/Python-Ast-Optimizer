@@ -2,7 +2,7 @@ import pytest
 
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
-    ExtraOptimizationsConfig,
+    OtherOptimizationsConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
@@ -24,7 +24,7 @@ def test_perserve_imports_without_skip_unused_imports():
 
 def test_target_python_below_3():
     with pytest.raises(ValueError, match=r"Can't target Python version below 3.0"):
-        ExtraOptimizationsConfig(target_python_version=(2, 7))
+        OtherOptimizationsConfig(target_python_version=(2, 7))
 
 
 def test_target_python_above_interpreter():
@@ -32,4 +32,4 @@ def test_target_python_above_interpreter():
     with pytest.raises(
         ValueError, match=r"Can't target python version above current interpreter"
     ):
-        ExtraOptimizationsConfig(target_python_version=(99, 0))
+        OtherOptimizationsConfig(target_python_version=(99, 0))

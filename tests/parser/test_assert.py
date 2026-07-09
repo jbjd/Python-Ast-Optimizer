@@ -13,5 +13,5 @@ while 1:
     )
 
     optimize_and_assert_correctness(
-        before_and_after, token_types_config=TokenTypesToSkipConfig(skip_asserts=True)
+        before_and_after, token_types_to_skip=TokenTypesToSkipConfig(skip_asserts=True)
     )

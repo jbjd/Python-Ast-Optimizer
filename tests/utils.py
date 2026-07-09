@@ -3,8 +3,8 @@ import ast
 from personal_python_ast_optimizer.config import (
     CodeToFoldConfig,
     CodeToSkipConfig,
-    ExtraOptimizationsConfig,
     OptimizeConfig,
+    OtherOptimizationsConfig,
     TokenTypesToSkipConfig,
     UserTokensToSkipConfig,
 )
@@ -28,20 +28,20 @@ class OptimizeOutputError(Exception):
 
 def optimize_and_assert_correctness(
     before_and_after: BeforeAndAfter,
-    code_to_fold_config: CodeToFoldConfig | None = None,
-    code_to_skip_config: CodeToSkipConfig | None = None,
-    token_types_config: TokenTypesToSkipConfig | None = None,
-    tokens_config: UserTokensToSkipConfig | None = None,
-    optimizations_config: ExtraOptimizationsConfig | None = None,
+    code_to_fold: CodeToFoldConfig | None = None,
+    code_to_skip: CodeToSkipConfig | None = None,
+    token_types_to_skip: TokenTypesToSkipConfig | None = None,
+    tokens_to_skip: UserTokensToSkipConfig | None = None,
+    other_optimizations: OtherOptimizationsConfig | None = None,
 ):
     optimized_code: str = optimize_source_and_minify(
         before_and_after.before,
         OptimizeConfig(
-            code_to_fold_config=code_to_fold_config,
-            code_to_skip_config=code_to_skip_config,
-            tokens_config=tokens_config,
-            token_types_config=token_types_config,
-            optimizations_config=optimizations_config,
+            code_to_fold=code_to_fold,
+            code_to_skip=code_to_skip,
+            tokens_to_skip=tokens_to_skip,
+            token_types_to_skip=token_types_to_skip,
+            other_optimizations=other_optimizations,
         ),
     )
 

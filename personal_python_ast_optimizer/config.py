@@ -208,7 +208,7 @@ default_functions_safe_to_exclude_in_test_expr: set[str] = {
 }
 
 
-class ExtraOptimizationsConfig:
+class OtherOptimizationsConfig:
     __slots__ = (
         "assume_this_machine",
         "collection_concat_to_unpack",
@@ -248,39 +248,39 @@ class ExtraOptimizationsConfig:
 
 class OptimizeConfig:
     __slots__ = (
-        "code_to_fold_config",
-        "code_to_skip_config",
-        "optimizations_config",
-        "token_types_config",
-        "tokens_config",
+        "code_to_fold",
+        "code_to_skip",
+        "other_optimizations",
+        "token_types_to_skip",
+        "tokens_to_skip",
     )
 
     def __init__(
         self,
         *,
-        code_to_fold_config: CodeToFoldConfig | None = None,
-        code_to_skip_config: CodeToSkipConfig | None = None,
-        tokens_config: UserTokensToSkipConfig | None = None,
-        token_types_config: TokenTypesToSkipConfig | None = None,
-        optimizations_config: ExtraOptimizationsConfig | None = None,
+        code_to_fold: CodeToFoldConfig | None = None,
+        code_to_skip: CodeToSkipConfig | None = None,
+        tokens_to_skip: UserTokensToSkipConfig | None = None,
+        token_types_to_skip: TokenTypesToSkipConfig | None = None,
+        other_optimizations: OtherOptimizationsConfig | None = None,
     ) -> None:
 
-        self.code_to_fold_config: CodeToFoldConfig = (
-            CodeToFoldConfig() if code_to_fold_config is None else code_to_fold_config
+        self.code_to_fold: CodeToFoldConfig = (
+            CodeToFoldConfig() if code_to_fold is None else code_to_fold
         )
-        self.code_to_skip_config: CodeToSkipConfig = (
-            CodeToSkipConfig() if code_to_skip_config is None else code_to_skip_config
+        self.code_to_skip: CodeToSkipConfig = (
+            CodeToSkipConfig() if code_to_skip is None else code_to_skip
         )
-        self.tokens_config: UserTokensToSkipConfig = (
-            UserTokensToSkipConfig() if tokens_config is None else tokens_config
+        self.tokens_to_skip: UserTokensToSkipConfig = (
+            UserTokensToSkipConfig() if tokens_to_skip is None else tokens_to_skip
         )
-        self.token_types_config: TokenTypesToSkipConfig = (
+        self.token_types_to_skip: TokenTypesToSkipConfig = (
             TokenTypesToSkipConfig()
-            if token_types_config is None
-            else token_types_config
+            if token_types_to_skip is None
+            else token_types_to_skip
         )
-        self.optimizations_config: ExtraOptimizationsConfig = (
-            ExtraOptimizationsConfig()
-            if optimizations_config is None
-            else optimizations_config
+        self.other_optimizations: OtherOptimizationsConfig = (
+            OtherOptimizationsConfig()
+            if other_optimizations is None
+            else other_optimizations
         )

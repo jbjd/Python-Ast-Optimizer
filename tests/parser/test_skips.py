@@ -20,7 +20,7 @@ class B:
     )
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(classes_to_skip={"ABC", "B"}),
+        tokens_to_skip=UserTokensToSkipConfig(classes_to_skip={"ABC", "B"}),
     )
 
 
@@ -31,7 +31,7 @@ def test_exclude_dict_keys():
     )
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(dict_keys_to_skip={"b"}),
+        tokens_to_skip=UserTokensToSkipConfig(dict_keys_to_skip={"b"}),
     )
 
 
@@ -87,7 +87,7 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(variables_to_skip={"foo"}),
+        tokens_to_skip=UserTokensToSkipConfig(variables_to_skip={"foo"}),
     )
 
 
@@ -114,7 +114,7 @@ def bar():
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -142,7 +142,7 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -167,7 +167,7 @@ def bar():
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=UserTokensToSkipConfig(functions_to_skip={"foo"}),
     )
 
 
@@ -185,10 +185,10 @@ import a as c
     )
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(
+        tokens_to_skip=UserTokensToSkipConfig(
             module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
         ),
-        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -207,8 +207,8 @@ is_cid = re.compile('').match
     )
     optimize_and_assert_correctness(
         before_and_after,
-        tokens_config=UserTokensToSkipConfig(
+        tokens_to_skip=UserTokensToSkipConfig(
             functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
         ),
-        code_to_skip_config=CodeToSkipConfig(skip_unused_imports=False),
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )

@@ -21,7 +21,6 @@ class TokensToSkipConfig:
         "assignments_to_skip",
         "classes_to_skip",
         "decorators_to_skip",
-        "dict_keys_to_skip",
         "from_imports_to_skip",
         "functions_to_skip",
         "module_imports_to_skip",
@@ -34,7 +33,6 @@ class TokensToSkipConfig:
         assignments_to_skip: Iterable[str] | None = None,
         classes_to_skip: Iterable[str] | None = None,
         decorators_to_skip: Iterable[str] | None = None,
-        dict_keys_to_skip: Iterable[str] | None = None,
         from_imports_to_skip: Iterable[str] | None = None,
         functions_to_skip: Iterable[str] | None = None,
         module_imports_to_skip: Iterable[str] | None = None,
@@ -48,9 +46,6 @@ class TokensToSkipConfig:
         )
         self.decorators_to_skip: Iterable[str] = (
             [] if decorators_to_skip is None else decorators_to_skip
-        )
-        self.dict_keys_to_skip: Iterable[str] = (
-            [] if dict_keys_to_skip is None else dict_keys_to_skip
         )
         self.from_imports_to_skip: Iterable[str] = (
             [] if from_imports_to_skip is None else from_imports_to_skip
@@ -68,7 +63,7 @@ class TokenTypesToSkipConfig:
     __slots__ = (
         "skip_asserts",
         "skip_dangling_expressions",
-        "skip_generics",
+        "skip_generics_and_alias",
         "skip_type_hints",
     )
 
@@ -77,15 +72,17 @@ class TokenTypesToSkipConfig:
         *,
         skip_dangling_expressions: bool = True,
         skip_type_hints: TypeHintsToSkip = TypeHintsToSkip.ALL_BUT_CLASS_VARS,
-        skip_generics: bool = False,
+        skip_generics_and_alias: bool = False,
         skip_asserts: bool = False,
     ) -> None:
-        if skip_generics and not skip_type_hints:
-            raise ValueError("Can't skip Generics if not skipping type hints")
+        if skip_generics_and_alias and skip_type_hints != TypeHintsToSkip.ALL:
+            raise ValueError("Can't skip Generics unless all type hints are skipped")
 
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
-        self.skip_generics: bool = skip_generics and bool(skip_type_hints)
+        self.skip_generics_and_alias: bool = skip_generics_and_alias and bool(
+            skip_type_hints
+        )
         self.skip_asserts: bool = skip_asserts
 
 

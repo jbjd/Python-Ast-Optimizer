@@ -7,7 +7,7 @@ from personal_python_ast_optimizer._optimize.transformers import (
     LastPassOptimizer,
     OptimizationPass,
 )
-from personal_python_ast_optimizer._optimize.utils import UserTokensToSkipTracker
+from personal_python_ast_optimizer._optimize.utils import TokensToSkipTracker
 from personal_python_ast_optimizer.config import (
     CodeToFoldConfig,
     CodeToSkipConfig,
@@ -23,7 +23,7 @@ from personal_python_ast_optimizer.typing import Unparser
 def optimize_module(
     module: ast.Module,
     skip_config: OptimizeConfig,
-    file_name: str = "<unknown>",  # noqa: ARG001
+    file_name: str = "",
 ) -> None:
     """Optimizes a Python AST by removing unneeded node, replacements of slower
     code, etc.
@@ -37,26 +37,29 @@ def optimize_module(
     token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
     other_optimizations: OtherOptimizationsConfig = skip_config.other_optimizations
 
+    tokens_to_skip_tracker = TokensToSkipTracker(
+        tokens_to_skip.assignments_to_skip,
+        tokens_to_skip.classes_to_skip,
+        tokens_to_skip.decorators_to_skip,
+        tokens_to_skip.from_imports_to_skip,
+        tokens_to_skip.functions_to_skip,
+        tokens_to_skip.module_imports_to_skip,
+        tokens_to_skip.no_warn,
+    )
+
     FirstPassOptimizer(
-        UserTokensToSkipTracker(
-            tokens_to_skip.assignments_to_skip,
-            tokens_to_skip.classes_to_skip,
-            tokens_to_skip.decorators_to_skip,
-            tokens_to_skip.dict_keys_to_skip,
-            tokens_to_skip.from_imports_to_skip,
-            tokens_to_skip.functions_to_skip,
-            tokens_to_skip.module_imports_to_skip,
-            tokens_to_skip.no_warn,
-        ),
+        tokens_to_skip_tracker,
         code_to_fold.fold_constants,
         token_types_to_skip.skip_dangling_expressions,
         token_types_to_skip.skip_type_hints,
-        token_types_to_skip.skip_generics,
+        token_types_to_skip.skip_generics_and_alias,
         token_types_to_skip.skip_asserts,
         code_to_skip.skip_typing_cast,
         code_to_skip.skip_overload_functions,
         other_optimizations.target_python_version,
     ).visit(module)
+
+    tokens_to_skip_tracker.warn_not_found_skips(file_name)
 
     optimization_passes = OptimizationPass(code_to_fold.fold_constants)
     while optimization_passes.has_work():
@@ -72,7 +75,7 @@ def optimize_source(
     source: str,
     skip_config: OptimizeConfig,
     unparser: Unparser,
-    file_name: str = "<unknown>",
+    file_name: str = "",
 ) -> str:
     """Optimizes Python code by removing unneeded node, replacements of slower
     code, etc.
@@ -88,7 +91,7 @@ def optimize_source(
 
 
 def optimize_source_and_minify(
-    source: str, skip_config: OptimizeConfig, file_name: str = "<unknown>"
+    source: str, skip_config: OptimizeConfig, file_name: str = ""
 ) -> str:
     """Optimizes Python code by removing unneeded node, replacements of slower
     code, etc. and returns it in a minified format.

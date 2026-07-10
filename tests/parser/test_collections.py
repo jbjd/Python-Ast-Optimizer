@@ -1,9 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.config import (
-    OtherOptimizationsConfig,
-    TokensToSkipConfig,
-)
+from personal_python_ast_optimizer.config import OtherOptimizationsConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _simplify_named_tuple_test_cases: list[tuple[str, str]] = [
@@ -111,11 +108,7 @@ _collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
 def test_collection_concat_to_unpack(before: str, after: str):
     before_and_after = BeforeAndAfter(before, after)
 
-    # Had a weird bug where this broke when dict_keys_to_skip was set to anything
-    to_skip: set[str] = {"foobar"}
-
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(dict_keys_to_skip=to_skip, no_warn=to_skip),
         other_optimizations=OtherOptimizationsConfig(collection_concat_to_unpack=True),
     )

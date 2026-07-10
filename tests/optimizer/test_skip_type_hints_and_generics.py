@@ -1,5 +1,3 @@
-import pytest
-
 from personal_python_ast_optimizer.config import (
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
@@ -16,11 +14,13 @@ def b() -> None:
     print(c)
 
 class C:
-    a: str
+    a: int = 0
+    b: str
 """
 
 _GENERICS_EXAMPLE: str = """
-def a[FOO, BAR](a: FOO, b: BAR) -> None:
+type NIL=None
+def a[FOO, BAR](a: FOO, b: BAR) -> NIL:
     print(a, b)
 class A[FOO]:
     def __init__(self,a:FOO):
@@ -29,10 +29,12 @@ class A[FOO]:
 
 
 def test_remove_no_type_hints():
+    """Should not remove any type hints."""
+
     expected: str = """import some_type
 a:some_type
 def b()->None:c:int=3;print(c)
-class C:a:str"""
+class C:a:int=0;b:str"""
     optimize_and_assert_correctness(
         _TYPE_HINT_EXAMPLE,
         expected,
@@ -43,12 +45,16 @@ class C:a:str"""
 
 
 def test_removes_type_hints_all_but_class_var():
-    expected: str = "def b():c=3;print(c)\nclass C:a:str"
+    """Should remove all type hints except class vars."""
+
+    expected: str = "def b():c=3;print(c)\nclass C:a:int=0;b:str"
     optimize_and_assert_correctness(_TYPE_HINT_EXAMPLE, expected)
 
 
 def test_remove_all_type_hints():
-    expected: str = "def b():c=3;print(c)\nclass C:pass"
+    """Should remove all type hints, including class vars."""
+
+    expected: str = "def b():c=3;print(c)\nclass C:a=0"
 
     optimize_and_assert_correctness(
         _TYPE_HINT_EXAMPLE,
@@ -58,16 +64,18 @@ def test_remove_all_type_hints():
 
 
 def test_generics_keep():
-    expected: str = """def a[FOO,BAR](a,b):print(a,b)
+    """Should not remove any generics/aliases."""
+
+    expected: str = """type NIL=None
+def a[FOO,BAR](a,b):print(a,b)
 class A[FOO]:\n\tdef __init__(self,a):self.a=a"""
 
     optimize_and_assert_correctness(_GENERICS_EXAMPLE, expected)
 
 
-@pytest.mark.parametrize(
-    "skip_type_hints", [TypeHintsToSkip.ALL, TypeHintsToSkip.ALL_BUT_CLASS_VARS]
-)
-def test_generics_remove(skip_type_hints: TypeHintsToSkip):
+def test_generics_remove():
+    """Should remove all generics/aliases."""
+
     expected: str = """def a(a,b):print(a,b)
 class A:\n\tdef __init__(self,a):self.a=a"""
 
@@ -75,6 +83,6 @@ class A:\n\tdef __init__(self,a):self.a=a"""
         _GENERICS_EXAMPLE,
         expected,
         token_types_to_skip=TokenTypesToSkipConfig(
-            skip_type_hints=skip_type_hints, skip_generics=True
+            skip_type_hints=TypeHintsToSkip.ALL, skip_generics_and_alias=True
         ),
     )

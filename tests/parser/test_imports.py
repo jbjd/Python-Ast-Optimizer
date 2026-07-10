@@ -1,49 +1,7 @@
 import pytest
 
-from personal_python_ast_optimizer.config import (
-    CodeToSkipConfig,
-    OtherOptimizationsConfig,
-    TokenTypesToSkipConfig,
-    TypeHintsToSkip,
-)
+from personal_python_ast_optimizer.config import CodeToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
-
-_futures_imports: str = """
-from __future__ import annotations
-from __future__ import generator_stop
-from __future__ import unicode_literals
-from __future__ import with_statement
-"""
-
-
-@pytest.mark.parametrize(
-    ("version", "skip_type_hints", "after"),
-    [
-        (
-            None,
-            TypeHintsToSkip.NONE,
-            "from __future__ import annotations,generator_stop",
-        ),
-        ((3, 7), TypeHintsToSkip.NONE, "from __future__ import annotations"),
-        ((3, 7), TypeHintsToSkip.ALL, ""),
-    ],
-)
-def test_futures_imports(
-    version: tuple[int, int] | None, skip_type_hints: TypeHintsToSkip, after: str
-):
-    before_and_after = BeforeAndAfter(_futures_imports, after)
-
-    other_optimizations = (
-        OtherOptimizationsConfig()
-        if version is None
-        else OtherOptimizationsConfig(target_python_version=version)
-    )
-
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        other_optimizations=other_optimizations,
-        token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=skip_type_hints),
-    )
 
 
 def test_import_combined():

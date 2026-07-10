@@ -368,7 +368,6 @@ class AstNodeSkipper(_OpFolder):
         if node.name in self.tokens_to_skip.classes_to_skip:
             return None
 
-        skip_base_classes(node, ["object"])
         skip_base_classes(node, self.tokens_to_skip.classes_to_skip)
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
@@ -513,26 +512,15 @@ class AstNodeSkipper(_OpFolder):
         return all(isinstance(n, ast.Pass) for n in node_body)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
-        if isinstance(node.value, ast.Name):
-            if node.attr in self.code_to_fold.enums_to_fold.get(node.value.id, []):
-                return self._get_enum_value_as_AST(node.value.id, node.attr)
-
-            if self.other_optimizations.assume_this_machine:
-                attribute_key: str = f"{node.value.id}.{node.attr}"
-                if attribute_key in machine_dependent_attributes:
-                    return ast.Constant(machine_dependent_attributes[attribute_key])
-
-        if isinstance(
-            node.value, ast.Attribute
-        ) and node.attr in self.code_to_fold.enums_to_fold.get(node.value.attr, []):
-            return self._get_enum_value_as_AST(node.value.attr, node.attr)
+        if (
+            isinstance(node.value, ast.Name)
+            and self.other_optimizations.assume_this_machine
+        ):
+            attribute_key: str = f"{node.value.id}.{node.attr}"
+            if attribute_key in machine_dependent_attributes:
+                return ast.Constant(machine_dependent_attributes[attribute_key])
 
         return self.generic_visit(node)
-
-    def _get_enum_value_as_AST(self, class_name: str, value_name: str) -> ast.Constant:
-        return ast.Constant(
-            self.code_to_fold.enums_to_fold[class_name][value_name].value
-        )
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""
@@ -649,29 +637,6 @@ class AstNodeSkipper(_OpFolder):
             return ast.Constant(constant_value)
 
         return node
-
-    def visit_Dict(self, node: ast.Dict) -> ast.AST:
-        if self.tokens_to_skip.dict_keys_to_skip and any(
-            k
-            for k in node.keys
-            if isinstance(k, ast.Constant)
-            and k.value in self.tokens_to_skip.dict_keys_to_skip
-        ):
-            new_keys: list[ast.expr | None] = []
-            new_values: list[ast.expr] = []
-
-            for k, v in zip(node.keys, node.values, strict=True):
-                if (
-                    not isinstance(k, ast.Constant)
-                    or k.value not in self.tokens_to_skip.dict_keys_to_skip
-                ):
-                    new_keys.append(k)
-                    new_values.append(v)
-
-            node.keys = new_keys
-            node.values = new_values
-
-        return self.generic_visit(node)
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = self.generic_visit(node)
@@ -833,16 +798,16 @@ class AstNodeSkipper(_OpFolder):
             )
 
     def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
-        return None if self.token_types_to_skip.skip_generics else node
+        return None if self.token_types_to_skip.skip_generics_and_alias else node
 
     def visit_ParamSpec(self, node: ast.ParamSpec) -> ast.ParamSpec | None:
-        return None if self.token_types_to_skip.skip_generics else node
+        return None if self.token_types_to_skip.skip_generics_and_alias else node
 
     def visit_TypeVarTuple(self, node: ast.TypeVarTuple) -> ast.TypeVarTuple | None:
-        return None if self.token_types_to_skip.skip_generics else node
+        return None if self.token_types_to_skip.skip_generics_and_alias else node
 
     def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.TypeAlias | None:
-        return None if self.token_types_to_skip.skip_generics else node
+        return None if self.token_types_to_skip.skip_generics_and_alias else node
 
 
 class UnusedImportSkipper(AstNodeTransformerBase):

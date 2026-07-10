@@ -4,15 +4,14 @@ from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     OtherOptimizationsConfig,
     TokenTypesToSkipConfig,
-    TypeHintsToSkip,
 )
 
 
 def test_generics_without_type_hints():
     with pytest.raises(
-        ValueError, match=r"Can't skip Generics if not skipping type hints"
+        ValueError, match=r"Can't skip Generics unless all type hints are skipped"
     ):
-        TokenTypesToSkipConfig(skip_generics=True, skip_type_hints=TypeHintsToSkip.NONE)
+        TokenTypesToSkipConfig(skip_generics_and_alias=True)
 
 
 def test_perserve_imports_without_skip_unused_imports():

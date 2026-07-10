@@ -6,7 +6,7 @@ from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstNodeTransformerBase
 from personal_python_ast_optimizer._optimize.utils import (
-    UserTokensToSkipTracker,
+    TokensToSkipTracker,
     get_name_or_full_attribute,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
@@ -249,7 +249,7 @@ class FirstPassOptimizer(OptimizationPass):
         "_unneeded_futures",
         "skip_asserts",
         "skip_dangling_expressions",
-        "skip_generics",
+        "skip_generics_and_alias",
         "skip_overload_functions",
         "skip_type_hints",
         "skip_typing_cast",
@@ -258,21 +258,23 @@ class FirstPassOptimizer(OptimizationPass):
 
     def __init__(
         self,
-        user_tokens_to_skip: UserTokensToSkipTracker,
+        tokens_to_skip: TokensToSkipTracker,
         fold_constants: bool,
         skip_dangling_expressions: bool,
         skip_type_hints: TypeHintsToSkip,
-        skip_generics: bool,
+        skip_generics_and_alias: bool,
         skip_asserts: bool,
         skip_typing_cast: bool,
         skip_overload_functions: bool,
         target_python_version: tuple[int, int],
     ) -> None:
         super().__init__(fold_constants)
-        self.user_tokens_to_skip: UserTokensToSkipTracker = user_tokens_to_skip
+        self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
-        self.skip_generics: bool = skip_generics and bool(skip_type_hints)
+        self.skip_generics_and_alias: bool = skip_generics_and_alias and bool(
+            skip_type_hints
+        )
         self.skip_asserts: bool = skip_asserts
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_overload_functions: bool = skip_overload_functions
@@ -304,8 +306,17 @@ class FirstPassOptimizer(OptimizationPass):
         return self._visit_with_context(node, _NodeContext.FUNCTION)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
-        if self.user_tokens_to_skip.classes.should_skip(node.name):
-            return None
+        if self.tokens_to_skip.classes:
+            if self.tokens_to_skip.classes.should_skip(node.name):
+                return None
+
+            node.bases = [
+                base
+                for base in node.bases
+                if not self.tokens_to_skip.classes.should_skip(
+                    get_name_or_full_attribute(base)
+                )
+            ]
 
         self._skip_decorators(node)
 
@@ -362,16 +373,16 @@ class FirstPassOptimizer(OptimizationPass):
         return None if self.skip_asserts else self.generic_visit(node)
 
     def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
-        return None if self.skip_generics else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self.generic_visit(node)
 
     def visit_ParamSpec(self, node: ast.ParamSpec) -> ast.ParamSpec | None:
-        return None if self.skip_generics else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self.generic_visit(node)
 
     def visit_TypeVarTuple(self, node: ast.TypeVarTuple) -> ast.TypeVarTuple | None:
-        return None if self.skip_generics else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self.generic_visit(node)
 
     def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.TypeAlias | None:
-        return None if self.skip_generics else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self.generic_visit(node)
 
     # Removes duplicate passes. Super class handles adding them back if needed
     # such as an empty if body
@@ -390,11 +401,11 @@ class FirstPassOptimizer(OptimizationPass):
         self,
         node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> None:
-        if self.user_tokens_to_skip.decorators:
+        if self.tokens_to_skip.decorators:
             node.decorator_list = [
                 n
                 for n in node.decorator_list
-                if not self.user_tokens_to_skip.decorators.should_skip(
+                if not self.tokens_to_skip.decorators.should_skip(
                     get_name_or_full_attribute(n)
                 )
             ]

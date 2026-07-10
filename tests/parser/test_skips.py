@@ -44,17 +44,6 @@ def B():
     )
 
 
-def test_exclude_dict_keys():
-    before_and_after = BeforeAndAfter(
-        "a = {'a': 1, 'b': 2}",
-        "a={'a':1}",
-    )
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        tokens_to_skip=TokensToSkipConfig(dict_keys_to_skip={"b"}),
-    )
-
-
 _exclude_assign_cases = [
     BeforeAndAfter(
         """

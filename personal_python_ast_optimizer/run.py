@@ -44,7 +44,6 @@ def optimize_module(
         tokens_to_skip.from_imports_to_skip,
         tokens_to_skip.functions_to_skip,
         tokens_to_skip.module_imports_to_skip,
-        tokens_to_skip.no_warn,
     )
 
     FirstPassOptimizer(
@@ -56,7 +55,6 @@ def optimize_module(
         token_types_to_skip.skip_asserts,
         code_to_skip.skip_typing_cast,
         code_to_skip.skip_overload_functions,
-        other_optimizations.target_python_version,
     ).visit(module)
 
     tokens_to_skip_tracker.warn_not_found_skips(file_name)

@@ -1,7 +1,8 @@
 import ast
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 
-from _log import get_logger
+from personal_python_ast_optimizer._log import get_logger
+from personal_python_ast_optimizer.config import TokensToSkip
 
 _logger = get_logger()
 
@@ -29,23 +30,37 @@ def get_name_or_full_attribute(node: ast.AST) -> str | None:
     )
 
 
-class _TokensToSkipVisitCounter:
+_UNVISITED = 0
+_VISITED = 1
+
+
+class _TokensToSkipVisitCounter[T]:
     __slots__ = ("_tokens_to_skip",)
 
-    def __init__(self, tokens_to_skip: Iterable[str]) -> None:
-        self._tokens_to_skip: dict[str, int] = dict.fromkeys(tokens_to_skip, 0)
+    def __init__(self, tokens_to_skip: TokensToSkip[T] | None) -> None:
+        self._tokens_to_skip: dict[T, int]
+
+        if tokens_to_skip is None:
+            self._tokens_to_skip = {}
+        elif tokens_to_skip.no_warn is None:
+            self._tokens_to_skip = {t: _UNVISITED for t in tokens_to_skip.tokens}
+        else:
+            self._tokens_to_skip = {
+                t: _VISITED if t in tokens_to_skip.no_warn else _UNVISITED
+                for t in tokens_to_skip.tokens
+            }
 
     def __bool__(self) -> bool:
         return bool(self._tokens_to_skip)
 
-    def get_unvisited_tokens(self, tokens_to_ignore: Iterable[str]) -> Iterator[str]:
+    def get_unvisited_tokens(self) -> Iterator[str]:
         for k, v in self._tokens_to_skip.items():
-            if v == 0 and k not in tokens_to_ignore:
-                yield k
+            if v == 0:
+                yield str(k)
 
     def should_skip(self, key: object) -> bool:
         if key in self._tokens_to_skip:
-            self._tokens_to_skip[key] += 1
+            self._tokens_to_skip[key] = _VISITED
             return True
 
         return False
@@ -53,7 +68,6 @@ class _TokensToSkipVisitCounter:
 
 class TokensToSkipTracker:
     __slots__ = (
-        "_no_warn",
         "assignments",
         "classes",
         "decorators",
@@ -64,13 +78,12 @@ class TokensToSkipTracker:
 
     def __init__(
         self,
-        assignments: Iterable[str],
-        classes: Iterable[str],
-        decorators: Iterable[str],
-        from_imports: Iterable[str],
-        functions: Iterable[str],
-        module_imports: Iterable[str],
-        no_warn: Iterable[str],
+        assignments: TokensToSkip | None,
+        classes: TokensToSkip | None,
+        decorators: TokensToSkip | None,
+        from_imports: TokensToSkip | None,
+        functions: TokensToSkip | None,
+        module_imports: TokensToSkip | None,
     ) -> None:
         self.assignments = _TokensToSkipVisitCounter(assignments)
         self.classes = _TokensToSkipVisitCounter(classes)
@@ -78,21 +91,15 @@ class TokensToSkipTracker:
         self.from_imports = _TokensToSkipVisitCounter(from_imports)
         self.functions = _TokensToSkipVisitCounter(functions)
         self.module_imports = _TokensToSkipVisitCounter(module_imports)
-        self._no_warn: Iterable[str] = no_warn
 
     def warn_not_found_skips(self, file_name: str) -> None:
         for attribute in self.__slots__:
-            if attribute == "_no_warn":
-                continue
-
             access_counter: _TokensToSkipVisitCounter = getattr(self, attribute)
-            not_found: str = ", ".join(
-                access_counter.get_unvisited_tokens(self._no_warn)
-            )
+            not_found: str = ", ".join(access_counter.get_unvisited_tokens())
 
             if not_found != "":
                 _logger.warning(
-                    "%s: Asked to skip %s that were not found/needed: %s",
+                    "%sAsked to skip %s that were not found/needed: %s",
                     f"{file_name}: " if file_name != "" else "",
                     attribute,
                     not_found,

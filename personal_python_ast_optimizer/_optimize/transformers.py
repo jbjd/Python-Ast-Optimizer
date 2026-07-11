@@ -10,10 +10,6 @@ from personal_python_ast_optimizer._optimize.utils import (
     get_name_or_full_attribute,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
-from personal_python_ast_optimizer.futures import (
-    FUTURE_IMPORT_NAME,
-    get_unneeded_futures,
-)
 
 
 class OptimizationPass(AstNodeTransformerBase):
@@ -271,7 +267,6 @@ class FirstPassOptimizer(OptimizationPass):
         skip_asserts: bool,
         skip_typing_cast: bool,
         skip_overload_functions: bool,
-        target_python_version: tuple[int, int],
     ) -> None:
         super().__init__(fold_constants)
         self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
@@ -284,10 +279,6 @@ class FirstPassOptimizer(OptimizationPass):
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_overload_functions: bool = skip_overload_functions
         self._node_context: _NodeContext = _NodeContext.NONE
-
-        self._unneeded_futures: list[str] = get_unneeded_futures(target_python_version)
-        if skip_type_hints:
-            self._unneeded_futures.append("annotations")
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -325,13 +316,28 @@ class FirstPassOptimizer(OptimizationPass):
 
         return self._visit_with_context(node, _NodeContext.CLASS)
 
+    def visit_Import(self, node: ast.Import) -> ast.AST | None:
+        node.names = [
+            alias
+            for alias in node.names
+            if not self.tokens_to_skip.from_imports.should_skip(
+                alias.name if alias.asname is None else alias.asname
+            )
+        ]
+
+        return node if node.names else None
+
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
-        if node.module == FUTURE_IMPORT_NAME:
-            node.names = [
-                alias
-                for alias in node.names
-                if alias.name not in self._unneeded_futures
-            ]
+        node.names = [
+            alias
+            for alias in node.names
+            if not self.tokens_to_skip.from_imports.should_skip(
+                (
+                    ("." * node.level) + (node.module or ""),
+                    alias.name if alias.asname is None else alias.asname,
+                )
+            )
+        ]
 
         return node if node.names else None
 

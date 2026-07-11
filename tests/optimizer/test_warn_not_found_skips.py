@@ -1,6 +1,10 @@
 from unittest.mock import patch
 
-from personal_python_ast_optimizer.config import OptimizeConfig, TokensToSkipConfig
+from personal_python_ast_optimizer.config import (
+    OptimizeConfig,
+    TokensToSkip,
+    TokensToSkipConfig,
+)
 from personal_python_ast_optimizer.run import optimize_source_and_minify
 
 
@@ -14,7 +18,7 @@ def test_warn_unused_skips() -> None:
         "personal_python_ast_optimizer._optimize.utils._logger.warning"
     ) as mock_logger_warning:
         config = OptimizeConfig(
-            tokens_to_skip=TokensToSkipConfig(classes_to_skip={"ABC"})
+            tokens_to_skip=TokensToSkipConfig(classes_to_skip=TokensToSkip({"ABC"}))
         )
 
         optimize_source_and_minify(no_warn_source, config)

@@ -12,7 +12,6 @@ from personal_python_ast_optimizer.config import (
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
-from personal_python_ast_optimizer.futures import get_unneeded_futures
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
     AstNodeVisitorBase,
@@ -26,7 +25,6 @@ from personal_python_ast_optimizer.parser.utils import (
     filter_imports,
     first_occurrence_of_type,
     get_node_name,
-    is_overload_function,
     is_return_none,
     skip_decorators,
 )
@@ -217,7 +215,6 @@ class AstNodeSkipper(_OpFolder):
         "_has_imports",
         "_node_context",
         "_simplified_named_tuple",
-        "_skippable_futures",
         "code_to_skip",
         "module_name",
         "target_python_version",
@@ -239,15 +236,6 @@ class AstNodeSkipper(_OpFolder):
         self._has_imports: bool = False
         self._simplified_named_tuple: bool = False
         self._node_context: _NodeContext = _NodeContext.NONE
-
-        self._skippable_futures: list[str] = (
-            get_unneeded_futures(self.target_python_version)
-            if self.target_python_version is not None
-            else []
-        )
-
-        if self.token_types_to_skip.skip_type_hints:
-            self._skippable_futures.append("annotations")
 
     @staticmethod
     def _within_class_node[*Ts, R](
@@ -435,11 +423,6 @@ class AstNodeSkipper(_OpFolder):
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
         """Handles skips for both async/regular functions"""
-        if self._should_skip_function(node):
-            return None
-
-        if self.token_types_to_skip.skip_type_hints:
-            node.returns = None
 
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
@@ -471,14 +454,6 @@ class AstNodeSkipper(_OpFolder):
                 ).visit(parsed_function)
 
         return parsed_function
-
-    def _should_skip_function(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> bool:
-        """Determines if a function node should be skipped."""
-        return node.name in self.tokens_to_skip.functions_to_skip or (
-            self.code_to_skip.skip_overload_functions and is_overload_function(node)
-        )
 
     def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
         parsed_node = self.generic_visit(node)
@@ -612,9 +587,6 @@ class AstNodeSkipper(_OpFolder):
             return None
 
         exclude_imports(node, self.tokens_to_skip.from_imports_to_skip)
-
-        if node.module == "__future__" and self._skippable_futures:
-            exclude_imports(node, self._skippable_futures)
 
         if not node.names:
             return None
@@ -805,8 +777,7 @@ class UnusedImportSkipper(AstNodeTransformerBase):
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
-        if node.module != "__future__":
-            filter_imports(node, self.names_and_attrs)
+        filter_imports(node, self.names_and_attrs)
 
         return node if node.names else None
 

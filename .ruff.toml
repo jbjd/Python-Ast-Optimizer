@@ -6,6 +6,7 @@ target-version = "py312"
 [lint]
 select = ["ALL"]
 
+# C420: Slower dict.fromkeys
 # COM812: Trailing Comma (Only covers single line trailing commas, seems out of place)
 # D: Doc style
 # EM: Error messages
@@ -18,7 +19,7 @@ select = ["ALL"]
 # TD002: TODO author
 # TD003: TODO issue link
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["COM812", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PTH", "SLF001", "TD002", "TD003", "TRY003"]
+ignore = ["C420", "COM812", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PTH", "SLF001", "TD002", "TD003", "TRY003"]
 
 [lint.extend-per-file-ignores]
 

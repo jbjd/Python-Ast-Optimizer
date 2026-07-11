@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Iterable
 from enum import Enum
 
@@ -16,6 +15,14 @@ class TypeHintsToSkip(Enum):
         return self != TypeHintsToSkip.NONE
 
 
+class TokensToSkip[T]:
+    __slots__ = ("no_warn", "tokens")
+
+    def __init__(self, tokens: Iterable[T], no_warn: Iterable[T] | None = None) -> None:
+        self.tokens: Iterable[T] = tokens
+        self.no_warn: Iterable[T] | None = no_warn
+
+
 class TokensToSkipConfig:
     __slots__ = (
         "assignments_to_skip",
@@ -24,39 +31,26 @@ class TokensToSkipConfig:
         "from_imports_to_skip",
         "functions_to_skip",
         "module_imports_to_skip",
-        "no_warn",
     )
 
     def __init__(
         self,
         *,
-        assignments_to_skip: Iterable[str] | None = None,
-        classes_to_skip: Iterable[str] | None = None,
-        decorators_to_skip: Iterable[str] | None = None,
-        from_imports_to_skip: Iterable[str] | None = None,
-        functions_to_skip: Iterable[str] | None = None,
-        module_imports_to_skip: Iterable[str] | None = None,
-        no_warn: Iterable[str] | None = None,
+        assignments_to_skip: TokensToSkip[str] | None = None,
+        classes_to_skip: TokensToSkip[str] | None = None,
+        decorators_to_skip: TokensToSkip[str] | None = None,
+        from_imports_to_skip: TokensToSkip[tuple[str, str]] | None = None,
+        functions_to_skip: TokensToSkip[str] | None = None,
+        module_imports_to_skip: TokensToSkip[str] | None = None,
     ) -> None:
-        self.assignments_to_skip: Iterable[str] = (
-            [] if assignments_to_skip is None else assignments_to_skip
+        self.assignments_to_skip: TokensToSkip[str] | None = assignments_to_skip
+        self.classes_to_skip: TokensToSkip[str] | None = classes_to_skip
+        self.decorators_to_skip: TokensToSkip[str] | None = decorators_to_skip
+        self.from_imports_to_skip: TokensToSkip[tuple[str, str]] | None = (
+            from_imports_to_skip
         )
-        self.classes_to_skip: Iterable[str] = (
-            [] if classes_to_skip is None else classes_to_skip
-        )
-        self.decorators_to_skip: Iterable[str] = (
-            [] if decorators_to_skip is None else decorators_to_skip
-        )
-        self.from_imports_to_skip: Iterable[str] = (
-            [] if from_imports_to_skip is None else from_imports_to_skip
-        )
-        self.functions_to_skip: Iterable[str] = (
-            [] if functions_to_skip is None else functions_to_skip
-        )
-        self.module_imports_to_skip: Iterable[str] = (
-            [] if module_imports_to_skip is None else module_imports_to_skip
-        )
-        self.no_warn: Iterable[str] = [] if no_warn is None else no_warn
+        self.functions_to_skip: TokensToSkip[str] | None = functions_to_skip
+        self.module_imports_to_skip: TokensToSkip[str] | None = module_imports_to_skip
 
 
 class TokenTypesToSkipConfig:
@@ -162,7 +156,6 @@ class OtherOptimizationsConfig:
         "collection_concat_to_unpack",
         "functions_safe_to_exclude_in_test_expr",
         "simplify_named_tuples",
-        "target_python_version",
     )
 
     MIN_TARGET_PYTHON: tuple[int, int] = (3, 0)
@@ -174,13 +167,7 @@ class OtherOptimizationsConfig:
         collection_concat_to_unpack: bool = False,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         simplify_named_tuples: bool = False,
-        target_python_version: tuple[int, int] = MIN_TARGET_PYTHON,
     ) -> None:
-        if target_python_version < self.MIN_TARGET_PYTHON:
-            raise ValueError("Can't target Python version below 3.0")
-        if target_python_version > sys.version_info:
-            raise ValueError("Can't target python version above current interpreter")
-
         self.assume_this_machine: bool = assume_this_machine
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
 
@@ -191,7 +178,6 @@ class OtherOptimizationsConfig:
         )
 
         self.simplify_named_tuples: bool = simplify_named_tuples
-        self.target_python_version: tuple[int, int] = target_python_version
 
 
 class OptimizeConfig:

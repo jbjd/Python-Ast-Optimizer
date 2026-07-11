@@ -2,6 +2,7 @@ import pytest
 
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
+    TokensToSkip,
     TokensToSkipConfig,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
@@ -20,7 +21,7 @@ class B:
     )
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(classes_to_skip={"ABC", "B"}),
+        tokens_to_skip=TokensToSkipConfig(classes_to_skip=TokensToSkip({"ABC", "B"})),
     )
 
 
@@ -40,7 +41,9 @@ def B():
     )
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(decorators_to_skip={"some_dec", "abc.abc"}),
+        tokens_to_skip=TokensToSkipConfig(
+            decorators_to_skip=TokensToSkip({"some_dec", "abc.abc"})
+        ),
     )
 
 
@@ -96,7 +99,7 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(variables_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(assignments_to_skip=TokensToSkip({"foo"})),
     )
 
 
@@ -123,7 +126,7 @@ def bar():
 def test_exclude_function_def(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),
     )
 
 
@@ -151,7 +154,7 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),
     )
 
 
@@ -176,7 +179,28 @@ def bar():
 def test_exclude_function_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(functions_to_skip={"foo"}),
+        tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),
+    )
+
+
+def test_exclude_from_imports():
+    before_and_after = BeforeAndAfter(
+        """
+from . import asdf
+from .a import foo
+from a import bar
+from ..a import abcd
+""",
+        "from ..a import abcd",
+    )
+    optimize_and_assert_correctness_old(
+        before_and_after,
+        tokens_to_skip=TokensToSkipConfig(
+            from_imports_to_skip=TokensToSkip(
+                [(".", "asdf"), (".a", "foo"), ("a", "bar")]
+            )
+        ),
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )
 
 
@@ -195,7 +219,7 @@ import a as c
     optimize_and_assert_correctness_old(
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(
-            module_imports_to_skip={"numpy", "numpy._core", "", "a", "b"}
+            module_imports_to_skip=TokensToSkip({"numpy", "numpy._core", "", "a", "b"})
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )
@@ -217,7 +241,8 @@ is_cid = re.compile('').match
     optimize_and_assert_correctness_old(
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(
-            functions_to_skip={"getLogger"}, variables_to_skip={"TYPE_CHECKING"}
+            assignments_to_skip=TokensToSkip({"TYPE_CHECKING"}),
+            functions_to_skip=TokensToSkip({"getLogger"}),
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )

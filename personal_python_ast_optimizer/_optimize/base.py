@@ -118,9 +118,8 @@ class AstNodeTransformerBase(_AstNodeVisitorProtocol):
         :returns: List of the same ASTs but with the order possibly altered"""
         return ast_list
 
-    @staticmethod
     def _on_visited_node_add_to_new_values(
-        new_nodes: list[ast.AST], node: ast.AST
+        self, new_nodes: list[ast.AST], node: ast.AST
     ) -> None:
         new_nodes.append(node)
 

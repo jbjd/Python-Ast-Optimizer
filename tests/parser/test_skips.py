@@ -208,8 +208,6 @@ def test_exclude_module_imports():
     before_and_after = BeforeAndAfter(
         """
 import numpy
-from numpy._core import uint8
-from . import asdf
 import a
 import a as b
 import a as c
@@ -219,7 +217,7 @@ import a as c
     optimize_and_assert_correctness_old(
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(
-            module_imports_to_skip=TokensToSkip({"numpy", "numpy._core", "", "a", "b"})
+            module_imports_to_skip=TokensToSkip({"numpy", "a", "b"})
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )

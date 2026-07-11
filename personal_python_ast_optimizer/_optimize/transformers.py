@@ -16,19 +16,14 @@ class OptimizationPass(AstNodeTransformerBase):
     """Performs optimizations that may occur over multiple passes
     like constant folding or dead code elimination."""
 
-    __slots__ = ("_did_work", "_passes", "fold_constants")
+    __slots__ = ("additional_pass_needed", "fold_constants")
 
     def __init__(self, fold_constants: bool) -> None:
         self.fold_constants: bool = fold_constants
-        self._passes: int = 0
-        self._did_work: bool = False
-
-    def has_work(self) -> bool:
-        return self._passes < 1 or self._did_work
+        self.additional_pass_needed: bool = False
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
-        self._passes += 1
-        self._did_work = False
+        self.additional_pass_needed = False
         return self.generic_visit(node)
 
     def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
@@ -45,24 +40,47 @@ class OptimizationPass(AstNodeTransformerBase):
         if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
             parsed_node.body
         ):
-            self._did_work = True
             return parsed_node.finalbody or None
 
         return parsed_node
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        return self._handle_if(node)
-
-    def visit_IfExp(self, node: ast.IfExp) -> ast.AST | list[ast.stmt] | None:
-        return self._handle_if(node)
-
-    def _handle_if(self, node: ast.If | ast.IfExp) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = self.generic_visit(node)
 
-        if isinstance(parsed_node, (ast.If, ast.IfExp)) and isinstance(
+        if isinstance(parsed_node, ast.If):
+            if isinstance(parsed_node.test, ast.Constant):
+                if_body: list[ast.stmt] = (
+                    parsed_node.body if parsed_node.test.value else parsed_node.orelse
+                )
+                return if_body or None
+
+            if (
+                not parsed_node.orelse
+                and len(parsed_node.body) == 1
+                and isinstance(parsed_node.body[0], ast.If)
+                and not parsed_node.body[0].orelse
+            ):
+                # These if conditions can be combine into one if
+                if isinstance(parsed_node.test, ast.BoolOp) and isinstance(
+                    parsed_node.test.op, ast.And
+                ):
+                    parsed_node.test.values.append(parsed_node.body[0].test)
+                else:
+                    parsed_node.test = ast.BoolOp(
+                        ast.And(), [parsed_node.test, parsed_node.body[0].test]
+                    )
+
+                parsed_node.body = parsed_node.body[0].body
+
+        return parsed_node
+
+    def visit_IfExp(self, node: ast.IfExp) -> ast.AST | None:
+        parsed_node: ast.AST = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.IfExp) and isinstance(
             parsed_node.test, ast.Constant
         ):
-            if_body: list[ast.stmt] | ast.expr = (
+            if_body: ast.expr = (
                 parsed_node.body if parsed_node.test.value else parsed_node.orelse
             )
             return if_body or None
@@ -99,7 +117,6 @@ class OptimizationPass(AstNodeTransformerBase):
                 else:
                     break
             else:  # all values before last are skippable
-                self._did_work = True
                 return node.values[-1]
 
             # 'False and some_func()' can be simplified to just 'False'
@@ -108,11 +125,9 @@ class OptimizationPass(AstNodeTransformerBase):
                 isinstance(left_value, ast.Constant)
                 and bool(left_value.value) is not remove_if
             ):
-                self._did_work = True
                 return left_value
 
             if index > 0:
-                self._did_work = True
                 node.values = node.values[index:]
 
         return node
@@ -124,13 +139,10 @@ class OptimizationPass(AstNodeTransformerBase):
             parsed_node.operand, ast.Constant
         ):
             if isinstance(parsed_node.op, ast.Not):
-                self._did_work = True
                 return ast.Constant(not parsed_node.operand.value)
             if isinstance(parsed_node.op, ast.UAdd):
-                self._did_work = True
                 return parsed_node.operand
             if sys.version_info < (3, 16) and isinstance(parsed_node.op, ast.Invert):
-                self._did_work = True
                 return ast.Constant(~parsed_node.operand.value)  # type: ignore[operator]
 
         return parsed_node
@@ -144,7 +156,6 @@ class OptimizationPass(AstNodeTransformerBase):
             and isinstance(parsed_node.left, ast.Constant)
             and isinstance(parsed_node.right, ast.Constant)
         ):
-            self._did_work = True
             return self._ast_constants_operation(
                 parsed_node.left, parsed_node.right, parsed_node.op
             )
@@ -160,7 +171,6 @@ class OptimizationPass(AstNodeTransformerBase):
             and len(parsed_node.comparators) == 1
             and isinstance(parsed_node.comparators[0], ast.Constant)
         ):
-            self._did_work = True
             return self._ast_constants_operation(
                 parsed_node.left, parsed_node.comparators[0], parsed_node.ops[0]
             )
@@ -254,6 +264,7 @@ class FirstPassOptimizer(OptimizationPass):
         "skip_overload_functions",
         "skip_type_hints",
         "skip_typing_cast",
+        "skip_useless_else",
         "user_tokens_to_skip",
     )
 
@@ -267,6 +278,7 @@ class FirstPassOptimizer(OptimizationPass):
         skip_asserts: bool,
         skip_typing_cast: bool,
         skip_overload_functions: bool,
+        skip_useless_else: bool,
     ) -> None:
         super().__init__(fold_constants)
         self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
@@ -278,7 +290,21 @@ class FirstPassOptimizer(OptimizationPass):
         self.skip_asserts: bool = skip_asserts
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_overload_functions: bool = skip_overload_functions
+        self.skip_useless_else: bool = skip_useless_else
         self._node_context: _NodeContext = _NodeContext.NONE
+
+    @override
+    def _on_visited_node_add_to_new_values(
+        self, new_nodes: list[ast.AST], node: ast.AST
+    ) -> None:
+        if (
+            self.skip_dangling_expressions
+            and isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Constant)
+        ):
+            return
+
+        super()._on_visited_node_add_to_new_values(new_nodes, node)
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -316,11 +342,25 @@ class FirstPassOptimizer(OptimizationPass):
 
         return self._visit_with_context(node, _NodeContext.CLASS)
 
+    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
+        parsed_node: ast.AST = super().visit_If(node)
+
+        if (
+            isinstance(parsed_node, ast.If)
+            and self.skip_useless_else
+            and isinstance(parsed_node.body[-1], (ast.Raise, ast.Return))
+        ):
+            denested_else: list[ast.stmt] = parsed_node.orelse
+            parsed_node.orelse = []
+            return [parsed_node, *denested_else]
+
+        return parsed_node
+
     def visit_Import(self, node: ast.Import) -> ast.AST | None:
         node.names = [
             alias
             for alias in node.names
-            if not self.tokens_to_skip.from_imports.should_skip(
+            if not self.tokens_to_skip.module_imports.should_skip(
                 alias.name if alias.asname is None else alias.asname
             )
         ]
@@ -441,6 +481,31 @@ class LastPassOptimizer(AstNodeTransformerBase):
         self.skip_unused_imports: bool = skip_unused_imports
         self._names_and_attrs: set[str] = set(imports_to_preserve)
 
+    @override
+    def _on_visited_node_add_to_new_values(
+        self, new_nodes: list[ast.AST], node: ast.AST
+    ) -> None:
+        if new_nodes:
+            previous_node: ast.AST = new_nodes[-1]
+            if (
+                isinstance(node, ast.Import) and isinstance(previous_node, ast.Import)
+            ) or (
+                isinstance(node, ast.ImportFrom)
+                and isinstance(previous_node, ast.ImportFrom)
+                and node.module == previous_node.module
+                and node.level == previous_node.level
+            ):
+                node.names += previous_node.names
+                new_nodes[-1] = node
+                return
+
+        super()._on_visited_node_add_to_new_values(new_nodes, node)
+
+    @override
+    @staticmethod
+    def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> Iterable[ast.AST]:
+        return reversed(ast_list)
+
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
         if not self.skip_unused_imports:
             return node
@@ -480,28 +545,3 @@ class LastPassOptimizer(AstNodeTransformerBase):
             node.test.value = 1
 
         return self.generic_visit(node)
-
-    @override
-    @staticmethod
-    def _alter_node_list_visit_order(ast_list: list[ast.AST]) -> Iterable[ast.AST]:
-        return reversed(ast_list)
-
-    @staticmethod
-    def _on_visited_node_add_to_new_values(
-        new_nodes: list[ast.AST], node: ast.AST
-    ) -> None:
-        if new_nodes:
-            previous_node: ast.AST = new_nodes[-1]
-            if (
-                isinstance(node, ast.Import) and isinstance(previous_node, ast.Import)
-            ) or (
-                isinstance(node, ast.ImportFrom)
-                and isinstance(previous_node, ast.ImportFrom)
-                and node.module == previous_node.module
-                and node.level == previous_node.level
-            ):
-                node.names += previous_node.names
-                new_nodes[-1] = node
-                return
-
-        new_nodes.append(node)

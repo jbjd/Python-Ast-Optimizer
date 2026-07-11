@@ -46,7 +46,7 @@ def optimize_module(
         tokens_to_skip.module_imports_to_skip,
     )
 
-    FirstPassOptimizer(
+    first_pass = FirstPassOptimizer(
         tokens_to_skip_tracker,
         code_to_fold.fold_constants,
         token_types_to_skip.skip_dangling_expressions,
@@ -55,13 +55,18 @@ def optimize_module(
         token_types_to_skip.skip_asserts,
         code_to_skip.skip_typing_cast,
         code_to_skip.skip_overload_functions,
-    ).visit(module)
+        code_to_skip.skip_useless_else,
+    )
+    first_pass.visit(module)
 
     tokens_to_skip_tracker.warn_not_found_skips(file_name)
 
-    optimization_passes = OptimizationPass(code_to_fold.fold_constants)
-    while optimization_passes.has_work():
-        optimization_passes.visit_Module(module)
+    additional_pass_needed: bool = first_pass.additional_pass_needed
+    if additional_pass_needed:
+        optimization_pass = OptimizationPass(code_to_fold.fold_constants)
+        while additional_pass_needed:
+            optimization_pass.visit_Module(module)
+            additional_pass_needed = optimization_pass.additional_pass_needed
 
     LastPassOptimizer(
         code_to_skip.skip_unused_imports,

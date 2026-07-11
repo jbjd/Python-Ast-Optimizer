@@ -1,3 +1,5 @@
+"""Transformer classes to optimize Python ASTs."""
+
 import ast
 import sys
 from collections.abc import Iterable

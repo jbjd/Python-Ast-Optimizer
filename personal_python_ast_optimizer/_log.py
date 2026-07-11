@@ -1,3 +1,5 @@
+"""Internal module for logging."""
+
 import logging
 import sys
 

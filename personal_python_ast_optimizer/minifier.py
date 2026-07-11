@@ -1,4 +1,4 @@
-"""Minification of Python AST."""
+"""Minifier for Python ASTs."""
 
 import ast
 from ast import _Precedence  # type: ignore[attr-defined]

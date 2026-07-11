@@ -1,3 +1,5 @@
+"""Functions to assist with regex replacements."""
+
 import re
 from collections.abc import Iterable, Iterator
 

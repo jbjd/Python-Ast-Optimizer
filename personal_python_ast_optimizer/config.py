@@ -1,3 +1,5 @@
+"""Config files for running the AST optimizer."""
+
 from collections.abc import Iterable
 from enum import Enum
 

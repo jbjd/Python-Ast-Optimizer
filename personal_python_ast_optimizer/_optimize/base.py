@@ -1,3 +1,5 @@
+"""Base classes for AST node visitors/transformers."""
+
 import ast
 from collections.abc import Iterable
 from typing import Protocol

@@ -1,4 +1,4 @@
-"""Convienience functions for running the ast optimizer."""
+"""Entrypoint for running the AST optimizer."""
 
 import ast
 

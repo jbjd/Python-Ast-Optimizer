@@ -1,3 +1,5 @@
+"""Utilities for AST optimization."""
+
 import ast
 from collections.abc import Iterator
 

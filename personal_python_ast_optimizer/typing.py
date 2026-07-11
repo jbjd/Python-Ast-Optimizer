@@ -1,3 +1,5 @@
+"""Module typing."""
+
 import ast
 from types import EllipsisType
 from typing import Protocol

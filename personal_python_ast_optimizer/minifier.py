@@ -56,7 +56,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:
-        self._source: list[str] = []
+        self._source: list[str]  # type: ignore[misc]
         self._indent: int  # type: ignore[misc]
         super().__init__()
 

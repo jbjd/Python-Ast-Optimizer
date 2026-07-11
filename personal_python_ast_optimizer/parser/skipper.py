@@ -1,5 +1,4 @@
 import ast
-import warnings
 from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Self
@@ -29,7 +28,6 @@ from personal_python_ast_optimizer.parser.utils import (
     get_node_name,
     is_overload_function,
     is_return_none,
-    skip_base_classes,
     skip_decorators,
 )
 
@@ -360,15 +358,10 @@ class AstNodeSkipper(_OpFolder):
             )
             import_filter.visit(node)
 
-        self._warn_unused_skips()
         return node
 
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        if node.name in self.tokens_to_skip.classes_to_skip:
-            return None
-
-        skip_base_classes(node, self.tokens_to_skip.classes_to_skip)
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
         if (
@@ -785,17 +778,6 @@ class AstNodeSkipper(_OpFolder):
             isinstance(node.value, ast.Call)
             and get_node_name(node.value.func) in self.tokens_to_skip.functions_to_skip
         )
-
-    def _warn_unused_skips(self) -> None:
-        for (
-            token_type,
-            not_found_tokens,
-        ) in self.tokens_to_skip.get_missing_tokens_iter():
-            warnings.warn(
-                f"{self.module_name}: requested to skip {token_type} "
-                f"{not_found_tokens} but was not found",
-                stacklevel=2,
-            )
 
     def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
         return None if self.token_types_to_skip.skip_generics_and_alias else node

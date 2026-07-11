@@ -39,15 +39,6 @@ def is_return_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
-def skip_base_classes(node: ast.ClassDef, classes_to_ignore: Container[str]) -> None:
-    if classes_to_ignore:
-        node.bases = [
-            base
-            for base in node.bases
-            if getattr(base, "id", "") not in classes_to_ignore
-        ]
-
-
 def skip_decorators(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
     decorators_to_ignore: Container[str],

@@ -43,7 +43,7 @@ class _TokensToSkipVisitCounter:
             if v == 0 and k not in tokens_to_ignore:
                 yield k
 
-    def should_skip(self, key: str) -> bool:
+    def should_skip(self, key: object) -> bool:
         if key in self._tokens_to_skip:
             self._tokens_to_skip[key] += 1
             return True

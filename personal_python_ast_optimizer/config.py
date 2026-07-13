@@ -117,10 +117,26 @@ class CodeToSkipConfig:
         self.skip_overload_functions: bool = skip_overload_functions
 
 
-class CodeToFoldConfig:
+# Functions that have no side effects and thus are safe to remove
+# if a test expression is found to be useless. For example:
+# if "str(a) == 'a':pass" will be turned into just "str(a) == 'a'"
+# but if its known str has no side effects then it can be fully removed
+_default_functions_safe_to_exclude_in_test_expr: set[str] = {
+    "int",
+    "str",
+    "isinstance",
+    "getattr",
+    "hasattr",
+}
+
+
+class PerfOptimizationsConfig:
     __slots__ = (
+        "collection_concat_to_unpack",
         "fold_constants",
         "fold_simple_function_locals",
+        "functions_safe_to_exclude_in_test_expr",
+        "simplify_named_tuples",
         "vars_to_fold",
     )
 
@@ -130,6 +146,9 @@ class CodeToFoldConfig:
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
         vars_to_fold: dict[str, FoldableConstant] | None = None,
+        functions_safe_to_exclude_in_test_expr: set[str] | None = None,
+        collection_concat_to_unpack: bool = False,
+        simplify_named_tuples: bool = False,
     ) -> None:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
@@ -138,55 +157,20 @@ class CodeToFoldConfig:
             {} if vars_to_fold is None else vars_to_fold
         )
 
-
-# Functions that have no side effects and thus are safe to remove
-# if a test expression is found to be useless. For example:
-# if "str(a) == 'a':pass" will be turned into just "str(a) == 'a'"
-# but if its known str has no side effects then it can be fully removed
-default_functions_safe_to_exclude_in_test_expr: set[str] = {
-    "int",
-    "str",
-    "isinstance",
-    "getattr",
-    "hasattr",
-}
-
-
-class OtherOptimizationsConfig:
-    __slots__ = (
-        "assume_this_machine",
-        "collection_concat_to_unpack",
-        "functions_safe_to_exclude_in_test_expr",
-        "simplify_named_tuples",
-    )
-
-    MIN_TARGET_PYTHON: tuple[int, int] = (3, 0)
-
-    def __init__(
-        self,
-        *,
-        assume_this_machine: bool = False,
-        collection_concat_to_unpack: bool = False,
-        functions_safe_to_exclude_in_test_expr: set[str] | None = None,
-        simplify_named_tuples: bool = False,
-    ) -> None:
-        self.assume_this_machine: bool = assume_this_machine
-        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
-
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
-            default_functions_safe_to_exclude_in_test_expr
+            _default_functions_safe_to_exclude_in_test_expr
             if functions_safe_to_exclude_in_test_expr is None
             else functions_safe_to_exclude_in_test_expr
         )
 
+        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.simplify_named_tuples: bool = simplify_named_tuples
 
 
 class OptimizeConfig:
     __slots__ = (
-        "code_to_fold",
         "code_to_skip",
-        "other_optimizations",
+        "perf_optimizations",
         "token_types_to_skip",
         "tokens_to_skip",
     )
@@ -194,16 +178,11 @@ class OptimizeConfig:
     def __init__(
         self,
         *,
-        code_to_fold: CodeToFoldConfig | None = None,
         code_to_skip: CodeToSkipConfig | None = None,
         tokens_to_skip: TokensToSkipConfig | None = None,
         token_types_to_skip: TokenTypesToSkipConfig | None = None,
-        other_optimizations: OtherOptimizationsConfig | None = None,
+        perf_optimizations: PerfOptimizationsConfig | None = None,
     ) -> None:
-
-        self.code_to_fold: CodeToFoldConfig = (
-            CodeToFoldConfig() if code_to_fold is None else code_to_fold
-        )
         self.code_to_skip: CodeToSkipConfig = (
             CodeToSkipConfig() if code_to_skip is None else code_to_skip
         )
@@ -215,8 +194,8 @@ class OptimizeConfig:
             if token_types_to_skip is None
             else token_types_to_skip
         )
-        self.other_optimizations: OtherOptimizationsConfig = (
-            OtherOptimizationsConfig()
-            if other_optimizations is None
-            else other_optimizations
+        self.perf_optimizations: PerfOptimizationsConfig = (
+            PerfOptimizationsConfig()
+            if perf_optimizations is None
+            else perf_optimizations
         )

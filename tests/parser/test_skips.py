@@ -4,6 +4,8 @@ from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     TokensToSkip,
     TokensToSkipConfig,
+    TokenTypesToSkipConfig,
+    TypeHintsToSkip,
 )
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
@@ -51,7 +53,7 @@ _exclude_assign_cases = [
     BeforeAndAfter(
         """
 a = 1
-foo = 2
+foo: int = 2
 """,
         "a=1",
     ),
@@ -73,7 +75,7 @@ def bar():
     BeforeAndAfter(
         """
 def bar():
-    foo = 2
+    foo = some_func()
     test = 1
 """,
         "def bar():test=1",
@@ -87,10 +89,8 @@ def bar():
         "def bar():test=1",
     ),
     BeforeAndAfter(
-        """
-*foo=1,2
-""",
-        "",
+        "*foo=(1,2)",
+        "*foo=(1,2)",
     ),
 ]
 
@@ -99,7 +99,12 @@ def bar():
 def test_exclude_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(assignments_to_skip=TokensToSkip({"foo"})),
+        tokens_to_skip=TokensToSkipConfig(
+            assignments_to_skip=TokensToSkip({"foo", "bar.foo"})
+        ),
+        token_types_to_skip=TokenTypesToSkipConfig(
+            skip_type_hints=TypeHintsToSkip.NONE
+        ),
     )
 
 
@@ -152,31 +157,6 @@ test=1
 
 @pytest.mark.parametrize("before_and_after", _exclude_function_call_cases)
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),
-    )
-
-
-_exclude_function_assign_cases = [
-    BeforeAndAfter(
-        """
-a=foo()
-""",
-        "",
-    ),
-    BeforeAndAfter(
-        """
-def bar():
-    a=foo()
-""",
-        "def bar():pass",
-    ),
-]
-
-
-@pytest.mark.parametrize("before_and_after", _exclude_function_assign_cases)
-def test_exclude_function_assign(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),

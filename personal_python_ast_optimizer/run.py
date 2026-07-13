@@ -9,10 +9,9 @@ from personal_python_ast_optimizer._optimize.transformers import (
 )
 from personal_python_ast_optimizer._optimize.utils import TokensToSkipTracker
 from personal_python_ast_optimizer.config import (
-    CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
-    OtherOptimizationsConfig,
+    PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
 )
@@ -31,11 +30,10 @@ def optimize_module(
     :param module: Module to optimize
     :param skip_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    code_to_fold: CodeToFoldConfig = skip_config.code_to_fold
     code_to_skip: CodeToSkipConfig = skip_config.code_to_skip
     tokens_to_skip: TokensToSkipConfig = skip_config.tokens_to_skip
     token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
-    other_optimizations: OtherOptimizationsConfig = skip_config.other_optimizations
+    perf_optimizations: PerfOptimizationsConfig = skip_config.perf_optimizations
 
     tokens_to_skip_tracker = TokensToSkipTracker(
         tokens_to_skip.assignments_to_skip,
@@ -48,7 +46,8 @@ def optimize_module(
 
     first_pass = FirstPassOptimizer(
         tokens_to_skip_tracker,
-        code_to_fold.fold_constants,
+        perf_optimizations.fold_constants,
+        perf_optimizations.collection_concat_to_unpack,
         token_types_to_skip.skip_dangling_expressions,
         token_types_to_skip.skip_type_hints,
         token_types_to_skip.skip_generics_and_alias,
@@ -63,7 +62,7 @@ def optimize_module(
 
     additional_pass_needed: bool = first_pass.additional_pass_needed
     if additional_pass_needed:
-        optimization_pass = OptimizationPass(code_to_fold.fold_constants)
+        optimization_pass = OptimizationPass(perf_optimizations.fold_constants)
         while additional_pass_needed:
             optimization_pass.visit_Module(module)
             additional_pass_needed = optimization_pass.additional_pass_needed

@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.config import CodeToFoldConfig
+from personal_python_ast_optimizer.config import PerfOptimizationsConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _fold_var_cases = [
@@ -69,7 +69,7 @@ FAVORITE_NUMBER,TEST=4,5
 def test_fold_var(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        code_to_fold=CodeToFoldConfig(
+        perf_optimizations=PerfOptimizationsConfig(
             vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test", "__name__": "__main__"}
         ),
     )

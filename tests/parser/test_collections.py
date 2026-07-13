@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.config import OtherOptimizationsConfig
+from personal_python_ast_optimizer.config import PerfOptimizationsConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _simplify_named_tuple_test_cases: list[tuple[str, str]] = [
@@ -57,7 +57,7 @@ def test_simplify_named_tuple(before: str, after: str):
 
     optimize_and_assert_correctness_old(
         before_and_after,
-        other_optimizations=OtherOptimizationsConfig(simplify_named_tuples=True),
+        perf_optimizations=PerfOptimizationsConfig(simplify_named_tuples=True),
     )
 
 
@@ -80,35 +80,5 @@ class A(NamedTuple):
     ):
         optimize_and_assert_correctness_old(
             before_and_after,
-            other_optimizations=OtherOptimizationsConfig(simplify_named_tuples=True),
+            perf_optimizations=PerfOptimizationsConfig(simplify_named_tuples=True),
         )
-
-
-_collection_concat_to_unpack_test_cases: list[tuple[str, str]] = [
-    (
-        "a = (1,) + (0,0) + b",
-        "a=(1,0,0,*b)",
-    ),
-    (
-        "a = [1] + b + [2]",
-        "a=[1,*b,2]",
-    ),
-    (
-        "a = b + [2] + [3]",
-        "a=[*b,2,3]",
-    ),
-    (
-        "def asdf(im):encoderinfo={**im.a,**e};return encoderinfo",
-        "def asdf(im):encoderinfo={**im.a,**e};return encoderinfo",
-    ),
-]
-
-
-@pytest.mark.parametrize(("before", "after"), _collection_concat_to_unpack_test_cases)
-def test_collection_concat_to_unpack(before: str, after: str):
-    before_and_after = BeforeAndAfter(before, after)
-
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        other_optimizations=OtherOptimizationsConfig(collection_concat_to_unpack=True),
-    )

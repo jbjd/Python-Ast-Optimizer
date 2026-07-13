@@ -4,10 +4,9 @@ from enum import Enum
 from typing import Self
 
 from personal_python_ast_optimizer.config import (
-    CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
-    OtherOptimizationsConfig,
+    PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
@@ -37,55 +36,14 @@ class _NodeContext(Enum):
 
 
 class _OpFolder(AstNodeTransformerBase):
-    __slots__ = ("code_to_fold", "other_optimizations")
+    __slots__ = ("perf_optimizations",)
 
     def __init__(
         self,
-        code_to_fold: CodeToFoldConfig,
-        other_optimizations: OtherOptimizationsConfig,
+        perf_optimizations: PerfOptimizationsConfig,
     ) -> None:
         super().__init__()
-        self.code_to_fold: CodeToFoldConfig = code_to_fold
-        self.other_optimizations: OtherOptimizationsConfig = other_optimizations
-
-    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
-        parsed_node: ast.AST = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.BinOp):
-            if (
-                self.code_to_fold.fold_constants
-                and isinstance(parsed_node.left, ast.Constant)
-                and isinstance(parsed_node.right, ast.Constant)
-            ):
-                return self._ast_constants_operation(
-                    parsed_node.left, parsed_node.right, parsed_node.op
-                )
-
-            if (
-                self.other_optimizations.collection_concat_to_unpack
-                and isinstance(parsed_node.op, ast.Add)
-                and (
-                    isinstance(parsed_node.left, (ast.Tuple, ast.List))
-                    or isinstance(parsed_node.right, (ast.Tuple, ast.List))
-                )
-            ):
-                if (
-                    isinstance(parsed_node.left, ast.Tuple)
-                    and isinstance(parsed_node.right, ast.Tuple)
-                ) or (
-                    isinstance(parsed_node.left, ast.List)
-                    and isinstance(parsed_node.right, ast.List)
-                ):
-                    parsed_node.left.elts += parsed_node.right.elts
-                elif isinstance(parsed_node.left, (ast.Tuple, ast.List)):
-                    parsed_node.left.elts.append(ast.Starred(parsed_node.right))
-                else:
-                    parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
-                    return parsed_node.right
-
-                return parsed_node.left
-
-        return parsed_node
+        self.perf_optimizations: PerfOptimizationsConfig = perf_optimizations
 
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
         parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore[assignment]
@@ -223,11 +181,11 @@ class AstNodeSkipper(_OpFolder):
     )
 
     def __init__(self, module_name: str, config: OptimizeConfig) -> None:
-        super().__init__(config.code_to_fold, config.other_optimizations)
+        super().__init__(config.perf_optimizations, config.perf_optimizations)
 
         self.module_name: str = module_name
         self.target_python_version: tuple[int, int] | None = (
-            config.other_optimizations.target_python_version
+            config.perf_optimizations.target_python_version
         )
         self.code_to_skip: CodeToSkipConfig = config.code_to_skip
         self.token_types_to_skip: TokenTypesToSkipConfig = config.token_types_to_skip
@@ -353,7 +311,7 @@ class AstNodeSkipper(_OpFolder):
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
         if (
-            self.other_optimizations.simplify_named_tuples
+            self.perf_optimizations.simplify_named_tuples
             and self._is_simple_named_tuple(node)
         ):
             self._simplified_named_tuple = True
@@ -424,21 +382,12 @@ class AstNodeSkipper(_OpFolder):
     ) -> ast.AST | None:
         """Handles skips for both async/regular functions"""
 
-        skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
-
-        if node.body:
-            last_body_node: ast.stmt = node.body[-1]
-            if isinstance(last_body_node, ast.Return) and (
-                is_return_none(last_body_node) or last_body_node.value is None
-            ):
-                node.body.pop()
-
         parsed_function: ast.FunctionDef | ast.AsyncFunctionDef | None = (
             self.generic_visit(node)  # type: ignore[assignment]
         )
 
         if (
-            self.code_to_fold.fold_simple_function_locals
+            self.perf_optimizations.fold_simple_function_locals
             and parsed_function is not None
         ):
             locals_folder = _FunctionFoldableLocalsFinder(
@@ -448,32 +397,11 @@ class AstNodeSkipper(_OpFolder):
 
             if locals_folder.foldable:
                 _FunctionLocalsFolder(
-                    self.code_to_fold,
-                    self.other_optimizations,
+                    self.perf_optimizations,
                     locals_folder.foldable,
                 ).visit(parsed_function)
 
         return parsed_function
-
-    def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
-            parsed_node.body
-        ):
-            return parsed_node.finalbody or None
-
-        return parsed_node
-
-    def visit_TryStar(self, node: ast.TryStar) -> ast.AST | list[ast.stmt] | None:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
-            parsed_node.body
-        ):
-            return parsed_node.finalbody or None
-
-        return parsed_node
 
     @staticmethod
     def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
@@ -482,7 +410,7 @@ class AstNodeSkipper(_OpFolder):
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
         if (
             isinstance(node.value, ast.Name)
-            and self.other_optimizations.assume_this_machine
+            and self.perf_optimizations.assume_this_machine
         ):
             attribute_key: str = f"{node.value.id}.{node.attr}"
             if attribute_key in machine_dependent_attributes:
@@ -596,8 +524,8 @@ class AstNodeSkipper(_OpFolder):
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
-        if node.id in self.code_to_fold.vars_to_fold:
-            constant_value = self.code_to_fold.vars_to_fold[node.id]
+        if node.id in self.perf_optimizations.vars_to_fold:
+            constant_value = self.perf_optimizations.vars_to_fold[node.id]
 
             return ast.Constant(constant_value)
 
@@ -616,7 +544,7 @@ class AstNodeSkipper(_OpFolder):
             if not parsed_node.orelse:
                 if self._body_is_only_pass(parsed_node.body):
                     call_finder = _DanglingExprCallFinder(
-                        self.other_optimizations.functions_safe_to_exclude_in_test_expr
+                        self.perf_optimizations.functions_safe_to_exclude_in_test_expr
                     )
                     call_finder.visit(parsed_node.test)
                     return [ast.Expr(expr) for expr in call_finder.calls]
@@ -693,7 +621,7 @@ class AstNodeSkipper(_OpFolder):
 
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
-            self.other_optimizations.assume_this_machine
+            self.perf_optimizations.assume_this_machine
             and isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)
         ):
@@ -742,7 +670,8 @@ class AstNodeSkipper(_OpFolder):
         there is no need to assign the value since its use"""
 
         return (
-            isinstance(target, ast.Name) and target.id in self.code_to_fold.vars_to_fold
+            isinstance(target, ast.Name)
+            and target.id in self.perf_optimizations.vars_to_fold
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:
@@ -880,11 +809,10 @@ class _FunctionLocalsFolder(_OpFolder):
 
     def __init__(
         self,
-        code_to_fold: CodeToFoldConfig,
-        other_optimizations: OtherOptimizationsConfig,
+        perf_optimizations: PerfOptimizationsConfig,
         folds: dict[str, ast.Constant],
     ) -> None:
-        super().__init__(code_to_fold, other_optimizations)
+        super().__init__(perf_optimizations, perf_optimizations)
         self.folds: dict[str, ast.Constant] = folds
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:

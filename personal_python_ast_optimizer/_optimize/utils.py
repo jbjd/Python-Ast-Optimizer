@@ -9,6 +9,10 @@ from personal_python_ast_optimizer.config import TokensToSkip
 _logger = get_logger()
 
 
+def is_return_literal_none(node: ast.Return) -> bool:
+    return isinstance(node.value, ast.Constant) and node.value.value is None
+
+
 def get_name_or_full_attribute(node: ast.AST) -> str | None:
     if isinstance(node, ast.Name):
         return node.id

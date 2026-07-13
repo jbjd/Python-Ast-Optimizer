@@ -1,10 +1,9 @@
 import ast
 
 from personal_python_ast_optimizer.config import (
-    CodeToFoldConfig,
     CodeToSkipConfig,
     OptimizeConfig,
-    OtherOptimizationsConfig,
+    PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
 )
@@ -29,40 +28,36 @@ class OptimizeOutputError(Exception):
 # TODO: deprecate BeforeAndAfter
 def optimize_and_assert_correctness_old(
     before_and_after: BeforeAndAfter,
-    code_to_fold: CodeToFoldConfig | None = None,
     code_to_skip: CodeToSkipConfig | None = None,
     token_types_to_skip: TokenTypesToSkipConfig | None = None,
     tokens_to_skip: TokensToSkipConfig | None = None,
-    other_optimizations: OtherOptimizationsConfig | None = None,
+    perf_optimizations: PerfOptimizationsConfig | None = None,
 ):
     optimize_and_assert_correctness(
         before_and_after.before,
         before_and_after.after,
-        code_to_fold,
         code_to_skip,
         token_types_to_skip,
         tokens_to_skip,
-        other_optimizations,
+        perf_optimizations,
     )
 
 
 def optimize_and_assert_correctness(
     source: str,
     expected: str,
-    code_to_fold: CodeToFoldConfig | None = None,
     code_to_skip: CodeToSkipConfig | None = None,
     token_types_to_skip: TokenTypesToSkipConfig | None = None,
     tokens_to_skip: TokensToSkipConfig | None = None,
-    other_optimizations: OtherOptimizationsConfig | None = None,
+    perf_optimizations: PerfOptimizationsConfig | None = None,
 ):
     optimized_code: str = optimize_source_and_minify(
         source,
         OptimizeConfig(
-            code_to_fold=code_to_fold,
             code_to_skip=code_to_skip,
             tokens_to_skip=tokens_to_skip,
             token_types_to_skip=token_types_to_skip,
-            other_optimizations=other_optimizations,
+            perf_optimizations=perf_optimizations,
         ),
     )
 

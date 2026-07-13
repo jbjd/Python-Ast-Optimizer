@@ -10,6 +10,7 @@ from personal_python_ast_optimizer._optimize.base import AstNodeTransformerBase
 from personal_python_ast_optimizer._optimize.utils import (
     TokensToSkipTracker,
     get_name_or_full_attribute,
+    is_return_literal_none,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
@@ -260,6 +261,7 @@ class FirstPassOptimizer(OptimizationPass):
     __slots__ = (
         "_node_context",
         "_unneeded_futures",
+        "collection_concat_to_unpack",
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_generics_and_alias",
@@ -267,13 +269,14 @@ class FirstPassOptimizer(OptimizationPass):
         "skip_type_hints",
         "skip_typing_cast",
         "skip_useless_else",
-        "user_tokens_to_skip",
+        "tokens_to_skip",
     )
 
     def __init__(
         self,
         tokens_to_skip: TokensToSkipTracker,
         fold_constants: bool,
+        collection_concat_to_unpack: bool,
         skip_dangling_expressions: bool,
         skip_type_hints: TypeHintsToSkip,
         skip_generics_and_alias: bool,
@@ -283,6 +286,7 @@ class FirstPassOptimizer(OptimizationPass):
         skip_useless_else: bool,
     ) -> None:
         super().__init__(fold_constants)
+        self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
@@ -317,7 +321,9 @@ class FirstPassOptimizer(OptimizationPass):
     def _handle_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
-        if self.skip_overload_functions and self._is_overload_function(node):
+        if (
+            self.skip_overload_functions and self._is_overload_function(node)
+        ) or self.tokens_to_skip.functions.should_skip(node.name):
             return None
 
         if self.skip_type_hints:
@@ -325,7 +331,24 @@ class FirstPassOptimizer(OptimizationPass):
 
         self._skip_decorators(node)
 
-        return self._visit_with_context(node, _NodeContext.FUNCTION)
+        parsed_node: ast.AST | None = self._visit_with_context(
+            node, _NodeContext.FUNCTION
+        )
+
+        if (
+            isinstance(parsed_node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and isinstance(parsed_node.body[-1], ast.Return)
+            and (
+                is_return_literal_none(parsed_node.body[-1])
+                or parsed_node.body[-1].value is None
+            )
+        ):
+            if len(parsed_node.body) > 1:
+                parsed_node.body.pop()
+            else:
+                parsed_node.body[0] = ast.Pass()
+
+        return parsed_node
 
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
         if self.tokens_to_skip.classes:
@@ -400,7 +423,23 @@ class FirstPassOptimizer(OptimizationPass):
 
         return self.generic_visit(node)
 
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
+        node.targets = [
+            t
+            for t in node.targets
+            if not self.tokens_to_skip.assignments.should_skip(
+                get_name_or_full_attribute(t)
+            )
+        ]
+
+        return self.generic_visit(node) if node.targets else None
+
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
+        if self.tokens_to_skip.assignments.should_skip(
+            get_name_or_full_attribute(node.target)
+        ):
+            return None
+
         if self.skip_type_hints == TypeHintsToSkip.ALL or (
             self.skip_type_hints == TypeHintsToSkip.ALL_BUT_CLASS_VARS
             and self._node_context != _NodeContext.CLASS
@@ -414,7 +453,7 @@ class FirstPassOptimizer(OptimizationPass):
         return self.generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> ast.AST | None:
-        if isinstance(node.value, ast.Constant) and node.value.value is None:
+        if is_return_literal_none(node):
             node.value = None
             return node
 
@@ -439,6 +478,31 @@ class FirstPassOptimizer(OptimizationPass):
     # such as an empty if body
     def visit_Pass(self, _: ast.Pass) -> ast.AST | None:
         return None
+
+    def visit_BinOp(self, node: ast.BinOp) -> ast.AST | None:
+        parsed_node: ast.AST | None = super().visit_BinOp(node)
+
+        if (
+            self.collection_concat_to_unpack
+            and isinstance(parsed_node, ast.BinOp)
+            and isinstance(parsed_node.op, ast.Add)
+            and (
+                isinstance(parsed_node.left, (ast.Tuple, ast.List))
+                or isinstance(parsed_node.right, (ast.Tuple, ast.List))
+            )
+        ):
+            if type(parsed_node.left) is type(parsed_node.right):
+                parsed_node.left.elts += parsed_node.right.elts
+                return parsed_node.left
+
+            if isinstance(parsed_node.left, (ast.Tuple, ast.List)):
+                parsed_node.left.elts.append(ast.Starred(parsed_node.right))
+                return parsed_node.left
+
+            parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
+            return parsed_node.right
+
+        return parsed_node
 
     def _visit_with_context(
         self, node: ast.AST, context: _NodeContext

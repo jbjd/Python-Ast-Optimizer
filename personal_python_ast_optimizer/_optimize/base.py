@@ -67,6 +67,8 @@ class AstNodeVisitorBase(_AstNodeVisitorProtocol):
 class AstNodeTransformerBase(_AstNodeVisitorProtocol):
     """Base class for ast node transformers."""
 
+    __slots__ = ()
+
     def visit(self, node: ast.AST) -> ast.AST | None:
         """Visits `node`."""
         method = "visit_" + node.__class__.__name__

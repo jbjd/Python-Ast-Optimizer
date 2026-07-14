@@ -79,6 +79,18 @@ except:raise OSError
 if test():pass""",
         "try:foo()\nexcept:raise OSError\ntest()",
     ),
+    BeforeAndAfter(
+        """
+'a' if 'True' == b else 'b'
+a='a' if 1==1 else 'b'
+b='a' if 1==2 else 'b'
+""",
+        """
+'a'if'True'==b else'b'
+a='a'
+b='b'
+""".strip(),
+    ),
 ]
 
 

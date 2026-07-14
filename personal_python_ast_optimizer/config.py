@@ -136,7 +136,7 @@ class PerfOptimizationsConfig:
         "fold_constants",
         "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
-        "simplify_named_tuples",
+        "simplify_named_tuple",
         "vars_to_fold",
     )
 
@@ -148,7 +148,7 @@ class PerfOptimizationsConfig:
         vars_to_fold: dict[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
-        simplify_named_tuples: bool = False,
+        simplify_named_tuple: bool = False,
     ) -> None:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
@@ -164,7 +164,7 @@ class PerfOptimizationsConfig:
         )
 
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
-        self.simplify_named_tuples: bool = simplify_named_tuples
+        self.simplify_named_tuple: bool = simplify_named_tuple
 
 
 class OptimizeConfig:

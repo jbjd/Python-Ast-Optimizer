@@ -48,6 +48,7 @@ def optimize_module(
         tokens_to_skip_tracker,
         perf_optimizations.fold_constants,
         perf_optimizations.collection_concat_to_unpack,
+        perf_optimizations.simplify_named_tuple,
         token_types_to_skip.skip_dangling_expressions,
         token_types_to_skip.skip_type_hints,
         token_types_to_skip.skip_generics_and_alias,

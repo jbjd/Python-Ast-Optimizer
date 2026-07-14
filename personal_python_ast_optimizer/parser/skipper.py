@@ -310,9 +310,8 @@ class AstNodeSkipper(_OpFolder):
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
-        if (
-            self.perf_optimizations.simplify_named_tuples
-            and self._is_simple_named_tuple(node)
+        if self.perf_optimizations.simplify_named_tuple and self._is_simple_named_tuple(
+            node
         ):
             self._simplified_named_tuple = True
             named_tuple = self._build_named_tuple(node)

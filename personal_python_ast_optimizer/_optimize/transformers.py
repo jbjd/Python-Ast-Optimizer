@@ -254,6 +254,15 @@ class _NodeContext(Enum):
     FUNCTION = 2
 
 
+class _SimplifyNamedTuple(Enum):
+    NO = 0
+    YES = 1
+    FOUND = 2
+
+    def __bool__(self) -> bool:
+        return self != _SimplifyNamedTuple.NO
+
+
 class FirstPassOptimizer(OptimizationPass):
     """Removes All nodes that only need to be removed once and can't be
     optimized into removal later. Intened to be called once as a first pass."""
@@ -262,6 +271,7 @@ class FirstPassOptimizer(OptimizationPass):
         "_node_context",
         "_unneeded_futures",
         "collection_concat_to_unpack",
+        "simplify_named_tuple",
         "skip_asserts",
         "skip_dangling_expressions",
         "skip_generics_and_alias",
@@ -277,6 +287,7 @@ class FirstPassOptimizer(OptimizationPass):
         tokens_to_skip: TokensToSkipTracker,
         fold_constants: bool,
         collection_concat_to_unpack: bool,
+        simplify_named_tuple: bool,
         skip_dangling_expressions: bool,
         skip_type_hints: TypeHintsToSkip,
         skip_generics_and_alias: bool,
@@ -287,6 +298,9 @@ class FirstPassOptimizer(OptimizationPass):
     ) -> None:
         super().__init__(fold_constants)
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
+        self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
+            simplify_named_tuple
+        )
         self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
@@ -311,6 +325,24 @@ class FirstPassOptimizer(OptimizationPass):
             return
 
         super()._on_visited_node_add_to_new_values(new_nodes, node)
+
+    def visit_Module(self, node: ast.Module) -> ast.AST:
+        self.generic_visit(node)
+
+        if self.simplify_named_tuple == _SimplifyNamedTuple.FOUND:
+            handled: bool = False
+            alias = ast.alias("namedtuple")
+            for n in node.body:
+                if isinstance(n, ast.ImportFrom) and n.module == "collections":
+                    if not any(alias.name == "namedtuple" for alias in n.names):
+                        n.names.append(alias)
+                    handled = True
+                    break
+
+            if not handled:
+                node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
+
+        return node
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -365,7 +397,28 @@ class FirstPassOptimizer(OptimizationPass):
 
         self._skip_decorators(node)
 
-        return self._visit_with_context(node, _NodeContext.CLASS)
+        parsed_node: ast.AST | None = self._visit_with_context(node, _NodeContext.CLASS)
+
+        if (
+            self.simplify_named_tuple
+            and isinstance(parsed_node, ast.ClassDef)
+            and (
+                len(node.bases) == 1
+                and isinstance(node.bases[0], ast.Name)
+                and node.bases[0].id == "NamedTuple"
+                and not node.keywords
+                and not node.decorator_list
+                and all(
+                    isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name)
+                    for n in node.body
+                )
+            )
+        ):
+            self.simplify_named_tuple = _SimplifyNamedTuple.FOUND
+            named_tuple: ast.Call = self._build_named_tuple(node)
+            return ast.Assign([ast.Name(node.name)], named_tuple)
+
+        return parsed_node
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = super().visit_If(node)
@@ -483,8 +536,7 @@ class FirstPassOptimizer(OptimizationPass):
         parsed_node: ast.AST | None = super().visit_BinOp(node)
 
         if (
-            self.collection_concat_to_unpack
-            and isinstance(parsed_node, ast.BinOp)
+            isinstance(parsed_node, ast.BinOp)
             and isinstance(parsed_node.op, ast.Add)
             and (
                 isinstance(parsed_node.left, (ast.Tuple, ast.List))
@@ -495,12 +547,13 @@ class FirstPassOptimizer(OptimizationPass):
                 parsed_node.left.elts += parsed_node.right.elts
                 return parsed_node.left
 
-            if isinstance(parsed_node.left, (ast.Tuple, ast.List)):
-                parsed_node.left.elts.append(ast.Starred(parsed_node.right))
-                return parsed_node.left
+            if self.collection_concat_to_unpack:
+                if isinstance(parsed_node.left, (ast.Tuple, ast.List)):
+                    parsed_node.left.elts.append(ast.Starred(parsed_node.right))
+                    return parsed_node.left
 
-            parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
-            return parsed_node.right
+                parsed_node.right.elts.insert(0, ast.Starred(parsed_node.left))  # type: ignore[attr-defined]
+                return parsed_node.right
 
         return parsed_node
 
@@ -526,6 +579,42 @@ class FirstPassOptimizer(OptimizationPass):
                     get_name_or_full_attribute(n)
                 )
             ]
+
+    @staticmethod
+    def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
+        """Build what a namedtuple node would  be for a given
+        class def inheriting from NamedTuple with only AnnAssigns in the body."""
+
+        defaults: list[ast.expr]
+
+        if node.body:
+            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
+
+            for i in range(1, len(node.body)):
+                assign: ast.AnnAssign = node.body[i]  # type: ignore[assignment]
+                if assign.value is not None:
+                    defaults.append(assign.value)
+                elif node.body[i - 1].value is not None:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        f'namedtuple "{node.name}" has '
+                        "non-default following a default field"
+                    )
+
+        else:
+            defaults = []
+
+        keywords: list[ast.keyword] = (
+            [ast.keyword("defaults", ast.List(defaults))] if defaults else []
+        )
+
+        return ast.Call(
+            ast.Name("namedtuple"),
+            [
+                ast.Constant(node.name),
+                ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore[attr-defined]
+            ],
+            keywords,
+        )
 
     @staticmethod
     def _is_overload_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

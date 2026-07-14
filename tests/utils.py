@@ -1,5 +1,7 @@
 import ast
 
+import pytest
+
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     OptimizeConfig,
@@ -41,6 +43,27 @@ def optimize_and_assert_correctness_old(
         tokens_to_skip,
         perf_optimizations,
     )
+
+
+def optimize_expect_error(
+    source: str,
+    error: BaseException,
+    expected_message: str,
+    code_to_skip: CodeToSkipConfig | None = None,
+    token_types_to_skip: TokenTypesToSkipConfig | None = None,
+    tokens_to_skip: TokensToSkipConfig | None = None,
+    perf_optimizations: PerfOptimizationsConfig | None = None,
+):
+    with pytest.raises(error, match=expected_message):
+        optimize_source_and_minify(
+            source,
+            OptimizeConfig(
+                code_to_skip=code_to_skip,
+                tokens_to_skip=tokens_to_skip,
+                token_types_to_skip=token_types_to_skip,
+                perf_optimizations=perf_optimizations,
+            ),
+        )
 
 
 def optimize_and_assert_correctness(

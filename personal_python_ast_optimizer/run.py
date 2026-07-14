@@ -7,7 +7,7 @@ from personal_python_ast_optimizer._optimize.transformers import (
     LastPassOptimizer,
     OptimizationPass,
 )
-from personal_python_ast_optimizer._optimize.utils import TokensToSkipTracker
+from personal_python_ast_optimizer._optimize.utils import TokensTracker
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
     OptimizeConfig,
@@ -35,13 +35,14 @@ def optimize_module(
     token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
     perf_optimizations: PerfOptimizationsConfig = skip_config.perf_optimizations
 
-    tokens_to_skip_tracker = TokensToSkipTracker(
+    tokens_to_skip_tracker = TokensTracker(
         tokens_to_skip.assignments_to_skip,
         tokens_to_skip.classes_to_skip,
         tokens_to_skip.decorators_to_skip,
         tokens_to_skip.from_imports_to_skip,
         tokens_to_skip.functions_to_skip,
         tokens_to_skip.module_imports_to_skip,
+        perf_optimizations.names_to_fold,
     )
 
     first_pass = FirstPassOptimizer(

@@ -15,7 +15,7 @@ _not_cases = [
 def test_not(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        perf_optimizations=PerfOptimizationsConfig(vars_to_fold={"__debug__": False}),
+        perf_optimizations=PerfOptimizationsConfig(names_to_fold={"__debug__": False}),
     )
 
 

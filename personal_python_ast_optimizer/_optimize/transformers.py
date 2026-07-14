@@ -8,8 +8,9 @@ from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstNodeTransformerBase
 from personal_python_ast_optimizer._optimize.utils import (
-    TokensToSkipTracker,
-    get_name_or_full_attribute,
+    TokensTracker,
+    get_full_attribute_id,
+    get_name_or_full_attribute_id,
     is_return_literal_none,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
@@ -284,7 +285,7 @@ class FirstPassOptimizer(OptimizationPass):
 
     def __init__(
         self,
-        tokens_to_skip: TokensToSkipTracker,
+        tokens_to_skip: TokensTracker,
         fold_constants: bool,
         collection_concat_to_unpack: bool,
         simplify_named_tuple: bool,
@@ -301,7 +302,7 @@ class FirstPassOptimizer(OptimizationPass):
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
             simplify_named_tuple
         )
-        self.tokens_to_skip: TokensToSkipTracker = tokens_to_skip
+        self.tokens_tracker: TokensTracker = tokens_to_skip
         self.skip_dangling_expressions: bool = skip_dangling_expressions
         self.skip_type_hints: TypeHintsToSkip = skip_type_hints
         self.skip_generics_and_alias: bool = skip_generics_and_alias and bool(
@@ -355,7 +356,7 @@ class FirstPassOptimizer(OptimizationPass):
     ) -> ast.AST | None:
         if (
             self.skip_overload_functions and self._is_overload_function(node)
-        ) or self.tokens_to_skip.functions.should_skip(node.name):
+        ) or self.tokens_tracker.functions_to_skip.has(node.name):
             return None
 
         if self.skip_type_hints:
@@ -383,15 +384,15 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        if self.tokens_to_skip.classes:
-            if self.tokens_to_skip.classes.should_skip(node.name):
+        if self.tokens_tracker.classes_to_skip:
+            if self.tokens_tracker.classes_to_skip.has(node.name):
                 return None
 
             node.bases = [
                 base
                 for base in node.bases
-                if not self.tokens_to_skip.classes.should_skip(
-                    get_name_or_full_attribute(base)
+                if not self.tokens_tracker.classes_to_skip.has(
+                    get_name_or_full_attribute_id(base)
                 )
             ]
 
@@ -438,7 +439,7 @@ class FirstPassOptimizer(OptimizationPass):
         node.names = [
             alias
             for alias in node.names
-            if not self.tokens_to_skip.module_imports.should_skip(
+            if not self.tokens_tracker.module_imports_to_skip.has(
                 alias.name if alias.asname is None else alias.asname
             )
         ]
@@ -449,7 +450,7 @@ class FirstPassOptimizer(OptimizationPass):
         node.names = [
             alias
             for alias in node.names
-            if not self.tokens_to_skip.from_imports.should_skip(
+            if not self.tokens_tracker.from_imports_to_skip.has(
                 (
                     ("." * node.level) + (node.module or ""),
                     alias.name if alias.asname is None else alias.asname,
@@ -480,17 +481,19 @@ class FirstPassOptimizer(OptimizationPass):
         node.targets = [
             t
             for t in node.targets
-            if not self.tokens_to_skip.assignments.should_skip(
-                get_name_or_full_attribute(t)
+            if not self.tokens_tracker.names_to_fold.has(
+                t_name := get_name_or_full_attribute_id(t)
             )
+            and not self.tokens_tracker.assignments_to_skip.has(t_name)
         ]
 
         return self.generic_visit(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
-        if self.tokens_to_skip.assignments.should_skip(
-            get_name_or_full_attribute(node.target)
-        ):
+        node_name: str | None = get_name_or_full_attribute_id(node.target)
+        if self.tokens_tracker.names_to_fold.has(
+            node_name
+        ) or self.tokens_tracker.assignments_to_skip.has(node_name):
             return None
 
         if self.skip_type_hints == TypeHintsToSkip.ALL or (
@@ -557,6 +560,19 @@ class FirstPassOptimizer(OptimizationPass):
 
         return parsed_node
 
+    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute | ast.Constant:
+        full_attr_id: str = get_full_attribute_id(node)
+        if self.tokens_tracker.names_to_fold.has(full_attr_id):
+            return ast.Constant(self.tokens_tracker.names_to_fold.get(full_attr_id))
+
+        return node
+
+    def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+        if self.tokens_tracker.names_to_fold.has(node.id):
+            return ast.Constant(self.tokens_tracker.names_to_fold.get(node.id))
+
+        return node
+
     def _visit_with_context(
         self, node: ast.AST, context: _NodeContext
     ) -> ast.AST | None:
@@ -571,22 +587,19 @@ class FirstPassOptimizer(OptimizationPass):
         self,
         node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> None:
-        if self.tokens_to_skip.decorators:
+        if self.tokens_tracker.decorators_to_skip:
             node.decorator_list = [
                 n
                 for n in node.decorator_list
-                if not self.tokens_to_skip.decorators.should_skip(
-                    get_name_or_full_attribute(n)
+                if not self.tokens_tracker.decorators_to_skip.has(
+                    get_name_or_full_attribute_id(n)
                 )
             ]
 
     @staticmethod
     def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
-        """Build what a namedtuple node would  be for a given
-        class def inheriting from NamedTuple with only AnnAssigns in the body."""
 
         defaults: list[ast.expr]
-
         if node.body:
             defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
 

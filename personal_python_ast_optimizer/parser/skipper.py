@@ -16,15 +16,11 @@ from personal_python_ast_optimizer.parser._base import (
     AstNodeVisitorBase,
 )
 from personal_python_ast_optimizer.parser.machine_info import (
-    machine_dependent_attributes,
     machine_dependent_functions,
 )
 from personal_python_ast_optimizer.parser.utils import (
     exclude_imports,
-    filter_imports,
-    first_occurrence_of_type,
     get_node_name,
-    is_return_none,
     skip_decorators,
 )
 
@@ -172,7 +168,6 @@ class AstNodeSkipper(_OpFolder):
     __slots__ = (
         "_has_imports",
         "_node_context",
-        "_simplified_named_tuple",
         "code_to_skip",
         "module_name",
         "target_python_version",
@@ -192,7 +187,6 @@ class AstNodeSkipper(_OpFolder):
         self.tokens_to_skip: TokensToSkipConfig = config.tokens_to_skip
 
         self._has_imports: bool = False
-        self._simplified_named_tuple: bool = False
         self._node_context: _NodeContext = _NodeContext.NONE
 
     @staticmethod
@@ -280,94 +274,11 @@ class AstNodeSkipper(_OpFolder):
 
         return node
 
-    def visit_Module(self, node: ast.Module) -> ast.AST:
-        self.generic_visit(node)
-
-        if self._simplified_named_tuple:
-            import_to_update: ast.ImportFrom | None = None
-            for n in node.body:
-                if isinstance(n, ast.ImportFrom) and n.module == "collections":
-                    if any(alias.name == "namedtuple" for alias in n.names):
-                        break
-                    if import_to_update is None:
-                        import_to_update = n
-            else:  # namedtuple was not already imported
-                alias = ast.alias("namedtuple")
-                if import_to_update is None:
-                    node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
-                else:
-                    import_to_update.names.append(alias)
-
-        if self.code_to_skip.skip_unused_imports and self._has_imports:
-            import_filter = UnusedImportSkipper(
-                self.code_to_skip.unused_imports_to_preserve
-            )
-            import_filter.visit(node)
-
-        return node
-
     @_within_class_node
     def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
         skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
 
-        if self.perf_optimizations.simplify_named_tuple and self._is_simple_named_tuple(
-            node
-        ):
-            self._simplified_named_tuple = True
-            named_tuple = self._build_named_tuple(node)
-            return ast.Assign([ast.Name(node.name)], named_tuple)
-
         return self.generic_visit(node)
-
-    @staticmethod
-    def _is_simple_named_tuple(node: ast.ClassDef) -> bool:
-        return (
-            len(node.bases) == 1
-            and isinstance(node.bases[0], ast.Name)
-            and node.bases[0].id == "NamedTuple"
-            and not node.keywords
-            and not node.decorator_list
-            and all(
-                isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name)
-                for n in node.body
-            )
-        )
-
-    @staticmethod
-    def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
-        """Build what a namedtuple node would  be for a given
-        class def inheriting from NamedTuple with only AnnAssigns in the body."""
-
-        defaults: list[ast.expr]
-
-        if node.body:
-            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
-
-            for i in range(1, len(node.body)):
-                assign: ast.AnnAssign = node.body[i]  # type: ignore[assignment]
-                if assign.value is not None:
-                    defaults.append(assign.value)
-                elif node.body[i - 1].value is not None:  # type: ignore[attr-defined]
-                    raise ValueError(
-                        f'Non-default namedtuple "{node.name}" field '
-                        f'"{get_node_name(assign.target)}" cannot follow default field'
-                    )
-
-        else:
-            defaults = []
-
-        keywords: list[ast.keyword] = (
-            [ast.keyword("defaults", ast.List(defaults))] if defaults else []
-        )
-
-        return ast.Call(
-            ast.Name("namedtuple"),
-            [
-                ast.Constant(node.name),
-                ast.List([ast.Constant(n.target.id) for n in node.body]),  # type: ignore[attr-defined]
-            ],
-            keywords,
-        )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
@@ -406,55 +317,13 @@ class AstNodeSkipper(_OpFolder):
     def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
         return all(isinstance(n, ast.Pass) for n in node_body)
 
-    def visit_Attribute(self, node: ast.Attribute) -> ast.AST | None:
-        if (
-            isinstance(node.value, ast.Name)
-            and self.perf_optimizations.assume_this_machine
-        ):
-            attribute_key: str = f"{node.value.id}.{node.attr}"
-            if attribute_key in machine_dependent_attributes:
-                return ast.Constant(machine_dependent_attributes[attribute_key])
-
-        return self.generic_visit(node)
-
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         """Skips assign if it is an assignment to a constant that is being folded"""
         if self._should_skip_function_assign(node):
             return None
 
         if isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple):
-            # TODO: handle skipping Starred vars
-            target_elts = node.targets[0].elts
-            original_target_len = len(target_elts)
-
-            # Weird edge case: unpack contains a starred expression like *a,b = 1,2,3
-            # Need to use negative indexes if a bad index comes after one of these
-            starred_expr_index: int = first_occurrence_of_type(target_elts, ast.Starred)
-            bad_indexes: list[int] = [
-                (
-                    i
-                    if starred_expr_index == -1 or i < starred_expr_index
-                    else original_target_len - i - 1
-                )
-                for i in range(len(target_elts))
-                if self._is_assign_of_folded_constant(target_elts[i])
-            ]
-
-            node.targets[0].elts = [
-                target for i, target in enumerate(target_elts) if i not in bad_indexes
-            ]
-            node.value.elts = [
-                target
-                for i, target in enumerate(node.value.elts)
-                if i not in bad_indexes
-            ]
-
-            if not node.targets[0].elts:
-                return None
-            if len(node.targets[0].elts) == 1:
-                node.targets = [node.targets[0].elts[0]]
-            if len(node.value.elts) == 1:
-                node.value = node.value.elts[0]
+            pass
         else:
             new_targets: list[ast.expr] = [
                 target
@@ -523,8 +392,8 @@ class AstNodeSkipper(_OpFolder):
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Extends super's implementation by adding constant folding"""
-        if node.id in self.perf_optimizations.vars_to_fold:
-            constant_value = self.perf_optimizations.vars_to_fold[node.id]
+        if node.id in self.perf_optimizations.names_to_fold:
+            constant_value = self.perf_optimizations.names_to_fold[node.id]
 
             return ast.Constant(constant_value)
 
@@ -585,39 +454,6 @@ class AstNodeSkipper(_OpFolder):
 
         return parsed_node
 
-    def visit_While(self, node: ast.While) -> ast.AST | None:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.While) and isinstance(
-            parsed_node.test, ast.Constant
-        ):
-            if not parsed_node.test.value:
-                return None
-
-            # 1 is faster than True in python 2
-            # They are the same in python 3, but less size
-            parsed_node.test.value = 1
-
-        return parsed_node
-
-    def visit_Return(self, node: ast.Return) -> ast.AST:
-        if is_return_none(node):
-            node.value = None
-            return node
-
-        return self.generic_visit(node)
-
-    def visit_Assert(self, node: ast.Assert) -> ast.AST | None:
-        return (
-            None if self.token_types_to_skip.skip_asserts else self.generic_visit(node)
-        )
-
-    def visit_Pass(self, node: ast.Pass) -> None:  # type: ignore[override]  # noqa: ARG002
-        """Always returns None. Pass is handled elsewhere only as needed.
-
-        :param node: This is ignored"""
-        return  # This could be toggleable
-
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
             self.perf_optimizations.assume_this_machine
@@ -628,14 +464,6 @@ class AstNodeSkipper(_OpFolder):
 
             if function_call_key in machine_dependent_functions:
                 return ast.Constant(machine_dependent_functions[function_call_key])
-
-        if (
-            self.code_to_skip.skip_typing_cast
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "cast"
-            and len(node.args) == 2  # noqa: PLR2004
-        ):
-            return self.generic_visit(node.args[1])
 
         return self.generic_visit(node)
 
@@ -648,29 +476,13 @@ class AstNodeSkipper(_OpFolder):
 
         return self.generic_visit(node)
 
-    def visit_arg(self, node: ast.arg) -> ast.AST:
-        if self.token_types_to_skip.skip_type_hints:
-            node.annotation = None
-            return node
-
-        return self.generic_visit(node)
-
-    def visit_arguments(self, node: ast.arguments) -> ast.AST:
-        if self.token_types_to_skip.skip_type_hints:
-            if node.kwarg is not None:
-                node.kwarg.annotation = None
-            if node.vararg is not None:
-                node.vararg.annotation = None
-
-        return self.generic_visit(node)
-
     def _is_assign_of_folded_constant(self, target: ast.expr) -> bool:
         """Returns if node is assignment of a value that we are folding. In this case,
         there is no need to assign the value since its use"""
 
         return (
             isinstance(target, ast.Name)
-            and target.id in self.perf_optimizations.vars_to_fold
+            and target.id in self.perf_optimizations.names_to_fold
         )
 
     def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:
@@ -678,44 +490,6 @@ class AstNodeSkipper(_OpFolder):
             isinstance(node.value, ast.Call)
             and get_node_name(node.value.func) in self.tokens_to_skip.functions_to_skip
         )
-
-    def visit_TypeVar(self, node: ast.TypeVar) -> ast.TypeVar | None:
-        return None if self.token_types_to_skip.skip_generics_and_alias else node
-
-    def visit_ParamSpec(self, node: ast.ParamSpec) -> ast.ParamSpec | None:
-        return None if self.token_types_to_skip.skip_generics_and_alias else node
-
-    def visit_TypeVarTuple(self, node: ast.TypeVarTuple) -> ast.TypeVarTuple | None:
-        return None if self.token_types_to_skip.skip_generics_and_alias else node
-
-    def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.TypeAlias | None:
-        return None if self.token_types_to_skip.skip_generics_and_alias else node
-
-
-class UnusedImportSkipper(AstNodeTransformerBase):
-    __slots__ = ("names_and_attrs",)
-
-    def __init__(self, imports_to_preserve: Iterable[str]) -> None:
-        super().__init__(reverse=True)
-        self.names_and_attrs: set[str] = set(imports_to_preserve)
-
-    def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        filter_imports(node, self.names_and_attrs)
-
-        return node if node.names else None
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
-        filter_imports(node, self.names_and_attrs)
-
-        return node if node.names else None
-
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        self.names_and_attrs.add(node.id)
-        return node
-
-    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        self.names_and_attrs.add(node.attr)
-        return self.generic_visit(node)
 
 
 class _DanglingExprCallFinder(AstNodeVisitorBase):

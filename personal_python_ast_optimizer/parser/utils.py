@@ -13,12 +13,6 @@ def exclude_imports(
         ]
 
 
-def filter_imports(node: ast.Import | ast.ImportFrom, includes: Container[str]) -> None:
-    node.names = [
-        alias for alias in node.names if (alias.asname or alias.name) in includes
-    ]
-
-
 def get_node_name(node: ast.expr) -> str:
     """Returns 'id' or 'attr' attributes or empty string if missing.
 
@@ -42,11 +36,3 @@ def skip_decorators(
             for n in node.decorator_list
             if get_node_name(n) not in decorators_to_ignore
         ]
-
-
-def first_occurrence_of_type(data: list, target_type: type) -> int:
-    for index, element in enumerate(data):
-        if isinstance(element, target_type):
-            return index
-
-    return -1

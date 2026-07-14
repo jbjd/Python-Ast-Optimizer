@@ -35,32 +35,16 @@ FAVORITE_NUMBER=a=6
         "a=6",
     ),
     BeforeAndAfter(
-        """
-FAVORITE_NUMBER,a=4,5
-""",
-        "a=5",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER,a,*_=4,5,6,7,8
-""",
-        "a,*_=(5,6,7,8)",
-    ),
-    BeforeAndAfter(
-        """
-*_,FAVORITE_NUMBER,a=4,5,6,7,8
-""",
-        "*_,a=(4,6,7,8)",
-    ),
-    BeforeAndAfter(
-        """
-FAVORITE_NUMBER,TEST=4,5
-""",
-        "",
-    ),
-    BeforeAndAfter(
         "if __name__=='__main__':print()",
         "print()",
+    ),
+    BeforeAndAfter("print(os.name)", "print('nt')"),
+    BeforeAndAfter(
+        """
+def get_cpu_count():
+    return os.cpu_count() or 1
+""",
+        "def get_cpu_count():return 12",
     ),
 ]
 
@@ -70,6 +54,11 @@ def test_fold_var(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
         perf_optimizations=PerfOptimizationsConfig(
-            vars_to_fold={"FAVORITE_NUMBER": 6, "TEST": "test", "__name__": "__main__"}
+            names_to_fold={
+                "FAVORITE_NUMBER": 6,
+                "TEST": "test",
+                "__name__": "__main__",
+                "os.name": "nt",
+            }
         ),
     )

@@ -5,6 +5,7 @@ from collections.abc import Iterator
 
 from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer.config import TokensToSkip
+from personal_python_ast_optimizer.typing import FoldableConstant
 
 _logger = get_logger()
 
@@ -13,13 +14,17 @@ def is_return_literal_none(node: ast.Return) -> bool:
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
-def get_name_or_full_attribute(node: ast.AST) -> str | None:
+def get_name_or_full_attribute_id(node: ast.AST) -> str | None:
     if isinstance(node, ast.Name):
         return node.id
 
     if not isinstance(node, ast.Attribute):
         return None
 
+    return get_full_attribute_id(node)
+
+
+def get_full_attribute_id(node: ast.Attribute) -> str:
     all_attributes: list[ast.Attribute | ast.Name] = [node]
 
     child: ast.expr = node.value
@@ -64,7 +69,7 @@ class _TokensToSkipVisitCounter[T]:
             if v == 0:
                 yield str(k)
 
-    def should_skip(self, key: object) -> bool:
+    def has(self, key: object) -> bool:
         if key in self._tokens_to_skip:
             self._tokens_to_skip[key] = _VISITED
             return True
@@ -72,31 +77,45 @@ class _TokensToSkipVisitCounter[T]:
         return False
 
 
-class TokensToSkipTracker:
+class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter):
+    def __init__(
+        self, tokens_to_skip: TokensToSkip[dict[str, FoldableConstant]]
+    ) -> None:
+        super().__init__(tokens_to_skip)
+        self.map: dict[str, FoldableConstant] = tokens_to_skip.tokens
+
+    def get(self, key: str) -> FoldableConstant:
+        return self.map[key]
+
+
+class TokensTracker:
     __slots__ = (
-        "assignments",
-        "classes",
-        "decorators",
-        "from_imports",
-        "functions",
-        "module_imports",
+        "assignments_to_skip",
+        "classes_to_skip",
+        "decorators_to_skip",
+        "from_imports_to_skip",
+        "functions_to_skip",
+        "module_imports_to_skip",
+        "names_to_fold",
     )
 
     def __init__(
         self,
-        assignments: TokensToSkip | None,
-        classes: TokensToSkip | None,
-        decorators: TokensToSkip | None,
-        from_imports: TokensToSkip | None,
-        functions: TokensToSkip | None,
-        module_imports: TokensToSkip | None,
+        assignments_to_skip: TokensToSkip | None,
+        classes_to_skip: TokensToSkip | None,
+        decorators_to_skip: TokensToSkip | None,
+        from_imports_to_skip: TokensToSkip | None,
+        functions_to_skip: TokensToSkip | None,
+        module_imports_to_skip: TokensToSkip | None,
+        names_to_fold: TokensToSkip[dict[str, FoldableConstant]] | None,
     ) -> None:
-        self.assignments = _TokensToSkipVisitCounter(assignments)
-        self.classes = _TokensToSkipVisitCounter(classes)
-        self.decorators = _TokensToSkipVisitCounter(decorators)
-        self.from_imports = _TokensToSkipVisitCounter(from_imports)
-        self.functions = _TokensToSkipVisitCounter(functions)
-        self.module_imports = _TokensToSkipVisitCounter(module_imports)
+        self.assignments_to_skip = _TokensToSkipVisitCounter(assignments_to_skip)
+        self.classes_to_skip = _TokensToSkipVisitCounter(classes_to_skip)
+        self.decorators_to_skip = _TokensToSkipVisitCounter(decorators_to_skip)
+        self.from_imports_to_skip = _TokensToSkipVisitCounter(from_imports_to_skip)
+        self.functions_to_skip = _TokensToSkipVisitCounter(functions_to_skip)
+        self.module_imports_to_skip = _TokensToSkipVisitCounter(module_imports_to_skip)
+        self.names_to_fold = _TokensToFoldVisitCounter(names_to_fold)
 
     def warn_not_found_skips(self, file_name: str) -> None:
         for attribute in self.__slots__:

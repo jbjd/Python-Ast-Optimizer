@@ -2,8 +2,6 @@ import ast
 
 
 class AstNodeVisitorBase:
-    """Base class for ast node visitors. Intended for internal use."""
-
     __slots__ = ()
 
     def visit(self, node: ast.AST) -> ast.AST:
@@ -27,8 +25,6 @@ class AstNodeVisitorBase:
 
 
 class AstNodeTransformerBase(AstNodeVisitorBase):
-    """Base class for ast node transformers. Intended for internal use."""
-
     __slots__ = ("reverse",)
 
     def __init__(self, reverse: bool = False) -> None:

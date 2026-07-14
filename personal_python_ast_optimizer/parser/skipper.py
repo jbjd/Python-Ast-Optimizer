@@ -1,8 +1,5 @@
 import ast
 import os
-from collections.abc import Callable, Iterable
-from enum import Enum
-from typing import Self
 
 from personal_python_ast_optimizer.config import (
     CodeToSkipConfig,
@@ -15,15 +12,8 @@ from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
     AstNodeVisitorBase,
 )
-from personal_python_ast_optimizer.parser.utils import get_node_name, skip_decorators
 
 machine_dependent_functions: dict[str, int | None] = {"os.cpu_count": os.cpu_count()}
-
-
-class _NodeContext(Enum):
-    NONE = 0
-    CLASS = 1
-    FUNCTION = 2
 
 
 class _OpFolder(AstNodeTransformerBase):
@@ -60,40 +50,8 @@ class AstNodeSkipper(_OpFolder):
         self.tokens_to_skip: TokensToSkipConfig = config.tokens_to_skip
 
         self._has_imports: bool = False
-        self._node_context: _NodeContext = _NodeContext.NONE
-
-    @staticmethod
-    def _within_class_node[*Ts, R](
-        function: Callable[["AstNodeSkipper", *Ts], R],
-    ) -> Callable[["AstNodeSkipper", *Ts], R]:
-        def wrapper(self: Self, *args: *Ts) -> R:
-            previous_value: _NodeContext = self._node_context
-            self._node_context = _NodeContext.CLASS
-            try:
-                return function(self, *args)
-            finally:
-                self._node_context = previous_value
-
-        return wrapper
-
-    @staticmethod
-    def _within_function_node[*Ts, R](
-        function: Callable[["AstNodeSkipper", *Ts], R],
-    ) -> Callable[["AstNodeSkipper", *Ts], R]:
-        def wrapper(self: Self, *args: *Ts) -> R:
-            # In case we have a function in a function
-            previous_value: _NodeContext = self._node_context
-            self._node_context = _NodeContext.FUNCTION
-            try:
-                return function(self, *args)
-            finally:
-                self._node_context = previous_value
-
-        return wrapper
 
     def generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
-        """Modified version of super class's generic_visit
-        to extend functionality"""
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values: list = []
@@ -147,23 +105,15 @@ class AstNodeSkipper(_OpFolder):
 
         return node
 
-    @_within_class_node
-    def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | None:
-        skip_decorators(node, self.tokens_to_skip.decorators_to_skip)
-
-        return self.generic_visit(node)
-
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
         return self._handle_function_node(node)
 
-    @_within_function_node
     def _handle_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
-        """Handles skips for both async/regular functions"""
 
         parsed_function: ast.FunctionDef | ast.AsyncFunctionDef | None = (
             self.generic_visit(node)  # type: ignore[assignment]
@@ -190,45 +140,6 @@ class AstNodeSkipper(_OpFolder):
     def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
         return all(isinstance(n, ast.Pass) for n in node_body)
 
-    def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        parsed_node: ast.AST = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.If):
-            if not parsed_node.orelse:
-                if self._body_is_only_pass(parsed_node.body):
-                    call_finder = _DanglingExprCallFinder(
-                        self.perf_optimizations.functions_safe_to_exclude_in_test_expr
-                    )
-                    call_finder.visit(parsed_node.test)
-                    return [ast.Expr(expr) for expr in call_finder.calls]
-
-                if (
-                    len(parsed_node.body) == 1
-                    and isinstance(parsed_node.body[0], ast.If)
-                    and not parsed_node.body[0].orelse
-                ):
-                    # These if conditions can be combine into one if
-                    if isinstance(parsed_node.test, ast.BoolOp) and isinstance(
-                        parsed_node.test.op, ast.And
-                    ):
-                        parsed_node.test.values.append(parsed_node.body[0].test)
-                    else:
-                        parsed_node.test = ast.BoolOp(
-                            ast.And(), [parsed_node.test, parsed_node.body[0].test]
-                        )
-
-                    parsed_node.body = parsed_node.body[0].body
-
-            elif self.code_to_skip.skip_useless_else and isinstance(
-                parsed_node.body[-1], (ast.Raise, ast.Return)
-            ):
-                denested_else: list[ast.stmt] = parsed_node.orelse
-                parsed_node.orelse = []
-                denested_else.insert(0, parsed_node)
-                return denested_else
-
-        return parsed_node
-
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
             self.perf_optimizations.assume_this_machine
@@ -241,39 +152,6 @@ class AstNodeSkipper(_OpFolder):
                 return ast.Constant(machine_dependent_functions[function_call_key])
 
         return self.generic_visit(node)
-
-    def _is_assign_of_folded_constant(self, target: ast.expr) -> bool:
-        """Returns if node is assignment of a value that we are folding. In this case,
-        there is no need to assign the value since its use"""
-
-        return (
-            isinstance(target, ast.Name)
-            and target.id in self.perf_optimizations.names_to_fold
-        )
-
-    def _should_skip_function_assign(self, node: ast.Assign | ast.AnnAssign) -> bool:
-        return (
-            isinstance(node.value, ast.Call)
-            and get_node_name(node.value.func) in self.tokens_to_skip.functions_to_skip
-        )
-
-
-class _DanglingExprCallFinder(AstNodeVisitorBase):
-    """Finds all calls in a given dangling expression
-    except for a subset of builtin functions that have
-    no side effects."""
-
-    __slots__ = ("calls", "excludes")
-
-    def __init__(self, excludes: Iterable[str]) -> None:
-        self.calls: list[ast.Call] = []
-        self.excludes: Iterable[str] = excludes
-
-    def visit_Call(self, node: ast.Call) -> ast.Call:
-        if get_node_name(node.func) not in self.excludes:
-            self.calls.append(node)
-
-        return node
 
 
 class _FunctionFoldableLocalsFinder(AstNodeVisitorBase):

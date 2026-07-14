@@ -2,69 +2,11 @@
 
 import ast
 from collections.abc import Iterable
-from typing import Protocol
+
+from personal_python_ast_optimizer._optimize.typing import AstNodeVisitorProtocol
 
 
-class _AstNodeVisitorProtocol(Protocol):
-    """Protocol for AST visitors. Super classes aren't used
-    due to type differences between visitors and transformers."""
-
-    def visit(self, node: ast.AST): ...  # noqa: ANN202
-
-    def generic_visit(self, node: ast.AST): ...  # noqa: ANN202
-
-
-class AstNodeVisitorBase(_AstNodeVisitorProtocol):
-    """Base class for ast node visitors."""
-
-    __slots__ = ()
-
-    def visit(self, node: ast.AST) -> ast.AST:
-        """Visits `node`."""
-        method = "visit_" + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
-        return visitor(node)
-
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        """Visits all ASTs within `node`."""
-        for _, value in ast.iter_fields(node):
-            if isinstance(value, list):
-                for item in value:
-                    if isinstance(item, ast.AST):
-                        self.visit(item)
-
-            elif isinstance(value, ast.AST):
-                self.visit(value)
-
-        return node
-
-    # Start - Nodes that do not need to be fully visited
-
-    def visit_alias(self, node: ast.alias) -> ast.alias:
-        return node
-
-    def visit_Break(self, node: ast.Break) -> ast.Break:
-        return node
-
-    def visit_Constant(self, node: ast.Constant) -> ast.Constant:
-        return node
-
-    def visit_Continue(self, node: ast.Continue) -> ast.Continue:
-        return node
-
-    def visit_Pass(self, node: ast.Pass) -> ast.Pass:
-        return node
-
-    def visit_Global(self, node: ast.Global) -> ast.Global:
-        return node
-
-    def visit_Nonlocal(self, node: ast.Nonlocal) -> ast.Nonlocal:
-        return node
-
-    # End - Nodes that do not need to be fully visited
-
-
-class AstNodeTransformerBase(_AstNodeVisitorProtocol):
+class AstNodeTransformerBase(AstNodeVisitorProtocol):
     """Base class for ast node transformers."""
 
     __slots__ = ()

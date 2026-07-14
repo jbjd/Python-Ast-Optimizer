@@ -6,13 +6,16 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import override
 
-from personal_python_ast_optimizer._optimize.base import AstNodeTransformerBase
+from personal_python_ast_optimizer._optimize.transformers_base import (
+    AstNodeTransformerBase,
+)
 from personal_python_ast_optimizer._optimize.utils import (
     TokensTracker,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     is_return_literal_none,
 )
+from personal_python_ast_optimizer._optimize.visitors import CallFinderVisitor
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
 
@@ -20,10 +23,19 @@ class OptimizationPass(AstNodeTransformerBase):
     """Performs optimizations that may occur over multiple passes
     like constant folding or dead code elimination."""
 
-    __slots__ = ("additional_pass_needed", "fold_constants")
+    __slots__ = (
+        "additional_pass_needed",
+        "fold_constants",
+        "functions_safe_to_exclude_in_test_expr",
+    )
 
-    def __init__(self, fold_constants: bool) -> None:
+    def __init__(
+        self, fold_constants: bool, functions_safe_to_exclude_in_test_expr: set[str]
+    ) -> None:
         self.fold_constants: bool = fold_constants
+        self.functions_safe_to_exclude_in_test_expr: set[str] = (
+            functions_safe_to_exclude_in_test_expr
+        )
         self.additional_pass_needed: bool = False
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
@@ -58,23 +70,30 @@ class OptimizationPass(AstNodeTransformerBase):
                 )
                 return if_body or None
 
-            if (
-                not parsed_node.orelse
-                and len(parsed_node.body) == 1
-                and isinstance(parsed_node.body[0], ast.If)
-                and not parsed_node.body[0].orelse
-            ):
-                # These if conditions can be combine into one if
-                if isinstance(parsed_node.test, ast.BoolOp) and isinstance(
-                    parsed_node.test.op, ast.And
-                ):
-                    parsed_node.test.values.append(parsed_node.body[0].test)
-                else:
-                    parsed_node.test = ast.BoolOp(
-                        ast.And(), [parsed_node.test, parsed_node.body[0].test]
+            if not parsed_node.orelse:
+                if self._body_is_only_pass(parsed_node.body):
+                    call_finder = CallFinderVisitor(
+                        self.functions_safe_to_exclude_in_test_expr
                     )
+                    call_finder.visit(parsed_node.test)
+                    return [ast.Expr(expr) for expr in call_finder.calls]
 
-                parsed_node.body = parsed_node.body[0].body
+                if (
+                    len(parsed_node.body) == 1
+                    and isinstance(parsed_node.body[0], ast.If)
+                    and not parsed_node.body[0].orelse
+                ):
+                    # These if conditions can be combine into one if
+                    if isinstance(parsed_node.test, ast.BoolOp) and isinstance(
+                        parsed_node.test.op, ast.And
+                    ):
+                        parsed_node.test.values.append(parsed_node.body[0].test)
+                    else:
+                        parsed_node.test = ast.BoolOp(
+                            ast.And(), [parsed_node.test, parsed_node.body[0].test]
+                        )
+
+                    parsed_node.body = parsed_node.body[0].body
 
         return parsed_node
 
@@ -287,6 +306,7 @@ class FirstPassOptimizer(OptimizationPass):
         self,
         tokens_to_skip: TokensTracker,
         fold_constants: bool,
+        functions_safe_to_exclude_in_test_expr: set[str],
         collection_concat_to_unpack: bool,
         simplify_named_tuple: bool,
         skip_dangling_expressions: bool,
@@ -297,7 +317,7 @@ class FirstPassOptimizer(OptimizationPass):
         skip_overload_functions: bool,
         skip_useless_else: bool,
     ) -> None:
-        super().__init__(fold_constants)
+        super().__init__(fold_constants, functions_safe_to_exclude_in_test_expr)
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
             simplify_named_tuple

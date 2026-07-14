@@ -573,10 +573,15 @@ class FirstPassOptimizer(OptimizationPass):
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute | ast.Constant:
         full_attr_id: str = get_full_attribute_id(node)
-        if self.tokens_tracker.names_to_fold.has(full_attr_id):
+        if not hasattr(node, "no_check_fold") and self.tokens_tracker.names_to_fold.has(
+            full_attr_id
+        ):
             return ast.Constant(self.tokens_tracker.names_to_fold.get(full_attr_id))
 
-        return node
+        if isinstance(node.value, ast.Attribute):
+            node.value.no_check_fold = True
+
+        return self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
         if self.tokens_tracker.names_to_fold.has(node.id):

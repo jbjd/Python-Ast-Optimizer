@@ -11,10 +11,18 @@ _logger = get_logger()
 
 
 def is_return_literal_none(node: ast.Return) -> bool:
+    """Checks if node is returning a literal None.
+
+    :param node: A return node to check
+    :returns: True if node returns literal None"""
     return isinstance(node.value, ast.Constant) and node.value.value is None
 
 
 def get_name_or_full_attribute_id(node: ast.AST) -> str | None:
+    """Returns id of Name nodes or full id of Attribute nodes.
+
+    :param node: An AST node to check
+    :returns: id or None if not a Name/Attribute"""
     if isinstance(node, ast.Name):
         return node.id
 
@@ -25,6 +33,10 @@ def get_name_or_full_attribute_id(node: ast.AST) -> str | None:
 
 
 def get_full_attribute_id(node: ast.Attribute) -> str:
+    """Returns full id of Attribute node.
+
+    :param node: An Attribute node to check
+    :returns: full id of Attribute"""
     all_attributes: list[ast.Attribute | ast.Name] = [node]
 
     child: ast.expr = node.value

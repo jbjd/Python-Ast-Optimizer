@@ -39,6 +39,8 @@ FAVORITE_NUMBER=a=6
         "print()",
     ),
     BeforeAndAfter("print(os.name)", "print('nt')"),
+    BeforeAndAfter("print(foo.os.name)", "print(foo.os.name)"),
+    BeforeAndAfter("print(os.name.foo)", "print(os.name.foo)"),
     BeforeAndAfter(
         """
 def get_cpu_count():

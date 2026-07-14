@@ -168,7 +168,7 @@ def test_exclude_from_imports():
         """
 from . import asdf
 from .a import foo
-from a import bar
+from a.b import bar2
 from ..a import abcd
 """,
         "from ..a import abcd",
@@ -177,7 +177,7 @@ from ..a import abcd
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(
             from_imports_to_skip=TokensToSkip(
-                [(".", "asdf"), (".a", "foo"), ("a", "bar")]
+                [(".", "asdf"), (".a", "foo"), ("a.b", "bar2")]
             )
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),

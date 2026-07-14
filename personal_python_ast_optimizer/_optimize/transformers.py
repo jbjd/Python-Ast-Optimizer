@@ -535,6 +535,17 @@ class FirstPassOptimizer(OptimizationPass):
     def visit_Pass(self, _: ast.Pass) -> ast.AST | None:
         return None
 
+    def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
+        if isinstance(
+            node.value, ast.Call
+        ) and self.tokens_tracker.functions_to_skip.has(
+            get_name_or_full_attribute_id(node.value.func)
+        ):
+            node.value = ast.Constant(None)
+            return node
+
+        return self.generic_visit(node)
+
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST | None:
         parsed_node: ast.AST | None = super().visit_BinOp(node)
 

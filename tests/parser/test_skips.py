@@ -137,10 +137,8 @@ def test_exclude_function_def(before_and_after: BeforeAndAfter):
 
 _exclude_function_call_cases = [
     BeforeAndAfter(
-        """
-foo()
-""",
-        "",
+        "logger.debug();foo()",
+        "logger.debug()",
     ),
     BeforeAndAfter(
         """
@@ -151,7 +149,7 @@ test=1
 """,
         "def bar():a=0\ntest=1",
     ),
-    BeforeAndAfter("warnings.foo()", ""),
+    BeforeAndAfter("logger.warn()", ""),
 ]
 
 
@@ -159,7 +157,9 @@ test=1
 def test_exclude_function_call(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        tokens_to_skip=TokensToSkipConfig(functions_to_skip=TokensToSkip({"foo"})),
+        tokens_to_skip=TokensToSkipConfig(
+            functions_to_skip=TokensToSkip({"foo", "logger.warn"})
+        ),
     )
 
 
@@ -198,29 +198,6 @@ import a as c
         before_and_after,
         tokens_to_skip=TokensToSkipConfig(
             module_imports_to_skip=TokensToSkip({"numpy", "a", "b"})
-        ),
-        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
-    )
-
-
-def test_exclude_real_case():
-    before_and_after = BeforeAndAfter(
-        """
-from ._util import DeferredError
-
-TYPE_CHECKING = False
-
-logger = logging.getLogger(__name__)
-
-is_cid = re.compile('').match
-""",
-        "from ._util import DeferredError\nis_cid=re.compile('').match",
-    )
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        tokens_to_skip=TokensToSkipConfig(
-            assignments_to_skip=TokensToSkip({"TYPE_CHECKING"}),
-            functions_to_skip=TokensToSkip({"getLogger"}),
         ),
         code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
     )

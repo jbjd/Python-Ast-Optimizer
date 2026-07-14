@@ -1,4 +1,5 @@
 import ast
+import os
 from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Self
@@ -9,20 +10,14 @@ from personal_python_ast_optimizer.config import (
     PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
-    TypeHintsToSkip,
 )
 from personal_python_ast_optimizer.parser._base import (
     AstNodeTransformerBase,
     AstNodeVisitorBase,
 )
-from personal_python_ast_optimizer.parser.machine_info import (
-    machine_dependent_functions,
-)
-from personal_python_ast_optimizer.parser.utils import (
-    exclude_imports,
-    get_node_name,
-    skip_decorators,
-)
+from personal_python_ast_optimizer.parser.utils import get_node_name, skip_decorators
+
+machine_dependent_functions: dict[str, int | None] = {"os.cpu_count": os.cpu_count()}
 
 
 class _NodeContext(Enum):
@@ -40,128 +35,6 @@ class _OpFolder(AstNodeTransformerBase):
     ) -> None:
         super().__init__()
         self.perf_optimizations: PerfOptimizationsConfig = perf_optimizations
-
-    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
-        parsed_node: ast.BoolOp = self.generic_visit(node)  # type: ignore[assignment]
-
-        if isinstance(parsed_node.op, (ast.Or, ast.And)):
-            # For And nodes left values that are Truthy and const can be removed
-            # and vice versa
-            remove_if: bool = isinstance(parsed_node.op, ast.And)
-            self._left_remove_constants(parsed_node, remove_if)
-
-            left: ast.AST = parsed_node.values[0]
-            if isinstance(left, ast.Constant) and bool(left.value) is not remove_if:
-                return left
-
-        return parsed_node
-
-    @staticmethod
-    def _left_remove_constants(node: ast.BoolOp, remove_if: bool) -> None:
-        index: int = 0
-        end: int = len(node.values) - 1
-        while index < end:
-            left: ast.expr = node.values[index]
-            if isinstance(left, ast.Constant) and bool(left.value) is remove_if:
-                index += 1
-            else:
-                break
-
-        if index > 0:
-            node.values = node.values[index:]
-
-    def visit_Compare(self, node: ast.Compare) -> ast.AST | None:
-        parsed_node = self.generic_visit(node)
-
-        if (
-            isinstance(parsed_node, ast.Compare)
-            and isinstance(parsed_node.left, ast.Constant)
-            and len(parsed_node.comparators) == 1
-            and isinstance(parsed_node.comparators[0], ast.Constant)
-        ):
-            return self._ast_constants_operation(
-                parsed_node.left, parsed_node.comparators[0], parsed_node.ops[0]
-            )
-
-        return parsed_node
-
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.UnaryOp) and isinstance(
-            parsed_node.operand, ast.Constant
-        ):
-            if isinstance(parsed_node.op, ast.Not):
-                return ast.Constant(not parsed_node.operand.value)
-            if isinstance(parsed_node.op, ast.Invert):
-                return ast.Constant(~parsed_node.operand.value)  # type: ignore[operator]
-            if isinstance(parsed_node.op, ast.UAdd):
-                return parsed_node.operand
-
-        return parsed_node
-
-    @staticmethod
-    def _ast_constants_operation(  # noqa: C901, PLR0912
-        left: ast.Constant,
-        right: ast.Constant,
-        operation: ast.operator | ast.cmpop,
-    ) -> ast.Constant:
-        """Given two ast.Constant values, performs an operation on their underlying
-        values and returns a new ast.Constant of the new value.
-
-        :param left: ast.Constant in the left of the operation.
-        :param right: ast.Constant in the right of the operation.
-        :param operation: One of the ast classes representing an operation."""
-
-        left_value: ast._ConstantValue = left.value
-        right_value: ast._ConstantValue = right.value
-        result: ast._ConstantValue
-
-        match operation:
-            case ast.Add():
-                result = left_value + right_value  # type: ignore[operator]
-            case ast.Sub():
-                result = left_value - right_value  # type: ignore[operator]
-            case ast.Mult():
-                result = left_value * right_value  # type: ignore[operator]
-            case ast.Div():
-                result = left_value / right_value  # type: ignore[operator]
-            case ast.FloorDiv():
-                result = left_value // right_value  # type: ignore[operator]
-            case ast.Mod():
-                result = left_value % right_value  # type: ignore[operator]
-            case ast.Pow():
-                result = left_value**right_value  # type: ignore[operator]
-            case ast.LShift():
-                result = left_value << right_value  # type: ignore[operator]
-            case ast.RShift():
-                result = left_value >> right_value  # type: ignore[operator]
-            case ast.BitOr():
-                result = left_value | right_value  # type: ignore[operator]
-            case ast.BitXor():
-                result = left_value ^ right_value  # type: ignore[operator]
-            case ast.BitAnd():
-                result = left_value & right_value  # type: ignore[operator]
-            case ast.Eq():
-                result = left_value == right_value
-            case ast.NotEq():
-                result = left_value != right_value
-            case ast.Lt():
-                result = left_value < right_value  # type: ignore[operator]
-            case ast.LtE():
-                result = left_value <= right_value  # type: ignore[operator]
-            case ast.Gt():
-                result = left_value > right_value  # type: ignore[operator]
-            case ast.GtE():
-                result = left_value >= right_value  # type: ignore[operator]
-            case ast.Is():
-                result = left_value is right_value
-            case ast.IsNot():
-                result = left_value is not right_value
-            case _:
-                raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
-
-        return ast.Constant(result)
 
 
 class AstNodeSkipper(_OpFolder):
@@ -317,98 +190,10 @@ class AstNodeSkipper(_OpFolder):
     def _body_is_only_pass(node_body: list[ast.stmt]) -> bool:
         return all(isinstance(n, ast.Pass) for n in node_body)
 
-    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
-        """Skips assign if it is an assignment to a constant that is being folded"""
-        if self._should_skip_function_assign(node):
-            return None
-
-        if isinstance(node.targets[0], ast.Tuple) and isinstance(node.value, ast.Tuple):
-            pass
-        else:
-            new_targets: list[ast.expr] = [
-                target
-                for target in node.targets
-                if not self._is_assign_of_folded_constant(target)
-                and get_node_name(target) not in self.tokens_to_skip.variables_to_skip
-            ]
-            if not new_targets:
-                return None
-
-            node.targets = new_targets
-
-        return self.generic_visit(node)
-
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
-        """Skips assign if it is an assignment to a constant that is being folded"""
-        target_name: str = get_node_name(node.target)
-        if (
-            self._should_skip_function_assign(node)
-            or target_name in self.tokens_to_skip.variables_to_skip
-            or self._is_assign_of_folded_constant(node.target)
-        ):
-            return None
-
-        parsed_node: ast.AnnAssign = self.generic_visit(node)  # type: ignore[assignment]
-
-        if self.token_types_to_skip.skip_type_hints == TypeHintsToSkip.ALL or (
-            self.token_types_to_skip.skip_type_hints
-            == TypeHintsToSkip.ALL_BUT_CLASS_VARS
-            and self._node_context != _NodeContext.CLASS
-        ):
-            if parsed_node.value is None:
-                return None
-
-            return ast.Assign([parsed_node.target], parsed_node.value)
-
-        return parsed_node
-
-    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST | None:
-        if get_node_name(node.target) in self.tokens_to_skip.variables_to_skip:
-            return None
-
-        return self.generic_visit(node)
-
-    def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        exclude_imports(node, self.tokens_to_skip.module_imports_to_skip)
-
-        if not node.names:
-            return None
-
-        self._has_imports = True
-        return node
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
-        normalized_module_name: str = node.module or ""
-        if normalized_module_name in self.tokens_to_skip.module_imports_to_skip:
-            return None
-
-        exclude_imports(node, self.tokens_to_skip.from_imports_to_skip)
-
-        if not node.names:
-            return None
-
-        self._has_imports = True
-        return node
-
-    def visit_Name(self, node: ast.Name) -> ast.AST:
-        """Extends super's implementation by adding constant folding"""
-        if node.id in self.perf_optimizations.names_to_fold:
-            constant_value = self.perf_optimizations.names_to_fold[node.id]
-
-            return ast.Constant(constant_value)
-
-        return node
-
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST = self.generic_visit(node)
 
         if isinstance(parsed_node, ast.If):
-            if isinstance(parsed_node.test, ast.Constant):
-                if_body: list[ast.stmt] = (
-                    parsed_node.body if parsed_node.test.value else parsed_node.orelse
-                )
-                return if_body or None
-
             if not parsed_node.orelse:
                 if self._body_is_only_pass(parsed_node.body):
                     call_finder = _DanglingExprCallFinder(
@@ -444,16 +229,6 @@ class AstNodeSkipper(_OpFolder):
 
         return parsed_node
 
-    def visit_IfExp(self, node: ast.IfExp) -> ast.AST | None:
-        parsed_node = self.generic_visit(node)
-
-        if isinstance(parsed_node, ast.IfExp) and isinstance(
-            parsed_node.test, ast.Constant
-        ):
-            return parsed_node.body if parsed_node.test.value else parsed_node.orelse
-
-        return parsed_node
-
     def visit_Call(self, node: ast.Call) -> ast.AST | None:
         if (
             self.perf_optimizations.assume_this_machine
@@ -464,15 +239,6 @@ class AstNodeSkipper(_OpFolder):
 
             if function_call_key in machine_dependent_functions:
                 return ast.Constant(machine_dependent_functions[function_call_key])
-
-        return self.generic_visit(node)
-
-    def visit_Expr(self, node: ast.Expr) -> ast.AST | None:
-        if (
-            isinstance(node.value, ast.Call)
-            and get_node_name(node.value.func) in self.tokens_to_skip.functions_to_skip
-        ):
-            return None
 
         return self.generic_visit(node)
 

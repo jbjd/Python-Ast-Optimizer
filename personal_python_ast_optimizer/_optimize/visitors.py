@@ -2,7 +2,7 @@
 
 import ast
 
-from personal_python_ast_optimizer._optimize.base import AstNodeVisitorBase
+from personal_python_ast_optimizer._optimize.base import AstVisitorBase
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
@@ -10,7 +10,7 @@ from personal_python_ast_optimizer._optimize.utils import (
 )
 
 
-class CallAggregator(AstNodeVisitorBase, AstVisitorProtocol):
+class CallAggregator(AstVisitorBase, AstVisitorProtocol):
     """Visitor that aggregates all Calls."""
 
     __slots__ = ("calls", "excludes")
@@ -30,7 +30,7 @@ class CallAggregator(AstNodeVisitorBase, AstVisitorProtocol):
         return node
 
 
-class FunctionFoldableLocalsAggregator(AstNodeVisitorBase, AstVisitorProtocol):
+class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
     __slots__ = ("_excludes", "_foldable", "_node_context")
 
     def __init__(self, excludes: set[str]) -> None:

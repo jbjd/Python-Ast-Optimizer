@@ -3,13 +3,10 @@
 import ast
 from collections.abc import Iterable, Sequence
 
-from personal_python_ast_optimizer._optimize.typing import (
-    AstVisitorBaseProtocol,
-    AstVisitorProtocol,
-)
+from personal_python_ast_optimizer._optimize.typing import AstVisitorBaseProtocol
 
 
-class AstNodeVisitorBase(AstVisitorBaseProtocol):
+class AstVisitorBase(AstVisitorBaseProtocol):
     """Base class for ast node visitors."""
 
     __slots__ = ()
@@ -33,13 +30,10 @@ class AstNodeVisitorBase(AstVisitorBaseProtocol):
                 self._visit(item)
 
 
-class AstNodeTransformerBase(AstVisitorBaseProtocol, AstVisitorProtocol):
+class AstTransformerBase(AstVisitorBaseProtocol):
     """Base class for ast node transformers."""
 
     __slots__ = ()
-
-    def visit(self, node: ast.Module) -> None:
-        self.generic_visit(node)
 
     def _visit(self, node: ast.AST) -> ast.AST | None:
         """Visits `node`."""

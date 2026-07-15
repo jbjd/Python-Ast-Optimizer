@@ -17,14 +17,13 @@ if __name__ == "__main__":
     files = [ File(str(n)) for n in range(10) ]
     print(files)
 """
-    after: str = """
-type FileName=str
+    after: str = """type FileName=str
 class File:
-    \"\"\"a file\"\"\"
-    KB:int
-    def __init__(self,name:FileName)->None:self.name:FileName=name
-if __name__=='__main__':files=[File(str(n))for n in range(10)];print(files)
-""".strip().replace("    ", "\t")
+\t\"\"\"a file\"\"\"
+\tKB:int
+\tdef __init__(self,name:FileName)->None:self.name:FileName=name
+if __name__=='__main__':files=[File(str(n))for n in range(10)];print(files)"""
+
     minify_and_assert_correctness(before, after)
 
 

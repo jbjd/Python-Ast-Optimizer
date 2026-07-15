@@ -7,8 +7,9 @@ from enum import Enum
 from typing import override
 
 from personal_python_ast_optimizer._optimize.base import (
-    AstNodeTransformerBase,
+    AstTransformerBase,
 )
+from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
     TokensTracker,
@@ -23,7 +24,7 @@ from personal_python_ast_optimizer._optimize.visitors import (
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
 
-class OptimizationPass(AstNodeTransformerBase):
+class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
     """Performs optimizations that may occur over multiple passes
     like constant folding or dead code elimination."""
 
@@ -47,10 +48,9 @@ class OptimizationPass(AstNodeTransformerBase):
         )
         self.additional_pass_needed: bool = False
 
-    @override
-    def visit(self, node: ast.Module) -> ast.AST:
+    def visit(self, node: ast.Module) -> None:
         self.additional_pass_needed = False
-        return self.generic_visit(node)
+        self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -370,7 +370,7 @@ class FirstPassOptimizer(OptimizationPass):
         self._node_context: NodeContext = NodeContext.NONE
 
     @override
-    def visit(self, node: ast.Module) -> ast.AST:
+    def visit(self, node: ast.Module) -> None:
         self.generic_visit(node)
 
         if self.simplify_named_tuple == _SimplifyNamedTuple.FOUND:
@@ -385,8 +385,6 @@ class FirstPassOptimizer(OptimizationPass):
 
             if not handled:
                 node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
-
-        return node
 
     @override
     def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
@@ -707,16 +705,19 @@ class FirstPassOptimizer(OptimizationPass):
         )
 
 
-class LastPassOptimizer(AstNodeTransformerBase):
+class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
     """Removes unused import nodes from AST and other final touches."""
 
-    __slots__ = ("_names_and_attrs", "skip_unused_imports")
+    __slots__ = ("_names_and_attrs", "_skip_unused_imports")
 
     def __init__(
         self, skip_unused_imports: bool, imports_to_preserve: Iterable[str]
     ) -> None:
-        self.skip_unused_imports: bool = skip_unused_imports
+        self._skip_unused_imports: bool = skip_unused_imports
         self._names_and_attrs: set[str] = set(imports_to_preserve)
+
+    def visit(self, node: ast.Module) -> None:
+        self.generic_visit(node)
 
     @override
     def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
@@ -742,7 +743,7 @@ class LastPassOptimizer(AstNodeTransformerBase):
         return reversed(ast_list)
 
     def visit_Import(self, node: ast.Import) -> ast.Import | None:
-        if not self.skip_unused_imports:
+        if not self._skip_unused_imports:
             return node
 
         self._filter_imports(node)
@@ -750,7 +751,7 @@ class LastPassOptimizer(AstNodeTransformerBase):
         return node if node.names else None
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom | None:
-        if not self.skip_unused_imports:
+        if not self._skip_unused_imports:
             return node
 
         if node.module != "__future__":
@@ -782,53 +783,14 @@ class LastPassOptimizer(AstNodeTransformerBase):
         return self.generic_visit(node)
 
 
-class _FunctionLocalsFolder:
+class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
     __slots__ = ("_folds",)
 
     def __init__(self, folds: dict[str, ast.Constant]) -> None:
         self._folds: dict[str, ast.Constant] = folds
 
-    # TODO: dedupe
     def visit(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         self.generic_visit(node)
-
-    def _visit(self, node: ast.AST) -> ast.AST | None:
-        """Visits `node`."""
-        method = "visit_" + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
-        return visitor(node)
-
-    def generic_visit(self, node: ast.AST) -> ast.AST:
-        for field, old_value in ast.iter_fields(node):
-            if isinstance(old_value, list):
-                new_nodes: list[ast.AST] = []
-                for value in old_value:
-                    new_node: ast.AST | None
-                    if isinstance(value, ast.AST):
-                        new_node = self._visit(value)
-                        if new_node is None:
-                            continue
-                    else:
-                        new_node = value
-
-                    new_nodes.append(new_node)
-
-                if (
-                    not new_nodes
-                    and field == "body"  # Kinda hacky, consider a better way to detect
-                ):
-                    new_nodes.append(ast.Pass())
-
-                old_value[:] = new_nodes
-
-            elif isinstance(old_value, ast.AST):
-                new_node = self._visit(old_value)
-                if new_node is None:
-                    delattr(node, field)
-                else:
-                    setattr(node, field, new_node)
-
-        return node
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         node.targets = [

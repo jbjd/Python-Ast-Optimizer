@@ -14,7 +14,6 @@ class AstVisitorBaseProtocol(Protocol):
 
 
 class AstVisitorProtocol(Protocol):
-    """Protocol for AST visitors. Super classes aren't used
-    due to type differences between visitors and transformers."""
+    """Protocol for AST visitors to define a standard visit method to begin parsing."""
 
     def visit(self, node): ...  # noqa: ANN001, ANN202

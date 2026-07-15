@@ -14,11 +14,15 @@ def test_warn_unused_skips() -> None:
 
     warn_source: str = "a=1"
 
+    no_warn = set()
+
     with patch(
         "personal_python_ast_optimizer._optimize.utils._logger.warning"
     ) as mock_logger_warning:
         config = OptimizeConfig(
-            tokens_to_skip=TokensToSkipConfig(classes_to_skip=TokensToSkip({"ABC"}))
+            tokens_to_skip=TokensToSkipConfig(
+                classes_to_skip=TokensToSkip({"ABC"}, no_warn)
+            )
         )
 
         optimize_source_and_minify(no_warn_source, config)

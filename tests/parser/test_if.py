@@ -61,8 +61,8 @@ else:bar()""",
         "if test():pass\nelse:foo()",
     ),
     BeforeAndAfter(
-        "if test():pass\nelse:pass",
-        "test()",
+        "if test(a()) and b():pass\nelse:pass",
+        "test(a())\nb()",
     ),
     BeforeAndAfter(
         "if str(a) == 'a':pass",

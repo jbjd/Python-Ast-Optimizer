@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.config import PerfOptimizationsConfig
+from personal_python_ast_optimizer.config import PerfOptimizationsConfig, TokensToFold
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _fold_var_cases = [
@@ -56,11 +56,13 @@ def test_fold_var(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
         perf_optimizations=PerfOptimizationsConfig(
-            names_to_fold={
-                "FAVORITE_NUMBER": 6,
-                "TEST": "test",
-                "__name__": "__main__",
-                "os.name": "nt",
-            }
+            names_to_fold=TokensToFold(
+                {
+                    "FAVORITE_NUMBER": 6,
+                    "TEST": "test",
+                    "__name__": "__main__",
+                    "os.name": "nt",
+                }
+            )
         ),
     )

@@ -2,20 +2,24 @@
 
 import ast
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import override
 
-from personal_python_ast_optimizer._optimize.transformers_base import (
+from personal_python_ast_optimizer._optimize.base import (
     AstNodeTransformerBase,
 )
 from personal_python_ast_optimizer._optimize.utils import (
+    NodeContext,
     TokensTracker,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     is_return_literal_none,
 )
-from personal_python_ast_optimizer._optimize.visitors import CallFinderVisitor
+from personal_python_ast_optimizer._optimize.visitors import (
+    CallAggregator,
+    FunctionFoldableLocalsAggregator,
+)
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
 
@@ -26,21 +30,52 @@ class OptimizationPass(AstNodeTransformerBase):
     __slots__ = (
         "additional_pass_needed",
         "fold_constants",
+        "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
     )
 
     def __init__(
-        self, fold_constants: bool, functions_safe_to_exclude_in_test_expr: set[str]
+        self,
+        fold_constants: bool,
+        fold_simple_function_locals: bool,
+        functions_safe_to_exclude_in_test_expr: set[str],
     ) -> None:
         self.fold_constants: bool = fold_constants
+        self.fold_simple_function_locals: bool = fold_simple_function_locals
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
             functions_safe_to_exclude_in_test_expr
         )
         self.additional_pass_needed: bool = False
 
-    def visit_Module(self, node: ast.Module) -> ast.AST:
+    @override
+    def visit(self, node: ast.Module) -> ast.AST:
         self.additional_pass_needed = False
         return self.generic_visit(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def _handle_function(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> ast.AST | None:
+        parsed_node: ast.AST | None = self.generic_visit(node)
+
+        if self.fold_simple_function_locals and isinstance(
+            parsed_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
+            locals_folder = FunctionFoldableLocalsAggregator(
+                {a.arg for a in node.args.args}
+            )
+            to_fold: dict[str, ast.Constant] = locals_folder.visit(parsed_node)
+
+            if to_fold:
+                _FunctionLocalsFolder(to_fold).visit(parsed_node)
+                self.additional_pass_needed = True
+
+        return parsed_node
 
     def visit_Try(self, node: ast.Try) -> ast.AST | list[ast.stmt] | None:
         return self._handle_try(node)
@@ -72,11 +107,12 @@ class OptimizationPass(AstNodeTransformerBase):
 
             if not parsed_node.orelse:
                 if self._body_is_only_pass(parsed_node.body):
-                    call_finder = CallFinderVisitor(
+                    call_finder = CallAggregator(
                         self.functions_safe_to_exclude_in_test_expr
                     )
-                    call_finder.visit(parsed_node.test)
-                    return [ast.Expr(expr) for expr in call_finder.calls]
+                    return [
+                        ast.Expr(expr) for expr in call_finder.visit(parsed_node.test)
+                    ]
 
                 if (
                     len(parsed_node.body) == 1
@@ -268,12 +304,6 @@ class OptimizationPass(AstNodeTransformerBase):
         return all(isinstance(n, ast.Pass) for n in node_body)
 
 
-class _NodeContext(Enum):
-    NONE = 0
-    CLASS = 1
-    FUNCTION = 2
-
-
 class _SimplifyNamedTuple(Enum):
     NO = 0
     YES = 1
@@ -306,6 +336,7 @@ class FirstPassOptimizer(OptimizationPass):
         self,
         tokens_to_skip: TokensTracker,
         fold_constants: bool,
+        fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
         collection_concat_to_unpack: bool,
         simplify_named_tuple: bool,
@@ -317,7 +348,11 @@ class FirstPassOptimizer(OptimizationPass):
         skip_overload_functions: bool,
         skip_useless_else: bool,
     ) -> None:
-        super().__init__(fold_constants, functions_safe_to_exclude_in_test_expr)
+        super().__init__(
+            fold_constants,
+            fold_simple_function_locals,
+            functions_safe_to_exclude_in_test_expr,
+        )
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
             simplify_named_tuple
@@ -332,22 +367,10 @@ class FirstPassOptimizer(OptimizationPass):
         self.skip_typing_cast: bool = skip_typing_cast
         self.skip_overload_functions: bool = skip_overload_functions
         self.skip_useless_else: bool = skip_useless_else
-        self._node_context: _NodeContext = _NodeContext.NONE
+        self._node_context: NodeContext = NodeContext.NONE
 
     @override
-    def _on_visited_node_add_to_new_values(
-        self, new_nodes: list[ast.AST], node: ast.AST
-    ) -> None:
-        if (
-            self.skip_dangling_expressions
-            and isinstance(node, ast.Expr)
-            and isinstance(node.value, ast.Constant)
-        ):
-            return
-
-        super()._on_visited_node_add_to_new_values(new_nodes, node)
-
-    def visit_Module(self, node: ast.Module) -> ast.AST:
+    def visit(self, node: ast.Module) -> ast.AST:
         self.generic_visit(node)
 
         if self.simplify_named_tuple == _SimplifyNamedTuple.FOUND:
@@ -364,6 +387,14 @@ class FirstPassOptimizer(OptimizationPass):
                 node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
 
         return node
+
+    @override
+    def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
+        return (
+            not self.skip_dangling_expressions
+            or not isinstance(node, ast.Expr)
+            or not isinstance(node.value, ast.Constant)
+        )
 
     def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -385,7 +416,7 @@ class FirstPassOptimizer(OptimizationPass):
         self._skip_decorators(node)
 
         parsed_node: ast.AST | None = self._visit_with_context(
-            node, _NodeContext.FUNCTION
+            node, NodeContext.FUNCTION, super()._handle_function
         )
 
         if (
@@ -418,7 +449,9 @@ class FirstPassOptimizer(OptimizationPass):
 
         self._skip_decorators(node)
 
-        parsed_node: ast.AST | None = self._visit_with_context(node, _NodeContext.CLASS)
+        parsed_node: ast.AST | None = self._visit_with_context(
+            node, NodeContext.CLASS, self.generic_visit
+        )
 
         if (
             self.simplify_named_tuple
@@ -518,7 +551,7 @@ class FirstPassOptimizer(OptimizationPass):
 
         if self.skip_type_hints == TypeHintsToSkip.ALL or (
             self.skip_type_hints == TypeHintsToSkip.ALL_BUT_CLASS_VARS
-            and self._node_context != _NodeContext.CLASS
+            and self._node_context != NodeContext.CLASS
         ):
             return (
                 None
@@ -609,13 +642,13 @@ class FirstPassOptimizer(OptimizationPass):
 
         return node
 
-    def _visit_with_context(
-        self, node: ast.AST, context: _NodeContext
-    ) -> ast.AST | None:
-        previous_value: _NodeContext = self._node_context
+    def _visit_with_context[R](
+        self, node: ast.AST, context: NodeContext, visitor: Callable[[ast.AST], R]
+    ) -> R:
+        previous_value: NodeContext = self._node_context
         self._node_context = context
         try:
-            return self.generic_visit(node)
+            return visitor(node)
         finally:
             self._node_context = previous_value
 
@@ -686,9 +719,7 @@ class LastPassOptimizer(AstNodeTransformerBase):
         self._names_and_attrs: set[str] = set(imports_to_preserve)
 
     @override
-    def _on_visited_node_add_to_new_values(
-        self, new_nodes: list[ast.AST], node: ast.AST
-    ) -> None:
+    def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
         if new_nodes:
             previous_node: ast.AST = new_nodes[-1]
             if (
@@ -701,9 +732,9 @@ class LastPassOptimizer(AstNodeTransformerBase):
             ):
                 node.names += previous_node.names
                 new_nodes[-1] = node
-                return
+                return False
 
-        super()._on_visited_node_add_to_new_values(new_nodes, node)
+        return True
 
     @override
     @staticmethod
@@ -749,3 +780,74 @@ class LastPassOptimizer(AstNodeTransformerBase):
             node.test.value = 1
 
         return self.generic_visit(node)
+
+
+class _FunctionLocalsFolder:
+    __slots__ = ("_folds",)
+
+    def __init__(self, folds: dict[str, ast.Constant]) -> None:
+        self._folds: dict[str, ast.Constant] = folds
+
+    # TODO: dedupe
+    def visit(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        self.generic_visit(node)
+
+    def _visit(self, node: ast.AST) -> ast.AST | None:
+        """Visits `node`."""
+        method = "visit_" + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        return visitor(node)
+
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        for field, old_value in ast.iter_fields(node):
+            if isinstance(old_value, list):
+                new_nodes: list[ast.AST] = []
+                for value in old_value:
+                    new_node: ast.AST | None
+                    if isinstance(value, ast.AST):
+                        new_node = self._visit(value)
+                        if new_node is None:
+                            continue
+                    else:
+                        new_node = value
+
+                    new_nodes.append(new_node)
+
+                if (
+                    not new_nodes
+                    and field == "body"  # Kinda hacky, consider a better way to detect
+                ):
+                    new_nodes.append(ast.Pass())
+
+                old_value[:] = new_nodes
+
+            elif isinstance(old_value, ast.AST):
+                new_node = self._visit(old_value)
+                if new_node is None:
+                    delattr(node, field)
+                else:
+                    setattr(node, field, new_node)
+
+        return node
+
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
+        node.targets = [
+            target
+            for target in node.targets
+            if not isinstance(target, ast.Name) or target.id not in self._folds
+        ]
+
+        return self.generic_visit(node) if node.targets else None
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
+
+        if isinstance(node.target, ast.Name) and node.target.id in self._folds:
+            return None
+
+        return self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+        if node.id in self._folds:
+            return self._folds[node.id]
+
+        return node

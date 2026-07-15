@@ -9,7 +9,7 @@ def get_logger() -> logging.Logger:
     logger.setLevel(logging.WARNING)
     sh = logging.StreamHandler(sys.stdout)
     sh.setFormatter(
-        logging.Formatter("[Python AST Optimizer] %(levelname)s:%(name)s:%(message)s")
+        logging.Formatter("[Python AST Optimizer] %(levelname)s: %(message)s")
     )
     logger.addHandler(sh)
     return logger

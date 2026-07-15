@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from enum import Enum
+from typing import Literal
 
 from personal_python_ast_optimizer.typing import FoldableConstant
 
@@ -20,9 +21,21 @@ class TypeHintsToSkip(Enum):
 class TokensToSkip[T]:
     __slots__ = ("no_warn", "tokens")
 
-    def __init__(self, tokens: Iterable[T], no_warn: Iterable[T] | None = None) -> None:
+    def __init__(
+        self, tokens: Iterable[T], no_warn: Iterable[T] | Literal["*"] = "*"
+    ) -> None:
         self.tokens: Iterable[T] = tokens
-        self.no_warn: Iterable[T] | None = no_warn
+        self.no_warn: Iterable[T] | Literal["*"] = no_warn
+
+
+class TokensToFold[T, V]:
+    __slots__ = ("no_warn", "tokens")
+
+    def __init__(
+        self, tokens: dict[T, V], no_warn: Iterable[T] | Literal["*"] = "*"
+    ) -> None:
+        self.tokens: dict[T, V] = tokens
+        self.no_warn: Iterable[T] | Literal["*"] = no_warn
 
 
 class TokensToSkipConfig:
@@ -145,7 +158,7 @@ class PerfOptimizationsConfig:
         *,
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
-        names_to_fold: dict[str, FoldableConstant] | None = None,
+        names_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
         simplify_named_tuple: bool = False,
@@ -153,9 +166,7 @@ class PerfOptimizationsConfig:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
-        self.names_to_fold: TokensToSkip[dict[str, FoldableConstant]] = TokensToSkip(
-            {} if names_to_fold is None else names_to_fold
-        )
+        self.names_to_fold: TokensToFold[str, FoldableConstant] | None = names_to_fold
 
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
             _default_functions_safe_to_exclude_in_test_expr

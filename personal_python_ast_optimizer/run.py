@@ -48,6 +48,7 @@ def optimize_module(
     first_pass = FirstPassOptimizer(
         tokens_to_skip_tracker,
         perf_optimizations.fold_constants,
+        perf_optimizations.fold_simple_function_locals,
         perf_optimizations.functions_safe_to_exclude_in_test_expr,
         perf_optimizations.collection_concat_to_unpack,
         perf_optimizations.simplify_named_tuple,
@@ -65,9 +66,13 @@ def optimize_module(
 
     additional_pass_needed: bool = first_pass.additional_pass_needed
     if additional_pass_needed:
-        optimization_pass = OptimizationPass(perf_optimizations.fold_constants)
+        optimization_pass = OptimizationPass(
+            perf_optimizations.fold_constants,
+            perf_optimizations.fold_simple_function_locals,
+            perf_optimizations.functions_safe_to_exclude_in_test_expr,
+        )
         while additional_pass_needed:
-            optimization_pass.visit_Module(module)
+            optimization_pass.visit(module)
             additional_pass_needed = optimization_pass.additional_pass_needed
 
     LastPassOptimizer(

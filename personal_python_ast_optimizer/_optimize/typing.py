@@ -4,8 +4,17 @@ import ast
 from typing import Protocol
 
 
-class AstNodeVisitorProtocol(Protocol):
+class AstVisitorBaseProtocol(Protocol):
+    """Protocol for AST visitor base classes. Super classes aren't used
+    due to type differences between visitors and transformers."""
+
+    def _visit(self, node: ast.AST): ...  # noqa: ANN202
+
+    def _generic_visit(self, node: ast.AST): ...  # noqa: ANN202
+
+
+class AstVisitorProtocol(Protocol):
     """Protocol for AST visitors. Super classes aren't used
     due to type differences between visitors and transformers."""
 
-    def visit(self, node: ast.AST): ...  # noqa: ANN202
+    def visit(self, node): ...  # noqa: ANN001, ANN202

@@ -2,12 +2,20 @@
 
 import ast
 from collections.abc import Iterator
+from enum import Enum
+from typing import Any
 
 from personal_python_ast_optimizer._log import get_logger
-from personal_python_ast_optimizer.config import TokensToSkip
+from personal_python_ast_optimizer.config import TokensToFold, TokensToSkip
 from personal_python_ast_optimizer.typing import FoldableConstant
 
 _logger = get_logger()
+
+
+class NodeContext(Enum):
+    NONE = 0
+    CLASS = 1
+    FUNCTION = 2
 
 
 def is_return_literal_none(node: ast.Return) -> bool:
@@ -60,13 +68,15 @@ _VISITED = 1
 class _TokensToSkipVisitCounter[T]:
     __slots__ = ("_tokens_to_skip",)
 
-    def __init__(self, tokens_to_skip: TokensToSkip[T] | None) -> None:
+    def __init__(
+        self, tokens_to_skip: TokensToSkip[T] | TokensToFold[T, Any] | None
+    ) -> None:
         self._tokens_to_skip: dict[T, int]
 
         if tokens_to_skip is None:
             self._tokens_to_skip = {}
-        elif tokens_to_skip.no_warn is None:
-            self._tokens_to_skip = {t: _UNVISITED for t in tokens_to_skip.tokens}
+        elif tokens_to_skip.no_warn == "*":
+            self._tokens_to_skip = {t: _VISITED for t in tokens_to_skip.tokens}
         else:
             self._tokens_to_skip = {
                 t: _VISITED if t in tokens_to_skip.no_warn else _UNVISITED
@@ -91,10 +101,12 @@ class _TokensToSkipVisitCounter[T]:
 
 class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter):
     def __init__(
-        self, tokens_to_skip: TokensToSkip[dict[str, FoldableConstant]]
+        self, tokens_to_fold: TokensToFold[str, FoldableConstant] | None
     ) -> None:
-        super().__init__(tokens_to_skip)
-        self.map: dict[str, FoldableConstant] = tokens_to_skip.tokens
+        super().__init__(tokens_to_fold)
+        self.map: dict[str, FoldableConstant] = (
+            {} if tokens_to_fold is None else tokens_to_fold.tokens
+        )
 
     def get(self, key: str) -> FoldableConstant:
         return self.map[key]
@@ -113,13 +125,13 @@ class TokensTracker:
 
     def __init__(
         self,
-        assignments_to_skip: TokensToSkip | None,
-        classes_to_skip: TokensToSkip | None,
-        decorators_to_skip: TokensToSkip | None,
-        from_imports_to_skip: TokensToSkip | None,
-        functions_to_skip: TokensToSkip | None,
-        module_imports_to_skip: TokensToSkip | None,
-        names_to_fold: TokensToSkip[dict[str, FoldableConstant]] | None,
+        assignments_to_skip: TokensToSkip[str] | None,
+        classes_to_skip: TokensToSkip[str] | None,
+        decorators_to_skip: TokensToSkip[str] | None,
+        from_imports_to_skip: TokensToSkip[tuple[str, str]] | None,
+        functions_to_skip: TokensToSkip[str] | None,
+        module_imports_to_skip: TokensToSkip[str] | None,
+        names_to_fold: TokensToFold[str, FoldableConstant] | None,
     ) -> None:
         self.assignments_to_skip = _TokensToSkipVisitCounter(assignments_to_skip)
         self.classes_to_skip = _TokensToSkipVisitCounter(classes_to_skip)

@@ -1,6 +1,6 @@
 import pytest
 
-from personal_python_ast_optimizer.config import PerfOptimizationsConfig
+from personal_python_ast_optimizer.config import PerfOptimizationsConfig, TokensToFold
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 _not_cases = [
@@ -15,7 +15,9 @@ _not_cases = [
 def test_not(before_and_after: BeforeAndAfter):
     optimize_and_assert_correctness_old(
         before_and_after,
-        perf_optimizations=PerfOptimizationsConfig(names_to_fold={"__debug__": False}),
+        perf_optimizations=PerfOptimizationsConfig(
+            names_to_fold=TokensToFold({"__debug__": False})
+        ),
     )
 
 

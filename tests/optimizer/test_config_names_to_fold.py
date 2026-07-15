@@ -59,6 +59,11 @@ def test_fold_names(source: str, expected: str):
         source,
         expected,
         perf_optimizations=PerfOptimizationsConfig(
+            calls_to_fold=TokensToFold(
+                {
+                    "os.cpu_count": 12,
+                }
+            ),
             names_to_fold=TokensToFold(
                 {
                     "FAVORITE_NUMBER": 6,
@@ -66,6 +71,6 @@ def test_fold_names(source: str, expected: str):
                     "__name__": "__main__",
                     "os.name": "nt",
                 }
-            )
+            ),
         ),
     )

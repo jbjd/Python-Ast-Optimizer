@@ -159,15 +159,19 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
-        if isinstance(node.op, (ast.Or, ast.And)):
+        parsed_node: ast.AST | None = self.generic_visit(node)
+
+        if isinstance(parsed_node, ast.BoolOp) and isinstance(
+            parsed_node.op, (ast.Or, ast.And)
+        ):
             # For And nodes left values that are Truthy and const can be removed
             # and vice versa
-            remove_if: bool = isinstance(node.op, ast.And)
+            remove_if: bool = isinstance(parsed_node.op, ast.And)
 
             index: int = 0
-            end: int = len(node.values) - 1
+            end: int = len(parsed_node.values) - 1
             while index < end:
-                current_node: ast.expr = node.values[index]
+                current_node: ast.expr = parsed_node.values[index]
                 if (
                     isinstance(current_node, ast.Constant)
                     and bool(current_node.value) is remove_if
@@ -176,10 +180,10 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
                 else:
                     break
             else:  # all values before last are skippable
-                return node.values[-1]
+                return parsed_node.values[-1]
 
             # 'False and some_func()' can be simplified to just 'False'
-            left_value: ast.AST = node.values[index]
+            left_value: ast.AST = parsed_node.values[index]
             if (
                 isinstance(left_value, ast.Constant)
                 and bool(left_value.value) is not remove_if
@@ -187,9 +191,9 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
                 return left_value
 
             if index > 0:
-                node.values = node.values[index:]
+                parsed_node.values = parsed_node.values[index:]
 
-        return node
+        return parsed_node
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         parsed_node: ast.AST = self.generic_visit(node)
@@ -526,6 +530,10 @@ class FirstPassOptimizer(OptimizationPass):
             and len(node.args) == 2  # noqa: PLR2004
         ):
             return self.generic_visit(node.args[1])
+
+        node_id: str = get_name_or_full_attribute_id(node.func)
+        if self.tokens_tracker.calls_to_fold.has(node_id):
+            return ast.Constant(self.tokens_tracker.calls_to_fold.get(node_id))
 
         return self.generic_visit(node)
 

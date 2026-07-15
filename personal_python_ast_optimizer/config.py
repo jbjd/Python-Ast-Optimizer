@@ -145,6 +145,7 @@ _default_functions_safe_to_exclude_in_test_expr: set[str] = {
 
 class PerfOptimizationsConfig:
     __slots__ = (
+        "calls_to_fold",
         "collection_concat_to_unpack",
         "fold_constants",
         "fold_simple_function_locals",
@@ -158,6 +159,7 @@ class PerfOptimizationsConfig:
         *,
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
+        calls_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         names_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
@@ -166,6 +168,7 @@ class PerfOptimizationsConfig:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
+        self.calls_to_fold: TokensToFold[str, FoldableConstant] | None = calls_to_fold
         self.names_to_fold: TokensToFold[str, FoldableConstant] | None = names_to_fold
 
         self.functions_safe_to_exclude_in_test_expr: set[str] = (

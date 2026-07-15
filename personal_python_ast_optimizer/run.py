@@ -42,6 +42,7 @@ def optimize_module(
         tokens_to_skip.from_imports_to_skip,
         tokens_to_skip.functions_to_skip,
         tokens_to_skip.module_imports_to_skip,
+        perf_optimizations.calls_to_fold,
         perf_optimizations.names_to_fold,
     )
 

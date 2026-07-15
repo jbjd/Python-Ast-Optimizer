@@ -115,6 +115,7 @@ class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter):
 class TokensTracker:
     __slots__ = (
         "assignments_to_skip",
+        "calls_to_fold",
         "classes_to_skip",
         "decorators_to_skip",
         "from_imports_to_skip",
@@ -131,6 +132,7 @@ class TokensTracker:
         from_imports_to_skip: TokensToSkip[tuple[str, str]] | None,
         functions_to_skip: TokensToSkip[str] | None,
         module_imports_to_skip: TokensToSkip[str] | None,
+        calls_to_fold: TokensToFold[str, FoldableConstant] | None,
         names_to_fold: TokensToFold[str, FoldableConstant] | None,
     ) -> None:
         self.assignments_to_skip = _TokensToSkipVisitCounter(assignments_to_skip)
@@ -139,6 +141,7 @@ class TokensTracker:
         self.from_imports_to_skip = _TokensToSkipVisitCounter(from_imports_to_skip)
         self.functions_to_skip = _TokensToSkipVisitCounter(functions_to_skip)
         self.module_imports_to_skip = _TokensToSkipVisitCounter(module_imports_to_skip)
+        self.calls_to_fold = _TokensToFoldVisitCounter(calls_to_fold)
         self.names_to_fold = _TokensToFoldVisitCounter(names_to_fold)
 
     def warn_not_found_skips(self, file_name: str) -> None:

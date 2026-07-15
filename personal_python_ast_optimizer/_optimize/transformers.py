@@ -198,7 +198,8 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
             parsed_node.operand, ast.Constant
         ):
             if isinstance(parsed_node.op, ast.Not):
-                return ast.Constant(not parsed_node.operand.value)
+                parsed_node.operand.value = not parsed_node.operand.value
+                return parsed_node.operand
             if isinstance(parsed_node.op, ast.UAdd):
                 return parsed_node.operand
             if sys.version_info < (3, 16) and isinstance(parsed_node.op, ast.Invert):

@@ -2,33 +2,6 @@ from personal_python_ast_optimizer.config import CodeToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
 
-def test_function_dangling_constants():
-    before_and_after = BeforeAndAfter(
-        """
-def foo(bar: str) -> None:
-    '''Some Doc String'''
-
-    3  # This is some dangling constant
-    a: int
-    return
-""",
-        "def foo(bar):pass",
-    )
-    optimize_and_assert_correctness_old(before_and_after)
-
-
-def test_function_with_many_args():
-    before_and_after = BeforeAndAfter(
-        """
-def foo(bar, spam, eggs):
-    a: int = 1
-    return a
-""",
-        "def foo(bar,spam,eggs):a=1;return a",
-    )
-    optimize_and_assert_correctness_old(before_and_after)
-
-
 def test_function_with_many_returns():
     before_and_after = BeforeAndAfter(
         """

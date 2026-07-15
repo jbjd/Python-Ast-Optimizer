@@ -27,11 +27,16 @@ if __name__=='__main__':files=[File(str(n))for n in range(10)];print(files)"""
     minify_and_assert_correctness(before, after)
 
 
+def test_imports():
+    """Should excluded unnecessary whitespace from imports."""
+    minify_and_assert_correctness("from ctypes import *", "from ctypes import*")
+
+
 def test_inlining():
     """Should inline all applicable nodes with semicolon delimitors."""
 
     before: str = """
-def a():
+def a(o, p):
     global b
     nonlocal c
     assert True
@@ -48,7 +53,7 @@ def a():
     return 0
 """
     after = (
-        "def a():global b;nonlocal c;assert True;a=1;a+=1;break;continue;del a;"
+        "def a(o,p):global b;nonlocal c;assert True;a=1;a+=1;break;continue;del a;"
         "some_func();import foo;from spam import eggs;pass;raise Exception;return 0"
     )
     minify_and_assert_correctness(before, after)

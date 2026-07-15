@@ -3,41 +3,6 @@ import pytest
 from personal_python_ast_optimizer.config import CodeToSkipConfig
 from tests.utils import BeforeAndAfter, optimize_and_assert_correctness_old
 
-
-def test_import_combined():
-    before_and_after = BeforeAndAfter(
-        """
-import test
-import test2
-def i():
-    import a
-    import d
-    from .b import f
-    from b import c
-    from b import d as e
-    print()
-    from b import abc
-""",
-        """import test,test2
-def i():import a,d;from .b import f;from b import c,d as e;print();from b import abc""",
-    )
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
-    )
-
-
-def test_import_star():
-    before_and_after = BeforeAndAfter(
-        "from ctypes import *",
-        "from ctypes import*",
-    )
-    optimize_and_assert_correctness_old(
-        before_and_after,
-        code_to_skip=CodeToSkipConfig(skip_unused_imports=False),
-    )
-
-
 _unused_import_test_cases: list[BeforeAndAfter] = [
     BeforeAndAfter(
         """

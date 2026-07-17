@@ -50,7 +50,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
     def visit(self, node: ast.Module) -> None:
         self.additional_pass_needed = False
-        self.generic_visit(node)
+        self._generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
@@ -61,7 +61,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
     def _handle_function(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> ast.AST | None:
-        parsed_node: ast.AST | None = self.generic_visit(node)
+        parsed_node: ast.AST | None = self._generic_visit(node)
 
         if self.fold_simple_function_locals and isinstance(
             parsed_node, (ast.FunctionDef, ast.AsyncFunctionDef)
@@ -86,7 +86,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
     def _handle_try(
         self, node: ast.Try | ast.TryStar
     ) -> ast.AST | list[ast.stmt] | None:
-        parsed_node = self.generic_visit(node)
+        parsed_node = self._generic_visit(node)
 
         if isinstance(parsed_node, (ast.Try, ast.TryStar)) and self._body_is_only_pass(
             parsed_node.body
@@ -96,7 +96,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        parsed_node: ast.AST = self.generic_visit(node)
+        parsed_node: ast.AST = self._generic_visit(node)
 
         if isinstance(parsed_node, ast.If):
             if isinstance(parsed_node.test, ast.Constant):
@@ -134,7 +134,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST | None:
-        parsed_node: ast.AST = self.generic_visit(node)
+        parsed_node: ast.AST = self._generic_visit(node)
 
         if isinstance(parsed_node, ast.IfExp) and isinstance(
             parsed_node.test, ast.Constant
@@ -147,7 +147,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_While(self, node: ast.While) -> ast.AST | None:
-        parsed_node = self.generic_visit(node)
+        parsed_node = self._generic_visit(node)
 
         if (
             isinstance(parsed_node, ast.While)
@@ -159,7 +159,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
-        parsed_node: ast.AST | None = self.generic_visit(node)
+        parsed_node: ast.AST = self._generic_visit(node)
 
         if isinstance(parsed_node, ast.BoolOp) and isinstance(
             parsed_node.op, (ast.Or, ast.And)
@@ -196,7 +196,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
-        parsed_node: ast.AST = self.generic_visit(node)
+        parsed_node: ast.AST = self._generic_visit(node)
 
         if isinstance(parsed_node, ast.UnaryOp) and isinstance(
             parsed_node.operand, ast.Constant
@@ -211,8 +211,8 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
         return parsed_node
 
-    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
-        parsed_node: ast.AST = self.generic_visit(node)
+    def visit_BinOp(self, node: ast.BinOp) -> ast.AST | None:
+        parsed_node: ast.AST = self._generic_visit(node)
 
         if (
             self.fold_constants
@@ -227,7 +227,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         return parsed_node
 
     def visit_Compare(self, node: ast.Compare) -> ast.AST:
-        parsed_node = self.generic_visit(node)
+        parsed_node = self._generic_visit(node)
 
         if (
             isinstance(parsed_node, ast.Compare)
@@ -300,7 +300,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
             case ast.IsNot():
                 result = left_value is not right_value
             case _:  # pragma: no cover
-                assert_never(operation)
+                assert_never(operation)  # type: ignore[arg-type]
 
         return ast.Constant(result)
 
@@ -376,7 +376,7 @@ class FirstPassOptimizer(OptimizationPass):
 
     @override
     def visit(self, node: ast.Module) -> None:
-        self.generic_visit(node)
+        self._generic_visit(node)
 
         if self.simplify_named_tuple == _SimplifyNamedTuple.FOUND:
             handled: bool = False
@@ -399,10 +399,10 @@ class FirstPassOptimizer(OptimizationPass):
             or not isinstance(node.value, ast.Constant)
         )
 
-    def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
         return self._handle_function(node)
 
     def _handle_function(
@@ -453,7 +453,7 @@ class FirstPassOptimizer(OptimizationPass):
         self._skip_decorators(node)
 
         parsed_node: ast.AST | None = self._visit_with_context(
-            node, NodeContext.CLASS, self.generic_visit
+            node, NodeContext.CLASS, self._generic_visit
         )
 
         if (
@@ -478,7 +478,7 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
-        parsed_node: ast.AST = super().visit_If(node)
+        parsed_node: ast.AST | list[ast.stmt] | None = super().visit_If(node)
 
         if (
             isinstance(parsed_node, ast.If)
@@ -529,13 +529,13 @@ class FirstPassOptimizer(OptimizationPass):
             and node.func.id == "cast"
             and len(node.args) == 2  # noqa: PLR2004
         ):
-            return self.generic_visit(node.args[1])
+            return self._generic_visit(node.args[1])
 
-        node_id: str = get_name_or_full_attribute_id(node.func)
-        if self.tokens_tracker.calls_to_fold.has(node_id):
+        node_id: str | None = get_name_or_full_attribute_id(node.func)
+        if node_id is not None and self.tokens_tracker.calls_to_fold.has(node_id):
             return ast.Constant(self.tokens_tracker.calls_to_fold.get(node_id))
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         node.targets = [
@@ -547,7 +547,7 @@ class FirstPassOptimizer(OptimizationPass):
             and not self.tokens_tracker.assignments_to_skip.has(t_name)
         ]
 
-        return self.generic_visit(node) if node.targets else None
+        return self._generic_visit(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         node_name: str | None = get_name_or_full_attribute_id(node.target)
@@ -563,32 +563,32 @@ class FirstPassOptimizer(OptimizationPass):
             return (
                 None
                 if node.value is None
-                else self.generic_visit(ast.Assign([node.target], node.value))
+                else self._generic_visit(ast.Assign([node.target], node.value))
             )
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> ast.AST | None:
         if is_return_literal_none(node):
             node.value = None
             return node
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_Assert(self, node: ast.Assert) -> ast.AST | None:
-        return None if self.skip_asserts else self.generic_visit(node)
+        return None if self.skip_asserts else self._generic_visit(node)
 
     def visit_TypeVar(self, node: ast.TypeVar) -> ast.AST | None:
-        return None if self.skip_generics_and_alias else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self._generic_visit(node)
 
     def visit_ParamSpec(self, node: ast.ParamSpec) -> ast.AST | None:
-        return None if self.skip_generics_and_alias else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self._generic_visit(node)
 
     def visit_TypeVarTuple(self, node: ast.TypeVarTuple) -> ast.AST | None:
-        return None if self.skip_generics_and_alias else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self._generic_visit(node)
 
     def visit_TypeAlias(self, node: ast.TypeAlias) -> ast.AST | None:
-        return None if self.skip_generics_and_alias else self.generic_visit(node)
+        return None if self.skip_generics_and_alias else self._generic_visit(node)
 
     # Removes duplicate passes. Super class handles adding them back if needed
     # such as an empty if body
@@ -604,7 +604,7 @@ class FirstPassOptimizer(OptimizationPass):
             node.value = ast.Constant(None)
             return node
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST | None:
         parsed_node: ast.AST | None = super().visit_BinOp(node)
@@ -618,7 +618,7 @@ class FirstPassOptimizer(OptimizationPass):
             )
         ):
             if type(parsed_node.left) is type(parsed_node.right):
-                parsed_node.left.elts += parsed_node.right.elts
+                parsed_node.left.elts += parsed_node.right.elts  # type: ignore[attr-defined]
                 return parsed_node.left
 
             if self.collection_concat_to_unpack:
@@ -631,7 +631,7 @@ class FirstPassOptimizer(OptimizationPass):
 
         return parsed_node
 
-    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute | ast.Constant:
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         full_attr_id: str = get_full_attribute_id(node)
         if not hasattr(node, "no_check_fold") and self.tokens_tracker.names_to_fold.has(
             full_attr_id
@@ -639,9 +639,9 @@ class FirstPassOptimizer(OptimizationPass):
             return ast.Constant(self.tokens_tracker.names_to_fold.get(full_attr_id))
 
         if isinstance(node.value, ast.Attribute):
-            node.value.no_check_fold = True
+            node.value.no_check_fold = True  # type: ignore[attr-defined]
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
         if self.tokens_tracker.names_to_fold.has(node.id):
@@ -649,8 +649,8 @@ class FirstPassOptimizer(OptimizationPass):
 
         return node
 
-    def _visit_with_context[R](
-        self, node: ast.AST, context: NodeContext, visitor: Callable[[ast.AST], R]
+    def _visit_with_context[P, R](
+        self, node: P, context: NodeContext, visitor: Callable[[P], R]
     ) -> R:
         previous_value: NodeContext = self._node_context
         self._node_context = context
@@ -674,8 +674,7 @@ class FirstPassOptimizer(OptimizationPass):
 
     @staticmethod
     def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
-        if not node.body:  # pragma: no cover
-            assert_never("Empty node body during NamedTuple simplification")
+        assert node.body, "Empty node body during NamedTuple simplification"
 
         defaults: list[ast.expr] = (
             [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
@@ -725,7 +724,7 @@ class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
         self._names_and_attrs: set[str] = set(imports_to_preserve)
 
     def visit(self, node: ast.Module) -> None:
-        self.generic_visit(node)
+        self._generic_visit(node)
 
     @override
     def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
@@ -773,7 +772,7 @@ class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         self._names_and_attrs.add(node.attr)
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def _filter_imports(self, node: ast.Import | ast.ImportFrom) -> None:
         node.names = [
@@ -788,7 +787,7 @@ class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
             # They are the same in python 3, but less size
             node.test.value = 1
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
 
 class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
@@ -798,7 +797,7 @@ class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
         self._folds: dict[str, ast.Constant] = folds
 
     def visit(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        self.generic_visit(node)
+        self._generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         node.targets = [
@@ -807,14 +806,14 @@ class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
             if not isinstance(target, ast.Name) or target.id not in self._folds
         ]
 
-        return self.generic_visit(node) if node.targets else None
+        return self._generic_visit(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
 
         if isinstance(node.target, ast.Name) and node.target.id in self._folds:
             return None
 
-        return self.generic_visit(node)
+        return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
         if node.id in self._folds:

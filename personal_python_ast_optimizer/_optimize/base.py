@@ -38,10 +38,10 @@ class AstTransformerBase(AstVisitorBaseProtocol):
     def _visit(self, node: ast.AST) -> ast.AST | None:
         """Visits `node`."""
         method = "visit_" + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
+        visitor = getattr(self, method, self._generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
+    def _generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_nodes: list[ast.AST] = []

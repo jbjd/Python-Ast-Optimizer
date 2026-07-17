@@ -22,9 +22,12 @@ _GENERICS_EXAMPLE: str = """
 type NIL=None
 def a[FOO, BAR](a: FOO, b: BAR) -> NIL:
     print(a, b)
-class A[FOO]:
-    def __init__(self,a:FOO):
-        self.a:FOO=a
+type Alias[**P] = Callable[P, int]
+def b(a: Alias):
+    a()
+class A[*FOO]:
+    def __init__(self,*a:*FOO):
+        self.a=a
 """
 
 
@@ -68,7 +71,9 @@ def test_generics_keep():
 
     expected: str = """type NIL=None
 def a[FOO,BAR](a,b):print(a,b)
-class A[FOO]:\n\tdef __init__(self,a):self.a=a"""
+type Alias[**P]=Callable[P,int]
+def b(a):a()
+class A[*FOO]:\n\tdef __init__(self,*a):self.a=a"""
 
     optimize_and_assert_correctness(_GENERICS_EXAMPLE, expected)
 
@@ -77,7 +82,8 @@ def test_generics_remove():
     """Should remove all generics/aliases."""
 
     expected: str = """def a(a,b):print(a,b)
-class A:\n\tdef __init__(self,a):self.a=a"""
+def b(a):a()
+class A:\n\tdef __init__(self,*a):self.a=a"""
 
     optimize_and_assert_correctness(
         _GENERICS_EXAMPLE,

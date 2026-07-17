@@ -38,7 +38,9 @@ def test_fold_plus(source: str, expected: str):
     optimize_and_assert_correctness(source, expected)
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 16), reason="Bitwise not deprected in 3.16")
+@pytest.mark.skipif(
+    sys.version_info >= (3, 16), reason="Bitwise not deprecated in 3.16"
+)
 @pytest.mark.parametrize(
     ("source", "expected"),
     [

@@ -4,7 +4,7 @@ import ast
 import sys
 from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import override
+from typing import assert_never, override
 
 from personal_python_ast_optimizer._optimize.base import (
     AstTransformerBase,
@@ -299,8 +299,8 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
                 result = left_value is right_value
             case ast.IsNot():
                 result = left_value is not right_value
-            case _:
-                raise ValueError(f"Invalid operation: {operation.__class__.__name__}")
+            case _:  # pragma: no cover
+                assert_never(operation)
 
         return ast.Constant(result)
 
@@ -674,23 +674,22 @@ class FirstPassOptimizer(OptimizationPass):
 
     @staticmethod
     def _build_named_tuple(node: ast.ClassDef) -> ast.Call:
+        if not node.body:  # pragma: no cover
+            assert_never("Empty node body during NamedTuple simplification")
 
-        defaults: list[ast.expr]
-        if node.body:
-            defaults = [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
+        defaults: list[ast.expr] = (
+            [node.body[0].value] if node.body[0].value is not None else []  # type: ignore[attr-defined]
+        )
 
-            for i in range(1, len(node.body)):
-                assign: ast.AnnAssign = node.body[i]  # type: ignore[assignment]
-                if assign.value is not None:
-                    defaults.append(assign.value)
-                elif node.body[i - 1].value is not None:  # type: ignore[attr-defined]
-                    raise ValueError(
-                        f'namedtuple "{node.name}" has '
-                        "non-default following a default field"
-                    )
-
-        else:
-            defaults = []
+        for i in range(1, len(node.body)):
+            assign: ast.AnnAssign = node.body[i]  # type: ignore[assignment]
+            if assign.value is not None:
+                defaults.append(assign.value)
+            elif node.body[i - 1].value is not None:  # type: ignore[attr-defined]
+                raise ValueError(
+                    f'namedtuple "{node.name}" has '
+                    "non-default following a default field"
+                )
 
         keywords: list[ast.keyword] = (
             [ast.keyword("defaults", ast.List(defaults))] if defaults else []

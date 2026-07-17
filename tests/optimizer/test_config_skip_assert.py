@@ -5,6 +5,8 @@ _ASSERT_EXAMPLE: str = "def foo1(val):assert val;val()"
 
 
 def test_skip_assert():
+    """Should remove all asserts."""
+
     optimize_and_assert_correctness(
         _ASSERT_EXAMPLE,
         "def foo1(val):val()",
@@ -13,6 +15,8 @@ def test_skip_assert():
 
 
 def test_no_skip_assert():
+    """Should remove no asserts."""
+
     optimize_and_assert_correctness(
         _ASSERT_EXAMPLE,
         _ASSERT_EXAMPLE,

@@ -9,6 +9,10 @@ from tests.utils import optimize_and_assert_correctness
     [
         ("a='a' is 'b'", "a=False"),
         ("a='a' is not 'b'", "a=True"),
+        ("a=3>=2", "a=True"),
+        ("a=2<=2", "a=True"),
+        ("a=1<2", "a=True"),
+        ("a=1!=1", "a=False"),
     ],
 )
 def test_fold_comparisons(source: str, expected: str):

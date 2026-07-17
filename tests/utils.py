@@ -13,36 +13,8 @@ from personal_python_ast_optimizer.minifier import MinifyUnparser
 from personal_python_ast_optimizer.run import optimize_source_and_minify
 
 
-class BeforeAndAfter:
-    """Input and output after minifying it"""
-
-    __slots__ = ("after", "before")
-
-    def __init__(self, before: str, after: str) -> None:
-        self.before: str = before
-        self.after: str = after
-
-
 class OptimizeOutputError(Exception):
     pass
-
-
-# TODO: deprecate BeforeAndAfter
-def optimize_and_assert_correctness_old(
-    before_and_after: BeforeAndAfter,
-    code_to_skip: CodeToSkipConfig | None = None,
-    token_types_to_skip: TokenTypesToSkipConfig | None = None,
-    tokens_to_skip: TokensToSkipConfig | None = None,
-    perf_optimizations: PerfOptimizationsConfig | None = None,
-):
-    optimize_and_assert_correctness(
-        before_and_after.before,
-        before_and_after.after,
-        code_to_skip,
-        token_types_to_skip,
-        tokens_to_skip,
-        perf_optimizations,
-    )
 
 
 def optimize_expect_error(
@@ -100,5 +72,5 @@ def _assert_correctness(code_to_check: str, expected_code: str) -> None:
         raise OptimizeOutputError(f"Minified code invalid:\n\n{code_to_check}") from e
 
     assert code_to_check == expected_code, (
-        f"\n\nGot:\n\n{code_to_check}\n\n--------\n\nExpected\n\n{expected_code}"
+        f"\n\nGot:\n\n{code_to_check!r}\n\n--------\n\nExpected\n\n{expected_code!r}"
     )

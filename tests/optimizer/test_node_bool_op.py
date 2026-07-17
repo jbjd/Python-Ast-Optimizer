@@ -11,6 +11,13 @@ def test_or_all_false():
     optimize_and_assert_correctness(*_get_test_inputs("'' or 0", "0"))
 
 
+def test_or_some_false():
+    """Should remove 'or' conditionals and stop at last value."""
+    optimize_and_assert_correctness(
+        *_get_test_inputs("'' or 0 or func() or 2", "func()or 2")
+    )
+
+
 def test_useless_and():
     """Should remove 'and' conditionals and stop at first falsey value."""
     optimize_and_assert_correctness(*_get_test_inputs("1 and 0 and 1", "0"))

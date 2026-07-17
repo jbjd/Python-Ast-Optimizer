@@ -4,10 +4,7 @@ import ast
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
-from personal_python_ast_optimizer._optimize.utils import (
-    NodeContext,
-    get_name_or_full_attribute_id,
-)
+from personal_python_ast_optimizer._optimize.utils import get_name_or_full_attribute_id
 
 
 class CallAggregator(AstVisitorBase, AstVisitorProtocol):
@@ -31,11 +28,10 @@ class CallAggregator(AstVisitorBase, AstVisitorProtocol):
 
 
 class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
-    __slots__ = ("_excludes", "_foldable", "_node_context")
+    __slots__ = ("_excludes", "_foldable")
 
     def __init__(self, excludes: set[str]) -> None:
         self._foldable: dict[str, ast.Constant] = {}
-        self._node_context: NodeContext = NodeContext.NONE
         self._excludes: set[str] = excludes
 
     def visit(
@@ -44,25 +40,17 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
         self._traverse_body(node.body)
         return self._foldable
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._handle_function(node)
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._handle_function(node)
-
-    def _handle_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        previous_value: NodeContext = self._node_context
-        self._node_context = NodeContext.FUNCTION
-        try:
-            return self._generic_visit(node)
-        finally:
-            self._node_context = previous_value
-
     def visit_Global(self, node: ast.Global) -> None:
-        self._excludes |= set(node.names)
+        self._handle_global_nonlocal(node)
 
     def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
-        self._excludes |= set(node.names)
+        self._handle_global_nonlocal(node)
+
+    def _handle_global_nonlocal(self, node: ast.Global | ast.Nonlocal) -> None:
+        for name in node.names:
+            self._excludes.add(name)
+            if name in self._foldable:
+                del self._foldable[name]
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
         self._handle_possible_foldable(node.target.id)
@@ -110,7 +98,6 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
             and node_id not in self._excludes
             and isinstance(value, ast.Constant)
             and (value.value is None or isinstance(value.value, int))
-            and self._node_context == NodeContext.NONE
         ):
             self._foldable[node_id] = value
 

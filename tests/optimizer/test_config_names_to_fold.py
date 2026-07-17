@@ -54,7 +54,7 @@ def get_cpu_count():
     ],
 )
 def test_fold_names(source: str, expected: str):
-    """Should replace occurances of name with provided constant."""
+    """Should replace occurrences of name with provided constant."""
     optimize_and_assert_correctness(
         source,
         expected,

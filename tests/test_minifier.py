@@ -33,7 +33,7 @@ def test_imports():
 
 
 def test_inlining():
-    """Should inline all applicable nodes with semicolon delimitors."""
+    """Should inline all applicable nodes with semicolon delimiters."""
 
     before: str = """
 def a(o, p):

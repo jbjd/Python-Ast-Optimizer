@@ -150,7 +150,7 @@ class PerfOptimizationsConfig:
         "fold_constants",
         "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
-        "names_to_fold",
+        "name_or_attr_to_fold",
         "simplify_named_tuple",
     )
 
@@ -160,7 +160,7 @@ class PerfOptimizationsConfig:
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
         calls_to_fold: TokensToFold[str, FoldableConstant] | None = None,
-        names_to_fold: TokensToFold[str, FoldableConstant] | None = None,
+        name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
         simplify_named_tuple: bool = False,
@@ -169,7 +169,9 @@ class PerfOptimizationsConfig:
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
         self.calls_to_fold: TokensToFold[str, FoldableConstant] | None = calls_to_fold
-        self.names_to_fold: TokensToFold[str, FoldableConstant] | None = names_to_fold
+        self.name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = (
+            name_or_attr_to_fold
+        )
 
         self.functions_safe_to_exclude_in_test_expr: set[str] = (
             _default_functions_safe_to_exclude_in_test_expr

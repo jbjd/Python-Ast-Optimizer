@@ -21,7 +21,7 @@ def test_fold_not(source: str, expected: str):
         source,
         expected,
         perf_optimizations=PerfOptimizationsConfig(
-            names_to_fold=TokensToFold({"__debug__": False})
+            name_or_attr_to_fold=TokensToFold({"__debug__": False})
         ),
     )
 

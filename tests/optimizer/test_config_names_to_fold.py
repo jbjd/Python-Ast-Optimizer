@@ -64,7 +64,7 @@ def test_fold_names(source: str, expected: str):
                     "os.cpu_count": 12,
                 }
             ),
-            names_to_fold=TokensToFold(
+            name_or_attr_to_fold=TokensToFold(
                 {
                     "FAVORITE_NUMBER": 6,
                     "TEST": "test",

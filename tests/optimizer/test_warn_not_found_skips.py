@@ -44,7 +44,7 @@ class DEF(ABC):a=1
                 module_imports_to_skip=TokensToSkip({"os"}, no_warn),
             ),
             perf_optimizations=PerfOptimizationsConfig(
-                names_to_fold=TokensToFold({"SOME_CONST": 1}, no_warn)
+                name_or_attr_to_fold=TokensToFold({"SOME_CONST": 1}, no_warn)
             ),
         )
 

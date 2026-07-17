@@ -541,7 +541,7 @@ class FirstPassOptimizer(OptimizationPass):
         node.targets = [
             t
             for t in node.targets
-            if not self.tokens_tracker.names_to_fold.has(
+            if not self.tokens_tracker.name_or_attr_to_fold.has(
                 t_name := get_name_or_full_attribute_id(t)
             )
             and not self.tokens_tracker.assignments_to_skip.has(t_name)
@@ -551,7 +551,7 @@ class FirstPassOptimizer(OptimizationPass):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         node_name: str | None = get_name_or_full_attribute_id(node.target)
-        if self.tokens_tracker.names_to_fold.has(
+        if self.tokens_tracker.name_or_attr_to_fold.has(
             node_name
         ) or self.tokens_tracker.assignments_to_skip.has(node_name):
             return None
@@ -633,10 +633,12 @@ class FirstPassOptimizer(OptimizationPass):
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         full_attr_id: str = get_full_attribute_id(node)
-        if not hasattr(node, "no_check_fold") and self.tokens_tracker.names_to_fold.has(
-            full_attr_id
-        ):
-            return ast.Constant(self.tokens_tracker.names_to_fold.get(full_attr_id))
+        if not hasattr(
+            node, "no_check_fold"
+        ) and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id):
+            return ast.Constant(
+                self.tokens_tracker.name_or_attr_to_fold.get(full_attr_id)
+            )
 
         if isinstance(node.value, ast.Attribute):
             node.value.no_check_fold = True  # type: ignore[attr-defined]
@@ -644,8 +646,8 @@ class FirstPassOptimizer(OptimizationPass):
         return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
-        if self.tokens_tracker.names_to_fold.has(node.id):
-            return ast.Constant(self.tokens_tracker.names_to_fold.get(node.id))
+        if self.tokens_tracker.name_or_attr_to_fold.has(node.id):
+            return ast.Constant(self.tokens_tracker.name_or_attr_to_fold.get(node.id))
 
         return node
 

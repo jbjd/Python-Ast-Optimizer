@@ -121,7 +121,7 @@ class TokensTracker:
         "from_imports_to_skip",
         "functions_to_skip",
         "module_imports_to_skip",
-        "names_to_fold",
+        "name_or_attr_to_fold",
     )
 
     def __init__(
@@ -133,7 +133,7 @@ class TokensTracker:
         functions_to_skip: TokensToSkip[str] | None,
         module_imports_to_skip: TokensToSkip[str] | None,
         calls_to_fold: TokensToFold[str, FoldableConstant] | None,
-        names_to_fold: TokensToFold[str, FoldableConstant] | None,
+        name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None,
     ) -> None:
         self.assignments_to_skip = _TokensToSkipVisitCounter(assignments_to_skip)
         self.classes_to_skip = _TokensToSkipVisitCounter(classes_to_skip)
@@ -142,7 +142,7 @@ class TokensTracker:
         self.functions_to_skip = _TokensToSkipVisitCounter(functions_to_skip)
         self.module_imports_to_skip = _TokensToSkipVisitCounter(module_imports_to_skip)
         self.calls_to_fold = _TokensToFoldVisitCounter(calls_to_fold)
-        self.names_to_fold = _TokensToFoldVisitCounter(names_to_fold)
+        self.name_or_attr_to_fold = _TokensToFoldVisitCounter(name_or_attr_to_fold)
 
     def warn_not_found_skips(self, file_name: str) -> None:
         for attribute in self.__slots__:

@@ -21,19 +21,19 @@ from personal_python_ast_optimizer.typing import Unparser
 
 def optimize_module(
     module: ast.Module,
-    skip_config: OptimizeConfig,
+    optimize_config: OptimizeConfig,
     file_name: str = "",
 ) -> None:
     """Optimizes a Python AST by removing unneeded node, replacements of slower
     code, etc.
 
     :param module: Module to optimize
-    :param skip_config: Config for what is allowed to be optimized
+    :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
-    code_to_skip: CodeToSkipConfig = skip_config.code_to_skip
-    tokens_to_skip: TokensToSkipConfig = skip_config.tokens_to_skip
-    token_types_to_skip: TokenTypesToSkipConfig = skip_config.token_types_to_skip
-    perf_optimizations: PerfOptimizationsConfig = skip_config.perf_optimizations
+    code_to_skip: CodeToSkipConfig = optimize_config.code_to_skip
+    tokens_to_skip: TokensToSkipConfig = optimize_config.tokens_to_skip
+    token_types_to_skip: TokenTypesToSkipConfig = optimize_config.token_types_to_skip
+    perf_optimizations: PerfOptimizationsConfig = optimize_config.perf_optimizations
 
     tokens_to_skip_tracker = TokensTracker(
         tokens_to_skip.assignments_to_skip,
@@ -84,7 +84,7 @@ def optimize_module(
 
 def optimize_source(
     source: str,
-    skip_config: OptimizeConfig,
+    optimize_config: OptimizeConfig,
     unparser: Unparser,
     file_name: str = "",
 ) -> str:
@@ -92,23 +92,23 @@ def optimize_source(
     code, etc.
 
     :param module: Module to optimize
-    :param skip_config: Config for what is allowed to be optimized
+    :param optimize_config: Config for what is allowed to be optimized
     :param unparser: A class that can convert the ast.Module back into python
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
     module: ast.Module = ast.parse(source, file_name)
-    optimize_module(module, skip_config)
+    optimize_module(module, optimize_config)
     return unparser.visit(module)
 
 
 def optimize_source_and_minify(
-    source: str, skip_config: OptimizeConfig, file_name: str = ""
+    source: str, optimize_config: OptimizeConfig, file_name: str = ""
 ) -> str:
     """Optimizes Python code by removing unneeded node, replacements of slower
     code, etc. and returns it in a minified format.
 
     :param module: Module to optimize
-    :param skip_config: Config for what is allowed to be optimized
+    :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
-    return optimize_source(source, skip_config, MinifyUnparser(), file_name)
+    return optimize_source(source, optimize_config, MinifyUnparser(), file_name)

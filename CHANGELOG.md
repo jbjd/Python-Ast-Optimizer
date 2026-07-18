@@ -5,7 +5,7 @@
 ## [9.0.0] - 2026-07-17
 
 - [Deprecation] RegexNoMatchException renamed to RegexNoMatchError
-- [Deprecation] Remove many modules that were never intended as public and resturcture entire project
+- [Deprecation] Remove many modules that were never intended as public and restructure entire project
 - [Deprecation] Config completely restructured and location moved
 - [Deprecation] Change vars_to_fold to name_or_attr_to_fold
 - [Deprecation] Removed Config assume_this_machine, use name_or_attr_to_fold/calls_to_fold instead

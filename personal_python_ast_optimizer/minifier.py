@@ -3,6 +3,7 @@
 import ast
 from ast import _Precedence  # type: ignore[attr-defined]
 from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from typing import Literal, LiteralString
 
 _chars_that_dont_need_whitespace: list[str] = [
@@ -53,15 +54,31 @@ _ast_operators_to_strip: list[str] = [
 class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     """Turns a Python AST into source code in a minfied format."""
 
-    __slots__ = ("can_write_body_in_one_line", "previous_node_in_body")
+    __slots__ = ("_is_buffered", "can_write_body_in_one_line", "previous_node_in_body")
 
     def __init__(self) -> None:
         self._source: list[str]  # type: ignore[misc]
         self._indent: int  # type: ignore[misc]
         super().__init__()
 
+        self._is_buffered: bool = False
         self.previous_node_in_body: ast.stmt | None = None
         self.can_write_body_in_one_line: bool = False
+
+    @contextmanager
+    def buffered(self, buffer: list[str] | None = None):  # noqa: ANN201
+        previous_value = self._is_buffered
+        self._is_buffered = True
+        try:
+            if buffer is None:
+                buffer = []
+
+            original_source = self._source
+            self._source = buffer
+            yield buffer
+            self._source = original_source
+        finally:
+            self._is_buffered = previous_value
 
     def visit(self, node: ast.AST) -> str:
         """Outputs a source code string that, if converted back to an ast
@@ -146,9 +163,13 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
                 yield text.strip()
                 continue
 
-            if text[:1] == " " and (
-                not self._source
-                or self._source[-1][-1] in _chars_that_dont_need_whitespace
+            if (
+                text[:1] == " "
+                and not self._is_buffered
+                and (
+                    not self._source
+                    or self._source[-1][-1] in _chars_that_dont_need_whitespace
+                )
             ):
                 text = text[1:]  # noqa: PLW2901
 

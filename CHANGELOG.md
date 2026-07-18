@@ -11,6 +11,7 @@
 - [Deprecation] Removed Config assume_this_machine, use name_or_attr_to_fold/calls_to_fold instead
 - [Deprecation] Removed Config enums_to_fold, use name_or_attr_to_fold/calls_to_fold instead
 - [Deprecation] Removed Config dict_keys_to_skip
+- [Fix] Rare edge case where minifier could remove whitespace from inside string
 - [Improvement] name_or_attr_to_fold now supports Attributes as well
 - [Improvement] Default to not warning about not finding nodes to skip
 - [Improvement] Ability to warn about names/attrs/calls to fold that were not found

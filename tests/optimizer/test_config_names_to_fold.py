@@ -70,6 +70,7 @@ def test_fold_names(source: str, expected: str):
                     "TEST": "test",
                     "__name__": "__main__",
                     "os.name": "nt",
+                    "foo": "asdf",
                 }
             ),
         ),

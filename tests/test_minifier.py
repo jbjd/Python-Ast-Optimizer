@@ -1,3 +1,5 @@
+import pytest
+
 from tests.utils import minify_and_assert_correctness
 
 
@@ -59,28 +61,39 @@ def a(o, p):
     minify_and_assert_correctness(before, after)
 
 
-def test_dangling_expression1():
-    minify_and_assert_correctness(
-        '''def a():
+def test_string():
+    """Should not edit anything inside of a string."""
+    example: str = "msg=f'Incomplete header: {len(header)}bytes';raise OSError(msg)"
+    minify_and_assert_correctness(example, example)
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        (
+            '''def a():
     """some doc string"""
     foo = 5
     bar = 6
 ''',
-        '''def a():
+            '''def a():
 \t"""some doc string"""
 \tfoo=5;bar=6''',
-    )
-
-
-def test_dangling_expression2():
-    minify_and_assert_correctness(
-        '''def a():
+        ),
+        (
+            '''def a():
     """some
 doc string"""
     if 1: print(1)
 ''',
-        '''def a():
+            '''def a():
 \t"""some
 doc string"""
 \tif 1:print(1)''',
-    )
+        ),
+    ],
+)
+def test_doc_string(source: str, expected: str):
+    """Should put doc string on its own line."""
+
+    minify_and_assert_correctness(source, expected)

@@ -457,13 +457,9 @@ class FirstPassOptimizer(OptimizationPass):
 
         self._skip_decorators(node)
 
-        parsed_node: ast.AST | None = self._visit_with_context(
-            node, NodeContext.CLASS, self._generic_visit
-        )
-
         if (
             self.simplify_named_tuple
-            and isinstance(parsed_node, ast.ClassDef)
+            and isinstance(node, ast.ClassDef)
             and (
                 len(node.bases) == 1
                 and isinstance(node.bases[0], ast.Name)
@@ -480,7 +476,7 @@ class FirstPassOptimizer(OptimizationPass):
             named_tuple: ast.Call = self._build_named_tuple(node)
             return ast.Assign([ast.Name(node.name)], named_tuple)
 
-        return parsed_node
+        return self._visit_with_context(node, NodeContext.CLASS, self._generic_visit)
 
     def visit_If(self, node: ast.If) -> ast.AST | list[ast.stmt] | None:
         parsed_node: ast.AST | list[ast.stmt] | None = super().visit_If(node)

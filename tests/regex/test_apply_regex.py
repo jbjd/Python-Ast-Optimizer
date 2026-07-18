@@ -1,7 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.regex.replace import (
-    RegexNoMatchException,
+    RegexNoMatchError,
     RegexReplacement,
     re_replace,
 )
@@ -17,11 +17,7 @@ _re_cases = [
         "Some series of things. A real series.",
         "Some wonder of things. A real wonder.",
     ),
-    (
-        RegexReplacement("series", "wonder"),
-        "Fox",
-        "Fox",
-    ),
+    (RegexReplacement("series", "wonder"), "Fox", "Fox"),
 ]
 
 
@@ -31,7 +27,7 @@ def test_re_replace(replacement: RegexReplacement, source: str, expected_output:
 
 
 def test_re_replace_raises():
-    with pytest.raises(RegexNoMatchException):
+    with pytest.raises(RegexNoMatchError):
         re_replace(
             "Fox", RegexReplacement("series", "wonder"), raise_if_not_applied=True
         )

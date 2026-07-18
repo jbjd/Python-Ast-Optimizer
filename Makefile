@@ -1,8 +1,11 @@
+format:
+	ruff check . --fix
+
 validate:
 	ruff check .
 	ruff format --check
 	mypy .
-	codespell personal_python_ast_optimizer tests setup.py README.md
+	codespell -I .codespellignore personal_python_ast_optimizer tests setup.py CHANGELOG.md README.md
 
 override PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD

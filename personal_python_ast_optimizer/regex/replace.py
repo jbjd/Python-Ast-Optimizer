@@ -1,3 +1,5 @@
+"""Functions to assist with regex replacements."""
+
 import re
 from collections.abc import Iterable, Iterator
 
@@ -22,7 +24,7 @@ class RegexReplacement:
         yield self.count
 
 
-class RegexNoMatchException(Exception):  # noqa: N818
+class RegexNoMatchError(Exception):
     pass
 
 
@@ -46,7 +48,7 @@ def re_replace(
             unused_regex.append(regex)
 
     if unused_regex:
-        raise RegexNoMatchException(
+        raise RegexNoMatchError(
             f"Found {len(unused_regex)} unused regex: {unused_regex}"
         )
 

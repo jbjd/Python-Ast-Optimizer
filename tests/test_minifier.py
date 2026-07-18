@@ -63,7 +63,7 @@ def a(o, p):
 
 def test_string():
     """Should not edit anything inside of a string."""
-    example: str = "msg=f'Incomplete header: {len(header)}bytes';raise OSError(msg)"
+    example: str = "msg=f'Incomplete header: {len(header)} bytes'\nraise OSError(msg)"
     minify_and_assert_correctness(example, example)
 
 

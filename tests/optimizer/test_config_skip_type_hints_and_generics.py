@@ -5,6 +5,7 @@ from personal_python_ast_optimizer.config import (
 from tests.utils import optimize_and_assert_correctness
 
 _TYPE_HINT_EXAMPLE: str = """
+from __future__ import annotations
 import some_type
 
 a: some_type
@@ -34,7 +35,8 @@ class A[*FOO]:
 def test_remove_no_type_hints():
     """Should not remove any type hints."""
 
-    expected: str = """import some_type
+    expected: str = """from __future__ import annotations
+import some_type
 a:some_type
 def b()->None:c:int=3;print(c)
 class C:a:int=0;b:str"""

@@ -3,7 +3,7 @@
 import ast
 from collections.abc import Iterator
 from enum import Enum
-from typing import Any
+from typing import Any, override
 
 from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer.config import TokensToFold, TokensToSkip
@@ -91,6 +91,9 @@ class _TokensToSkipVisitCounter[T]:
             if v == 0:
                 yield str(k)
 
+    def add(self, key: T, already_visitied: bool) -> None:
+        self._tokens_to_skip[key] = already_visitied
+
     def has(self, key: object) -> bool:
         if key in self._tokens_to_skip:
             self._tokens_to_skip[key] = _VISITED
@@ -99,7 +102,7 @@ class _TokensToSkipVisitCounter[T]:
         return False
 
 
-class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter):
+class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter[str]):
     def __init__(
         self, tokens_to_fold: TokensToFold[str, FoldableConstant] | None
     ) -> None:
@@ -107,6 +110,10 @@ class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter):
         self.map: dict[str, FoldableConstant] = (
             {} if tokens_to_fold is None else tokens_to_fold.tokens
         )
+
+    @override
+    def add(self, key: str, already_visitied: bool) -> None:
+        raise NotImplementedError  # pragma: no cover
 
     def get(self, key: str) -> FoldableConstant:
         return self.map[key]

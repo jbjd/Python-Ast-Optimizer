@@ -374,6 +374,11 @@ class FirstPassOptimizer(OptimizationPass):
         self.skip_useless_else: bool = skip_useless_else
         self._node_context: NodeContext = NodeContext.NONE
 
+        if skip_type_hints:
+            self.tokens_tracker.from_imports_to_skip.add(
+                ("__future__", "annotations"), True
+            )
+
     @override
     def visit(self, node: ast.Module) -> None:
         self._generic_visit(node)

@@ -97,7 +97,7 @@ def optimize_source(
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
     module: ast.Module = ast.parse(source, file_name)
-    optimize_module(module, optimize_config)
+    optimize_module(module, optimize_config, file_name)
     return unparser.visit(module)
 
 

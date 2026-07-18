@@ -1,46 +1,76 @@
 import ast
 
-from personal_python_ast_optimizer.parser.config import (
-    OptimizationsConfig,
-    SkipConfig,
-    TokensConfig,
-    TokenTypesConfig,
+import pytest
+
+from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
+    OptimizeConfig,
+    PerfOptimizationsConfig,
+    TokensToSkipConfig,
+    TokenTypesToSkipConfig,
 )
-from personal_python_ast_optimizer.parser.run import run_unparser
+from personal_python_ast_optimizer.minifier import MinifyUnparser
+from personal_python_ast_optimizer.run import optimize_source_and_minify
 
 
-class BeforeAndAfter:
-    """Input and output after minifying it"""
-
-    __slots__ = ("after", "before")
-
-    def __init__(self, before: str, after: str) -> None:
-        self.before: str = before
-        self.after: str = after
+class OptimizeOutputError(Exception):
+    pass
 
 
-def run_minifier_and_assert_correct(
-    before_and_after: BeforeAndAfter,
-    target_python_version: tuple[int, int] | None = None,
-    token_types_config: TokenTypesConfig | None = None,
-    tokens_config: TokensConfig | None = None,
-    optimizations_config: OptimizationsConfig | None = None,
+def optimize_expect_error(
+    source: str,
+    error: type[BaseException],
+    expected_message: str,
+    code_to_skip: CodeToSkipConfig | None = None,
+    token_types_to_skip: TokenTypesToSkipConfig | None = None,
+    tokens_to_skip: TokensToSkipConfig | None = None,
+    perf_optimizations: PerfOptimizationsConfig | None = None,
 ):
-    minified_code: str = run_unparser(
-        before_and_after.before,
-        skip_config=SkipConfig(
-            "",
-            target_python_version=target_python_version,
-            tokens_config=tokens_config or TokensConfig(),
-            token_types_config=token_types_config or TokenTypesConfig(),
-            optimizations_config=optimizations_config or OptimizationsConfig(),
+    with pytest.raises(error, match=expected_message):
+        optimize_source_and_minify(
+            source,
+            OptimizeConfig(
+                code_to_skip=code_to_skip,
+                tokens_to_skip=tokens_to_skip,
+                token_types_to_skip=token_types_to_skip,
+                perf_optimizations=perf_optimizations,
+            ),
+        )
+
+
+def optimize_and_assert_correctness(
+    source: str,
+    expected: str,
+    code_to_skip: CodeToSkipConfig | None = None,
+    token_types_to_skip: TokenTypesToSkipConfig | None = None,
+    tokens_to_skip: TokensToSkipConfig | None = None,
+    perf_optimizations: PerfOptimizationsConfig | None = None,
+):
+    optimized_code: str = optimize_source_and_minify(
+        source,
+        OptimizeConfig(
+            code_to_skip=code_to_skip,
+            tokens_to_skip=tokens_to_skip,
+            token_types_to_skip=token_types_to_skip,
+            perf_optimizations=perf_optimizations,
         ),
     )
-    raise_if_python_code_invalid(minified_code)
-    assert before_and_after.after == minified_code, (
-        f"\n\n{before_and_after.after}\n\n--------\n\n{minified_code}"
+
+    _assert_correctness(optimized_code, expected)
+
+
+def minify_and_assert_correctness(source: str, expected: str) -> None:
+    module: ast.Module = ast.parse(source)
+    minified_code: str = MinifyUnparser().visit(module)
+    _assert_correctness(minified_code, expected)
+
+
+def _assert_correctness(code_to_check: str, expected_code: str) -> None:
+    try:
+        ast.parse(code_to_check)
+    except SyntaxError as e:
+        raise OptimizeOutputError(f"Minified code invalid:\n\n{code_to_check}") from e
+
+    assert code_to_check == expected_code, (
+        f"\n\nGot:\n\n{code_to_check!r}\n\n--------\n\nExpected\n\n{expected_code!r}"
     )
-
-
-def raise_if_python_code_invalid(python_code: str) -> None:
-    ast.parse(python_code)

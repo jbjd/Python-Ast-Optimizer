@@ -29,7 +29,7 @@ class DEF(ABC):a=1
 
     warn_source: str = "b=1"
 
-    no_warn = set()
+    no_warn: set = set()
 
     with patch(
         "personal_python_ast_optimizer._optimize.utils._logger.warning"

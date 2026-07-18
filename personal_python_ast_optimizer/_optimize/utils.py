@@ -40,7 +40,7 @@ def get_name_or_full_attribute_id(node: ast.AST) -> str | None:
     return get_full_attribute_id(node)
 
 
-def get_full_attribute_id(node: ast.Attribute) -> None:
+def get_full_attribute_id(node: ast.Attribute) -> str | None:
     """Returns full id of Attribute node.
 
     :param node: An Attribute node to check

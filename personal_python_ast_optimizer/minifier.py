@@ -54,7 +54,12 @@ _ast_operators_to_strip: list[str] = [
 class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     """Turns a Python AST into source code in a minfied format."""
 
-    __slots__ = ("_is_buffered", "can_write_body_in_one_line", "previous_node_in_body")
+    __slots__ = (
+        "_is_buffered",
+        "_source",
+        "can_write_body_in_one_line",
+        "previous_node_in_body",
+    )
 
     def __init__(self) -> None:
         self._source: list[str]  # type: ignore[misc]

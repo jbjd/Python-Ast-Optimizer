@@ -19,7 +19,7 @@ class OptimizeOutputError(Exception):
 
 def optimize_expect_error(
     source: str,
-    error: BaseException,
+    error: type[BaseException],
     expected_message: str,
     code_to_skip: CodeToSkipConfig | None = None,
     token_types_to_skip: TokenTypesToSkipConfig | None = None,

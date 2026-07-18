@@ -602,8 +602,7 @@ class FirstPassOptimizer(OptimizationPass):
         ) and self.tokens_tracker.functions_to_skip.has(
             get_name_or_full_attribute_id(node.value.func)
         ):
-            node.value = ast.Constant(None)
-            return node
+            return None
 
         return self._generic_visit(node)
 
@@ -634,15 +633,17 @@ class FirstPassOptimizer(OptimizationPass):
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         full_attr_id: str | None = get_full_attribute_id(node)
-        if not hasattr(
-            node, "no_check_fold"
-        ) and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id):
+        if (
+            not hasattr(node, "no_check_fold")
+            and full_attr_id is not None
+            and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id)
+        ):
             return ast.Constant(
                 self.tokens_tracker.name_or_attr_to_fold.get(full_attr_id)
             )
 
         if isinstance(node.value, (ast.Attribute, ast.Name)):
-            node.value.no_check_fold = True  # type: ignore[attr-defined]
+            node.value.no_check_fold = True  # type: ignore[union-attr]
 
         return self._generic_visit(node)
 

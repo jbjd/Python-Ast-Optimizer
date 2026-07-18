@@ -40,11 +40,14 @@ def get_name_or_full_attribute_id(node: ast.AST) -> str | None:
     return get_full_attribute_id(node)
 
 
-def get_full_attribute_id(node: ast.Attribute) -> str:
+def get_full_attribute_id(node: ast.Attribute) -> None:
     """Returns full id of Attribute node.
 
     :param node: An Attribute node to check
-    :returns: full id of Attribute"""
+    :returns: full id of Attribute or None if its value is not a Name/Attributes"""
+    if not isinstance(node.value, (ast.Name, ast.Attribute)):
+        return None
+
     all_attributes: list[ast.Attribute | ast.Name] = [node]
 
     child: ast.expr = node.value

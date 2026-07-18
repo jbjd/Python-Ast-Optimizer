@@ -633,7 +633,7 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        full_attr_id: str = get_full_attribute_id(node)
+        full_attr_id: str | None = get_full_attribute_id(node)
         if not hasattr(
             node, "no_check_fold"
         ) and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id):

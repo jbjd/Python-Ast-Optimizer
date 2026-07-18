@@ -44,6 +44,7 @@ FAVORITE_NUMBER=a=6
         ("print(os.name)", "print('nt')"),
         ("print(foo.os.name)", "print(foo.os.name)"),
         ("print(os.name.foo)", "print(os.name.foo)"),
+        ("print(call().foo)", "print(call().foo)"),
         (
             """
 def get_cpu_count():

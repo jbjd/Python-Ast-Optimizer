@@ -15,7 +15,8 @@ from personal_python_ast_optimizer._optimize.utils import (
     TokensTracker,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
-    is_return_literal_none,
+    returns_constant,
+    returns_literal_none,
 )
 from personal_python_ast_optimizer._optimize.visitors import (
     CallAggregator,
@@ -326,6 +327,7 @@ class FirstPassOptimizer(OptimizationPass):
         "_node_context",
         "_unneeded_futures",
         "collection_concat_to_unpack",
+        "simplify_conditional_bool_return",
         "simplify_named_tuple",
         "skip_asserts",
         "skip_dangling_expressions",
@@ -344,6 +346,7 @@ class FirstPassOptimizer(OptimizationPass):
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
         collection_concat_to_unpack: bool,
+        simplify_conditional_bool_return: bool,
         simplify_named_tuple: bool,
         skip_dangling_expressions: bool,
         skip_type_hints: TypeHintsToSkip,
@@ -359,6 +362,7 @@ class FirstPassOptimizer(OptimizationPass):
             functions_safe_to_exclude_in_test_expr,
         )
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
+        self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
             simplify_named_tuple
         )
@@ -397,11 +401,44 @@ class FirstPassOptimizer(OptimizationPass):
                 node.body.insert(0, ast.ImportFrom("collections", [alias], 0))
 
     @override
-    def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
-        return (
+    def _add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> None:
+        # TODO: Break into function
+        if self.simplify_conditional_bool_return:
+            if (
+                isinstance(node, ast.If)
+                and self._if_with_only_return_true(node)
+                and len(node.orelse) == 1
+                and isinstance(node.orelse[0], ast.Return)
+                and returns_constant(node.orelse[0], False)
+            ):
+                new_nodes.append(ast.Return(node.test))
+                return
+
+            if (
+                isinstance(node, ast.Return)
+                and new_nodes
+                and isinstance(last_node := new_nodes[-1], ast.If)
+                and self._if_with_only_return_true(last_node)
+                and not last_node.orelse
+                and returns_constant(node, False)
+            ):
+                new_nodes[-1] = ast.Return(last_node.test)
+                return
+
+        if (
             not self.skip_dangling_expressions
             or not isinstance(node, ast.Expr)
             or not isinstance(node.value, ast.Constant)
+        ):
+            new_nodes.append(node)
+
+    @staticmethod
+    def _if_with_only_return_true(node: ast.If) -> bool:
+        return (
+            len(node.body) == 1
+            and isinstance(last_if_node := node.body[0], ast.Return)
+            and isinstance(last_if_node.value, ast.Constant)
+            and last_if_node.value.value is True
         )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
@@ -431,7 +468,7 @@ class FirstPassOptimizer(OptimizationPass):
             isinstance(parsed_node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and isinstance(parsed_node.body[-1], ast.Return)
             and (
-                is_return_literal_none(parsed_node.body[-1])
+                returns_literal_none(parsed_node.body[-1])
                 or parsed_node.body[-1].value is None
             )
         ):
@@ -570,7 +607,7 @@ class FirstPassOptimizer(OptimizationPass):
         return self._generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> ast.AST | None:
-        if is_return_literal_none(node):
+        if returns_literal_none(node):
             node.value = None
             return node
 
@@ -733,7 +770,7 @@ class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
         self._generic_visit(node)
 
     @override
-    def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:
+    def _add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> None:
         if new_nodes:
             previous_node: ast.AST = new_nodes[-1]
             if (
@@ -746,9 +783,9 @@ class LastPassOptimizer(AstTransformerBase, AstVisitorProtocol):
             ):
                 node.names += previous_node.names
                 new_nodes[-1] = node
-                return False
+                return
 
-        return True
+        new_nodes.append(node)
 
     @override
     @staticmethod

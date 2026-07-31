@@ -18,12 +18,21 @@ class NodeContext(Enum):
     FUNCTION = 2
 
 
-def is_return_literal_none(node: ast.Return) -> bool:
+def returns_literal_none(node: ast.Return) -> bool:
     """Checks if node is returning a literal None.
 
     :param node: A return node to check
     :returns: True if node returns literal None"""
     return isinstance(node.value, ast.Constant) and node.value.value is None
+
+
+def returns_constant(node: ast.Return, expected_value: FoldableConstant) -> bool:
+    """Checks if node is returning an ast constant value.
+
+    :param node: A return node to check
+    :expected_value: A constant value to compare against
+    :returns: True if node returns `expected_value`"""
+    return isinstance(node.value, ast.Constant) and node.value.value is expected_value
 
 
 def get_name_or_full_attribute_id(node: ast.AST) -> str | None:

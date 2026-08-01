@@ -402,7 +402,6 @@ class FirstPassOptimizer(OptimizationPass):
 
     @override
     def _add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> None:
-        # TODO: Break into function
         if self.simplify_conditional_bool_return:
             if (
                 isinstance(node, ast.If)

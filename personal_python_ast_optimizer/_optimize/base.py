@@ -41,7 +41,7 @@ class AstTransformerBase(AstVisitorBaseProtocol):
         visitor = getattr(self, method, self._generic_visit)
         return visitor(node)
 
-    def _generic_visit(self, node: ast.AST) -> ast.AST:  # noqa: C901
+    def _generic_visit(self, node: ast.AST) -> ast.AST:
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_nodes: list[ast.AST] = []
@@ -59,8 +59,7 @@ class AstTransformerBase(AstVisitorBaseProtocol):
                     else:
                         new_node = value
 
-                    if self._should_add_node_to_body(new_nodes, new_node):
-                        new_nodes.append(new_node)
+                    self._add_node_to_body(new_nodes, new_node)
 
                 if (
                     not isinstance(node, ast.Module)
@@ -89,8 +88,8 @@ class AstTransformerBase(AstVisitorBaseProtocol):
         :returns: List of the same ASTs but with the order possibly altered"""
         return ast_list
 
-    def _should_add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> bool:  # noqa: ARG002
-        return True
+    def _add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> None:
+        new_nodes.append(node)
 
     # Start - Nodes that do not need to be fully visited
 

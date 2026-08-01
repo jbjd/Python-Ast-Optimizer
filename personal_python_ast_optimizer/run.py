@@ -52,6 +52,7 @@ def optimize_module(
         perf_optimizations.fold_simple_function_locals,
         perf_optimizations.functions_safe_to_exclude_in_test_expr,
         perf_optimizations.collection_concat_to_unpack,
+        perf_optimizations.simplify_conditional_bool_return,
         perf_optimizations.simplify_named_tuple,
         token_types_to_skip.skip_dangling_expressions,
         token_types_to_skip.skip_type_hints,

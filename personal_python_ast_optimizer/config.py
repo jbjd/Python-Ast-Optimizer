@@ -151,6 +151,7 @@ class PerfOptimizationsConfig:
         "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
         "name_or_attr_to_fold",
+        "simplify_conditional_bool_return",
         "simplify_named_tuple",
     )
 
@@ -163,6 +164,7 @@ class PerfOptimizationsConfig:
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
+        simplify_conditional_bool_return: bool = False,
         simplify_named_tuple: bool = False,
     ) -> None:
         self.fold_constants: bool = fold_constants
@@ -180,6 +182,7 @@ class PerfOptimizationsConfig:
         )
 
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
+        self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: bool = simplify_named_tuple
 
 

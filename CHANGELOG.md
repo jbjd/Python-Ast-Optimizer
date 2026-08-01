@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [9.1.0] - 2026-08-01
+
+- [Improvement] Option to simplify conditional bool returns
+
 ## [9.0.0] - 2026-07-17
 
 - [Deprecation] RegexNoMatchException renamed to RegexNoMatchError

@@ -327,6 +327,7 @@ class FirstPassOptimizer(OptimizationPass):
         "_node_context",
         "_unneeded_futures",
         "collection_concat_to_unpack",
+        "combine_msg_and_raise",
         "simplify_conditional_bool_return",
         "simplify_named_tuple",
         "skip_asserts",
@@ -346,6 +347,7 @@ class FirstPassOptimizer(OptimizationPass):
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
         collection_concat_to_unpack: bool,
+        combine_msg_and_raise: bool,
         simplify_conditional_bool_return: bool,
         simplify_named_tuple: bool,
         skip_dangling_expressions: bool,
@@ -362,6 +364,7 @@ class FirstPassOptimizer(OptimizationPass):
             functions_safe_to_exclude_in_test_expr,
         )
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
+        self.combine_msg_and_raise: bool = combine_msg_and_raise
         self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
             simplify_named_tuple
@@ -402,6 +405,15 @@ class FirstPassOptimizer(OptimizationPass):
 
     @override
     def _add_node_to_body(self, new_nodes: list[ast.AST], node: ast.AST) -> None:
+        # TODO: Stop bloating this function... need to track new_nodes globally
+        if (
+            self.combine_msg_and_raise
+            and isinstance(node, ast.Raise)
+            and new_nodes
+            and isinstance(new_nodes[-1], ast.Assign)
+        ):
+            pass
+
         if self.simplify_conditional_bool_return:
             if (
                 isinstance(node, ast.If)

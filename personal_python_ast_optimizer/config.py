@@ -147,6 +147,7 @@ class PerfOptimizationsConfig:
     __slots__ = (
         "calls_to_fold",
         "collection_concat_to_unpack",
+        "combine_msg_and_raise",
         "fold_constants",
         "fold_simple_function_locals",
         "functions_safe_to_exclude_in_test_expr",
@@ -164,6 +165,7 @@ class PerfOptimizationsConfig:
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
+        combine_msg_and_raise: bool = False,
         simplify_conditional_bool_return: bool = False,
         simplify_named_tuple: bool = False,
     ) -> None:
@@ -182,6 +184,7 @@ class PerfOptimizationsConfig:
         )
 
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
+        self.combine_msg_and_raise: bool = combine_msg_and_raise
         self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: bool = simplify_named_tuple
 

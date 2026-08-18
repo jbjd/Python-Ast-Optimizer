@@ -1,6 +1,10 @@
 import pytest
 
-from personal_python_ast_optimizer.config import PerfOptimizationsConfig, TokensToFold
+from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
+    PerfOptimizationsConfig,
+    TokensToFold,
+)
 from tests.utils import optimize_and_assert_correctness
 
 
@@ -59,6 +63,7 @@ def test_fold_names(source: str, expected: str):
     optimize_and_assert_correctness(
         source,
         expected,
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
         perf_optimizations=PerfOptimizationsConfig(
             calls_to_fold=TokensToFold(
                 {

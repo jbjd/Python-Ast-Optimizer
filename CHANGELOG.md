@@ -4,7 +4,7 @@
 
 ## [10.0.0] - 2026-08-17
 
-- [Deprecation] optimize_source had its argument order changed to accomodate optimize_config defaulting to None
+- [Deprecation] optimize_source had its argument order changed to accommodate optimize_config defaulting to None
 - [Deprecation] Change default of skip_typing_cast and skip_unused_imports to False
 - [Improvement] Allow optimize_config to be None in optimize_module so defaults are used
 

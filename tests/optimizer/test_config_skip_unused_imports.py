@@ -56,5 +56,7 @@ def test_remove_unused_import(source: str, expected: str):
     optimize_and_assert_correctness(
         source,
         expected,
-        code_to_skip=CodeToSkipConfig(unused_imports_to_preserve=["asdf"]),
+        code_to_skip=CodeToSkipConfig(
+            skip_unused_imports=True, unused_imports_to_preserve=["asdf"]
+        ),
     )

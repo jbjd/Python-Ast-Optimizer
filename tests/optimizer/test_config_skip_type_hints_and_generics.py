@@ -1,4 +1,5 @@
 from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
 )
@@ -43,6 +44,7 @@ class C:a:int=0;b:str"""
     optimize_and_assert_correctness(
         _TYPE_HINT_EXAMPLE,
         expected,
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
         token_types_to_skip=TokenTypesToSkipConfig(
             skip_type_hints=TypeHintsToSkip.NONE
         ),
@@ -53,7 +55,11 @@ def test_removes_type_hints_all_but_class_var():
     """Should remove all type hints except class vars."""
 
     expected: str = "def b():c=3;print(c)\nclass C:a:int=0;b:str"
-    optimize_and_assert_correctness(_TYPE_HINT_EXAMPLE, expected)
+    optimize_and_assert_correctness(
+        _TYPE_HINT_EXAMPLE,
+        expected,
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
+    )
 
 
 def test_remove_all_type_hints():
@@ -64,6 +70,7 @@ def test_remove_all_type_hints():
     optimize_and_assert_correctness(
         _TYPE_HINT_EXAMPLE,
         expected,
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
         token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
     )
 

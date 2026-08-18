@@ -21,7 +21,7 @@ from personal_python_ast_optimizer.typing import Unparser
 
 def optimize_module(
     module: ast.Module,
-    optimize_config: OptimizeConfig,
+    optimize_config: OptimizeConfig | None = None,
     file_name: str = "",
 ) -> None:
     """Optimizes a Python AST by removing unneeded node, replacements of slower
@@ -30,6 +30,10 @@ def optimize_module(
     :param module: Module to optimize
     :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for logging"""
+
+    if optimize_config is None:
+        optimize_config = OptimizeConfig()
+
     code_to_skip: CodeToSkipConfig = optimize_config.code_to_skip
     tokens_to_skip: TokensToSkipConfig = optimize_config.tokens_to_skip
     token_types_to_skip: TokenTypesToSkipConfig = optimize_config.token_types_to_skip
@@ -85,16 +89,16 @@ def optimize_module(
 
 def optimize_source(
     source: str,
-    optimize_config: OptimizeConfig,
     unparser: Unparser,
+    optimize_config: OptimizeConfig | None = None,
     file_name: str = "",
 ) -> str:
     """Optimizes Python code by removing unneeded node, replacements of slower
     code, etc.
 
     :param module: Module to optimize
-    :param optimize_config: Config for what is allowed to be optimized
     :param unparser: A class that can convert the ast.Module back into python
+    :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
     module: ast.Module = ast.parse(source, file_name)
@@ -103,7 +107,7 @@ def optimize_source(
 
 
 def optimize_source_and_minify(
-    source: str, optimize_config: OptimizeConfig, file_name: str = ""
+    source: str, optimize_config: OptimizeConfig | None = None, file_name: str = ""
 ) -> str:
     """Optimizes Python code by removing unneeded node, replacements of slower
     code, etc. and returns it in a minified format.
@@ -112,4 +116,4 @@ def optimize_source_and_minify(
     :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
-    return optimize_source(source, optimize_config, MinifyUnparser(), file_name)
+    return optimize_source(source, MinifyUnparser(), optimize_config, file_name)

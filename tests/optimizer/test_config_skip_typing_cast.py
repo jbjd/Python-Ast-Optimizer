@@ -16,7 +16,7 @@ def test_skip_typing_cast():
     optimize_and_assert_correctness(
         _EXAMPLE_TYPING_CAST,
         expected,
-        code_to_skip=CodeToSkipConfig(skip_typing_cast=True),
+        code_to_skip=CodeToSkipConfig(skip_typing_cast=True, skip_unused_imports=True),
     )
 
 
@@ -28,5 +28,5 @@ def test_no_skip_typing_cast():
     optimize_and_assert_correctness(
         _EXAMPLE_TYPING_CAST,
         expected,
-        code_to_skip=CodeToSkipConfig(skip_typing_cast=False),
+        code_to_skip=CodeToSkipConfig(skip_typing_cast=False, skip_unused_imports=True),
     )

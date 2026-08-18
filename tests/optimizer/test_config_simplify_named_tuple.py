@@ -1,6 +1,7 @@
 import pytest
 
 from personal_python_ast_optimizer.config import (
+    CodeToSkipConfig,
     PerfOptimizationsConfig,
     TokenTypesToSkipConfig,
     TypeHintsToSkip,
@@ -68,6 +69,7 @@ def test_simplify_named_tuple(source: str, expected: str):
     optimize_and_assert_correctness(
         source,
         expected,
+        code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
         token_types_to_skip=TokenTypesToSkipConfig(skip_type_hints=TypeHintsToSkip.ALL),
         perf_optimizations=PerfOptimizationsConfig(simplify_named_tuple=True),
     )

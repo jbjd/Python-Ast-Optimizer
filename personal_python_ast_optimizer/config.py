@@ -110,9 +110,9 @@ class CodeToSkipConfig:
     def __init__(
         self,
         *,
-        skip_typing_cast: bool = True,
         skip_useless_else: bool = True,
-        skip_unused_imports: bool = True,
+        skip_typing_cast: bool = False,
+        skip_unused_imports: bool = False,
         unused_imports_to_preserve: Iterable[str] | None = None,
         skip_overload_functions: bool = False,
     ) -> None:

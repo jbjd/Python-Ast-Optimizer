@@ -556,6 +556,9 @@ class FirstPassOptimizer(OptimizationPass):
         return node if node.names else None
 
     def visit_arg(self, node: ast.arg) -> ast.AST | None:
+        if self.name_or_attr_map is not None and node.arg in self.name_or_attr_map:
+            node.arg = self.name_or_attr_map[node.arg]
+
         if self.skip_type_hints:
             node.annotation = None
 

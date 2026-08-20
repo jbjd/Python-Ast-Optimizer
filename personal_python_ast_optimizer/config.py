@@ -46,6 +46,7 @@ class TokensToSkipConfig:
         "from_imports_to_skip",
         "functions_to_skip",
         "module_imports_to_skip",
+        "name_or_attr_map",
     )
 
     def __init__(
@@ -57,6 +58,7 @@ class TokensToSkipConfig:
         from_imports_to_skip: TokensToSkip[tuple[str, str]] | None = None,
         functions_to_skip: TokensToSkip[str] | None = None,
         module_imports_to_skip: TokensToSkip[str] | None = None,
+        name_or_attr_map: dict[str, str] | None = None,
     ) -> None:
         self.assignments_to_skip: TokensToSkip[str] | None = assignments_to_skip
         self.classes_to_skip: TokensToSkip[str] | None = classes_to_skip
@@ -66,6 +68,7 @@ class TokensToSkipConfig:
         )
         self.functions_to_skip: TokensToSkip[str] | None = functions_to_skip
         self.module_imports_to_skip: TokensToSkip[str] | None = module_imports_to_skip
+        self.name_or_attr_map: dict[str, str] | None = name_or_attr_map
 
 
 class TokenTypesToSkipConfig:

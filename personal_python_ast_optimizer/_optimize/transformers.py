@@ -345,6 +345,7 @@ class FirstPassOptimizer(OptimizationPass):
         fold_constants: bool,
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
+        name_or_attr_map: dict[str, str] | None,
         collection_concat_to_unpack: bool,
         simplify_conditional_bool_return: bool,
         simplify_named_tuple: bool,
@@ -361,6 +362,7 @@ class FirstPassOptimizer(OptimizationPass):
             fold_simple_function_locals,
             functions_safe_to_exclude_in_test_expr,
         )
+        self.name_or_attr_map: dict[str, str] | None = name_or_attr_map
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
@@ -668,6 +670,9 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+        if self.name_or_attr_map is not None and node.attr in self.name_or_attr_map:
+            node.attr = self.name_or_attr_map[node.attr]
+
         full_attr_id: str | None = get_full_attribute_id(node)
         if (
             not hasattr(node, "no_check_fold")
@@ -684,6 +689,10 @@ class FirstPassOptimizer(OptimizationPass):
         return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+
+        if self.name_or_attr_map is not None and node.id in self.name_or_attr_map:
+            node.id = self.name_or_attr_map[node.id]
+
         if not hasattr(
             node, "no_check_fold"
         ) and self.tokens_tracker.name_or_attr_to_fold.has(node.id):

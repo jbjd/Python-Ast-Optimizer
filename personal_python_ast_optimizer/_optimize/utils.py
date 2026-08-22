@@ -23,21 +23,31 @@ class NodeContext(Enum):
 class UglyNameGenerator:
     """Tracks and generates shortened names."""
 
-    __slots__ = ("_generator", "_length", "excludes", "prefix")
+    __slots__ = ("_cached_name", "_generator", "_length", "excludes", "prefix")
 
     def __init__(
         self, prefix: str | None = None, excludes: set[str] | None = None
     ) -> None:
         self.prefix: str | None = prefix
         self.excludes: set[str] = excludes or set()
+        self._cached_name: str | None = None
         self._length: int = 1
         self._generator = self._get_generator()
 
-    def get_ugly_name(self) -> str:
-        possible_name: str = self._get_generated_name()
+    def get_ugly_name(self, max_len: int) -> str | None:
+        possible_name: str
+        if self._cached_name is None:
+            possible_name = self._get_generated_name()
+        else:
+            possible_name = self._cached_name
+            self._cached_name = None
 
         while possible_name in self.excludes:
             possible_name = self._get_generated_name()
+
+        if len(possible_name) > max_len:
+            self._cached_name = possible_name
+            return None
 
         return possible_name
 

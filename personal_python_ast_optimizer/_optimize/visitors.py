@@ -1,6 +1,7 @@
 """Visitor classes to help optimize Python ASTs."""
 
 import ast
+from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
@@ -105,6 +106,8 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
 
 
 class NameAggregator(AstVisitorBase, AstVisitorProtocol):
+    """Aggregates all Names, Attributes, alias, and function/class names"""
+
     __slots__ = ("_found",)
 
     def __init__(self) -> None:
@@ -123,6 +126,20 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
     def visit_alias(self, node: ast.alias) -> None:
         self._found.add(node.asname or node.name)
 
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if node.name is not None:
+            self._found.add(node.name)
+        self._generic_visit(node)
+
+    def visit_Class(self, node: ast.ClassDef) -> None:
+        self._found.add(node.name)
+        self._generic_visit(node)
+
+    @override
+    def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
+        self._found.add(node.name)
+        self._generic_visit(node)
+
 
 class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
     __slots__ = ("_found",)
@@ -134,12 +151,7 @@ class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
         self._traverse_body(node.body)
         return self._found
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._handle_function(node)
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._handle_function(node)
-
+    @override
     def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
         if node.name.startswith("_"):
             self._found.add(node.name)

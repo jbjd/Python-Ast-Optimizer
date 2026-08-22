@@ -31,6 +31,12 @@ def _b():print(1)
 def _f():print(1)
 a=_b()""",
         ),
+        (
+            """def _a():print(1)
+def _abc():print(1)""",
+            """def _a():print(1)
+def _b():print(1)""",
+        ),
     ],
 )
 def test_shorten_private_functions(source: str, expected: str):

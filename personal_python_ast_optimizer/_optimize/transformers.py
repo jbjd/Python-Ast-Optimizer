@@ -22,6 +22,7 @@ from personal_python_ast_optimizer._optimize.utils import (
 from personal_python_ast_optimizer._optimize.visitors import (
     CallAggregator,
     FunctionFoldableLocalsAggregator,
+    NameAggregator,
     PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
@@ -880,18 +881,20 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         self.shorten_private_functions: bool = shorten_private_functions
 
     def visit(self, node: ast.Module) -> None:
-        if self.shorten_private_functions:
-            # TODO: handle aggregating names/attrs/alias
-            name_generator = UglyNameGenerator("_", [])
+        if not self.shorten_private_functions:
+            return
 
-            private_functions: set[str] = PrivateFunctionAggregator().visit(node)
-            self._private_functions_map: dict[str, str] = {
-                old_name: new_name
-                for old_name in private_functions
-                if (new_name := name_generator.get_ugly_name()) is not None
-            }
+        names: set[str] = NameAggregator().visit(node)
+        name_generator = UglyNameGenerator("_", names)
 
-            self._generic_visit(node)
+        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
+        self._private_functions_map: dict[str, str] = {
+            old_name: new_name
+            for old_name in private_functions
+            if (new_name := name_generator.get_ugly_name()) is not None
+        }
+
+        self._generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
         if node.attr in self._private_functions_map:

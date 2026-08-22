@@ -1,6 +1,7 @@
 """Utilities for AST optimization."""
 
 import ast
+import string
 from collections.abc import Iterator
 from enum import Enum
 from typing import Any, override
@@ -16,6 +17,25 @@ class NodeContext(Enum):
     NONE = 0
     CLASS = 1
     FUNCTION = 2
+
+
+class UglyNameGenerator:
+    """Tracks and generates shortened names."""
+
+    __slots__ = ("_index", "excludes", "prefix")
+
+    def __init__(self, prefix: str, excludes: set[str] | None = None) -> None:
+        self.prefix: str = prefix
+        self.excludes: set[str] = excludes or set()
+        self._index: int = 0
+
+    def get_ugly_name(self) -> str | None:
+        # TODO: actually implement properly...
+
+        possible_name: str = self.prefix + string.ascii_letters[self._index]
+        self._index += 1
+
+        return possible_name
 
 
 def returns_literal_none(node: ast.Return) -> bool:

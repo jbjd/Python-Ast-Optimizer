@@ -13,6 +13,7 @@ from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
     TokensTracker,
+    UglyNameGenerator,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     returns_constant,
@@ -21,6 +22,7 @@ from personal_python_ast_optimizer._optimize.utils import (
 from personal_python_ast_optimizer._optimize.visitors import (
     CallAggregator,
     FunctionFoldableLocalsAggregator,
+    PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
@@ -345,7 +347,6 @@ class FirstPassOptimizer(OptimizationPass):
         fold_constants: bool,
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
-        name_or_attr_map: dict[str, str] | None,
         collection_concat_to_unpack: bool,
         simplify_conditional_bool_return: bool,
         simplify_named_tuple: bool,
@@ -362,7 +363,6 @@ class FirstPassOptimizer(OptimizationPass):
             fold_simple_function_locals,
             functions_safe_to_exclude_in_test_expr,
         )
-        self.name_or_attr_map: dict[str, str] | None = name_or_attr_map
         self.collection_concat_to_unpack: bool = collection_concat_to_unpack
         self.simplify_conditional_bool_return: bool = simplify_conditional_bool_return
         self.simplify_named_tuple: _SimplifyNamedTuple = _SimplifyNamedTuple(
@@ -556,9 +556,6 @@ class FirstPassOptimizer(OptimizationPass):
         return node if node.names else None
 
     def visit_arg(self, node: ast.arg) -> ast.AST | None:
-        if self.name_or_attr_map is not None and node.arg in self.name_or_attr_map:
-            node.arg = self.name_or_attr_map[node.arg]
-
         if self.skip_type_hints:
             node.annotation = None
 
@@ -673,8 +670,6 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        if self.name_or_attr_map is not None and node.attr in self.name_or_attr_map:
-            node.attr = self.name_or_attr_map[node.attr]
 
         full_attr_id: str | None = get_full_attribute_id(node)
         if (
@@ -692,9 +687,6 @@ class FirstPassOptimizer(OptimizationPass):
         return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
-
-        if self.name_or_attr_map is not None and node.id in self.name_or_attr_map:
-            node.id = self.name_or_attr_map[node.id]
 
         if not hasattr(
             node, "no_check_fold"
@@ -874,3 +866,55 @@ class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
             return self._folds[node.id]
 
         return node
+
+
+class Uglifier(AstTransformerBase, AstVisitorProtocol):
+    """Compresses certain tokens."""
+
+    __slots__ = (
+        "_private_functions_map",
+        "shorten_private_functions",
+    )
+
+    def __init__(self, shorten_private_functions: bool) -> None:
+        self.shorten_private_functions: bool = shorten_private_functions
+
+    def visit(self, node: ast.Module) -> None:
+        if self.shorten_private_functions:
+            # TODO: handle aggregating names/attrs/alias
+            name_generator = UglyNameGenerator("_", [])
+
+            private_functions: set[str] = PrivateFunctionAggregator().visit(node)
+            self._private_functions_map: dict[str, str] = {
+                old_name: new_name
+                for old_name in private_functions
+                if (new_name := name_generator.get_ugly_name()) is not None
+            }
+
+            self._generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
+        if node.attr in self._private_functions_map:
+            node.attr = self._private_functions_map[node.attr]
+
+        return node
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        if node.id in self._private_functions_map:
+            node.id = self._private_functions_map[node.id]
+
+        return node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def _handle_function(
+        self, node: ast.AsyncFunctionDef | ast.FunctionDef
+    ) -> ast.AST | None:
+        if node.name in self._private_functions_map:
+            node.name = self._private_functions_map[node.name]
+
+        return self._generic_visit(node)

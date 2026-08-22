@@ -102,3 +102,46 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
             self._foldable[node_id] = value
 
         self._excludes.add(node_id)
+
+
+class NameAggregator(AstVisitorBase, AstVisitorProtocol):
+    __slots__ = ("_found",)
+
+    def __init__(self) -> None:
+        self._found: set[str] = set()
+
+    def visit(self, node: ast.Module) -> set[str]:
+        self._traverse_body(node.body)
+        return self._found
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        self._found.add(node.attr)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        self._found.add(node.id)
+
+    def visit_alias(self, node: ast.alias) -> None:
+        self._found.add(node.asname or node.name)
+
+
+class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
+    __slots__ = ("_found",)
+
+    def __init__(self) -> None:
+        self._found: set[str] = set()
+
+    def visit(self, node: ast.Module) -> set[str]:
+        self._traverse_body(node.body)
+        return self._found
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._handle_function(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._handle_function(node)
+
+    def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
+        if node.name.startswith("_"):
+            self._found.add(node.name)
+
+        self._generic_visit(node)

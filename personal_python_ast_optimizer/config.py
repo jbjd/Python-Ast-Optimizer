@@ -46,7 +46,6 @@ class TokensToSkipConfig:
         "from_imports_to_skip",
         "functions_to_skip",
         "module_imports_to_skip",
-        "name_or_attr_map",
     )
 
     def __init__(
@@ -58,7 +57,6 @@ class TokensToSkipConfig:
         from_imports_to_skip: TokensToSkip[tuple[str, str]] | None = None,
         functions_to_skip: TokensToSkip[str] | None = None,
         module_imports_to_skip: TokensToSkip[str] | None = None,
-        name_or_attr_map: dict[str, str] | None = None,
     ) -> None:
         self.assignments_to_skip: TokensToSkip[str] | None = assignments_to_skip
         self.classes_to_skip: TokensToSkip[str] | None = classes_to_skip
@@ -68,7 +66,6 @@ class TokensToSkipConfig:
         )
         self.functions_to_skip: TokensToSkip[str] | None = functions_to_skip
         self.module_imports_to_skip: TokensToSkip[str] | None = module_imports_to_skip
-        self.name_or_attr_map: dict[str, str] | None = name_or_attr_map
 
 
 class TokenTypesToSkipConfig:
@@ -189,12 +186,20 @@ class PerfOptimizationsConfig:
         self.simplify_named_tuple: bool = simplify_named_tuple
 
 
+class UglifyConfig:
+    __slots__ = ("shorten_private_functions",)
+
+    def __init__(self, *, shorten_private_functions: bool = False) -> None:
+        self.shorten_private_functions: bool = shorten_private_functions
+
+
 class OptimizeConfig:
     __slots__ = (
         "code_to_skip",
         "perf_optimizations",
         "token_types_to_skip",
         "tokens_to_skip",
+        "uglify",
     )
 
     def __init__(
@@ -204,20 +209,20 @@ class OptimizeConfig:
         tokens_to_skip: TokensToSkipConfig | None = None,
         token_types_to_skip: TokenTypesToSkipConfig | None = None,
         perf_optimizations: PerfOptimizationsConfig | None = None,
+        uglify: UglifyConfig | None = None,
     ) -> None:
-        self.code_to_skip: CodeToSkipConfig = (
-            CodeToSkipConfig() if code_to_skip is None else code_to_skip
-        )
-        self.tokens_to_skip: TokensToSkipConfig = (
+        self.code_to_skip = CodeToSkipConfig() if code_to_skip is None else code_to_skip
+        self.tokens_to_skip = (
             TokensToSkipConfig() if tokens_to_skip is None else tokens_to_skip
         )
-        self.token_types_to_skip: TokenTypesToSkipConfig = (
+        self.token_types_to_skip = (
             TokenTypesToSkipConfig()
             if token_types_to_skip is None
             else token_types_to_skip
         )
-        self.perf_optimizations: PerfOptimizationsConfig = (
+        self.perf_optimizations = (
             PerfOptimizationsConfig()
             if perf_optimizations is None
             else perf_optimizations
         )
+        self.uglify: UglifyConfig = UglifyConfig() if uglify is None else uglify

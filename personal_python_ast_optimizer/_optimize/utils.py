@@ -1,6 +1,7 @@
 """Utilities for AST optimization."""
 
 import ast
+import itertools
 import string
 from collections.abc import Iterator
 from enum import Enum
@@ -22,20 +23,41 @@ class NodeContext(Enum):
 class UglyNameGenerator:
     """Tracks and generates shortened names."""
 
-    __slots__ = ("_index", "excludes", "prefix")
+    __slots__ = ("_generator", "_length", "excludes", "prefix")
 
-    def __init__(self, prefix: str, excludes: set[str] | None = None) -> None:
-        self.prefix: str = prefix
+    def __init__(
+        self, prefix: str | None = None, excludes: set[str] | None = None
+    ) -> None:
+        self.prefix: str | None = prefix
         self.excludes: set[str] = excludes or set()
-        self._index: int = 0
+        self._length: int = 1
+        self._generator = self._get_generator()
 
-    def get_ugly_name(self) -> str | None:
-        # TODO: actually implement properly...
+    def get_ugly_name(self) -> str:
+        possible_name: str = self._get_generated_name()
 
-        possible_name: str = self.prefix + string.ascii_letters[self._index]
-        self._index += 1
+        while possible_name in self.excludes:
+            possible_name = self._get_generated_name()
 
         return possible_name
+
+    def _get_generated_name(self) -> str:
+        permutation: tuple[str, ...]
+        try:
+            permutation = next(self._generator)
+        except StopIteration:
+            self._length += 1
+            self._generator = self._get_generator()
+            permutation = next(self._generator)
+
+        generated_name: str = "".join(permutation)
+        if self.prefix is None:
+            return generated_name
+
+        return self.prefix + generated_name
+
+    def _get_generator(self) -> itertools.product:
+        return itertools.product(string.ascii_letters, repeat=self._length)
 
 
 def returns_literal_none(node: ast.Return) -> bool:

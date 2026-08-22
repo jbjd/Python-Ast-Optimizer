@@ -891,7 +891,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         self._private_functions_map: dict[str, str] = {
             old_name: new_name
             for old_name in private_functions
-            if (new_name := name_generator.get_ugly_name()) is not None
+            if len(new_name := name_generator.get_ugly_name()) < len(old_name)
         }
 
         self._generic_visit(node)

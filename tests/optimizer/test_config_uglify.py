@@ -21,10 +21,20 @@ a = A()._asdf()""",
 \tdef _a():print(1)
 a=A()._a()""",
         ),
+        (
+            """import _a
+def _asdf():print(1)
+def _f():print(1)
+a = _asdf()""",
+            """import _a
+def _b():print(1)
+def _f():print(1)
+a=_b()""",
+        ),
     ],
 )
-def test_exclude_assign(source: str, expected: str):
-    """Should remove assignments when applicable."""
+def test_shorten_private_functions(source: str, expected: str):
+    """Should shorten private functions without causing global name conflicts."""
 
     optimize_and_assert_correctness(
         source, expected, uglify=UglifyConfig(shorten_private_functions=True)

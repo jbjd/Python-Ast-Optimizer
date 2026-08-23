@@ -153,7 +153,7 @@ class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
 
     @override
     def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
-        if node.name.startswith("_"):
+        if node.name.startswith("_") and not node.name.endswith("__"):
             self._found.add(node.name)
 
         self._generic_visit(node)

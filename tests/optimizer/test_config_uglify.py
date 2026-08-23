@@ -15,10 +15,12 @@ a=_a()""",
         ),
         (
             """class A:
-    def _asdf():print(1)
+    def __init__(self):self.a=1
+    def _asdf(self):print(1)
 a = A()._asdf()""",
             """class A:
-\tdef _a():print(1)
+\tdef __init__(self):self.a=1
+\tdef _a(self):print(1)
 a=A()._a()""",
         ),
         (

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [10.1.0] - 2026-08-24
+
+- [Improvement] Config to shorten private functions by uglifying their name
+
 ## [10.0.0] - 2026-08-17
 
 - [Deprecation] optimize_source had its argument order changed to accommodate optimize_config defaulting to None

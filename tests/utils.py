@@ -8,6 +8,7 @@ from personal_python_ast_optimizer.config import (
     PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
+    UglifyConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
 from personal_python_ast_optimizer.run import optimize_source_and_minify
@@ -45,6 +46,7 @@ def optimize_and_assert_correctness(
     token_types_to_skip: TokenTypesToSkipConfig | None = None,
     tokens_to_skip: TokensToSkipConfig | None = None,
     perf_optimizations: PerfOptimizationsConfig | None = None,
+    uglify: UglifyConfig | None = None,
 ):
     optimized_code: str = optimize_source_and_minify(
         source,
@@ -53,6 +55,7 @@ def optimize_and_assert_correctness(
             tokens_to_skip=tokens_to_skip,
             token_types_to_skip=token_types_to_skip,
             perf_optimizations=perf_optimizations,
+            uglify=uglify,
         ),
     )
 

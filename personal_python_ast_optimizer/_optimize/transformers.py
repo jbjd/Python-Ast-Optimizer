@@ -13,6 +13,7 @@ from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
     TokensTracker,
+    UglyNameGenerator,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     returns_constant,
@@ -21,6 +22,8 @@ from personal_python_ast_optimizer._optimize.utils import (
 from personal_python_ast_optimizer._optimize.visitors import (
     CallAggregator,
     FunctionFoldableLocalsAggregator,
+    NameAggregator,
+    PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 
@@ -668,6 +671,7 @@ class FirstPassOptimizer(OptimizationPass):
         return parsed_node
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+
         full_attr_id: str | None = get_full_attribute_id(node)
         if (
             not hasattr(node, "no_check_fold")
@@ -684,6 +688,7 @@ class FirstPassOptimizer(OptimizationPass):
         return self._generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name | ast.Constant:
+
         if not hasattr(
             node, "no_check_fold"
         ) and self.tokens_tracker.name_or_attr_to_fold.has(node.id):
@@ -862,3 +867,57 @@ class _FunctionLocalsFolder(AstTransformerBase, AstVisitorProtocol):
             return self._folds[node.id]
 
         return node
+
+
+class Uglifier(AstTransformerBase, AstVisitorProtocol):
+    """Compresses certain tokens."""
+
+    __slots__ = (
+        "_private_functions_map",
+        "shorten_private_functions",
+    )
+
+    def __init__(self, shorten_private_functions: bool) -> None:
+        self.shorten_private_functions: bool = shorten_private_functions
+
+    def visit(self, node: ast.Module) -> None:
+        if not self.shorten_private_functions:
+            return
+
+        names: set[str] = NameAggregator().visit(node)
+        name_generator = UglyNameGenerator("_", names)
+
+        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
+        self._private_functions_map: dict[str, str] = {
+            old_name: new_name
+            for old_name in private_functions
+            if (new_name := name_generator.get_ugly_name(len(old_name) - 1)) is not None
+        }
+
+        self._generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
+        if node.attr in self._private_functions_map:
+            node.attr = self._private_functions_map[node.attr]
+
+        return node
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        if node.id in self._private_functions_map:
+            node.id = self._private_functions_map[node.id]
+
+        return node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
+        return self._handle_function(node)
+
+    def _handle_function(
+        self, node: ast.AsyncFunctionDef | ast.FunctionDef
+    ) -> ast.AST | None:
+        if node.name in self._private_functions_map:
+            node.name = self._private_functions_map[node.name]
+
+        return self._generic_visit(node)

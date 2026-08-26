@@ -1,6 +1,7 @@
 """Visitor classes to help optimize Python ASTs."""
 
 import ast
+from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
@@ -102,3 +103,57 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
             self._foldable[node_id] = value
 
         self._excludes.add(node_id)
+
+
+class NameAggregator(AstVisitorBase, AstVisitorProtocol):
+    """Aggregates all Names, Attributes, alias, and function/class names"""
+
+    __slots__ = ("_found",)
+
+    def __init__(self) -> None:
+        self._found: set[str] = set()
+
+    def visit(self, node: ast.Module) -> set[str]:
+        self._traverse_body(node.body)
+        return self._found
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        self._found.add(node.attr)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        self._found.add(node.id)
+
+    def visit_alias(self, node: ast.alias) -> None:
+        self._found.add(node.asname or node.name)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if node.name is not None:
+            self._found.add(node.name)
+        self._generic_visit(node)
+
+    def visit_Class(self, node: ast.ClassDef) -> None:
+        self._found.add(node.name)
+        self._generic_visit(node)
+
+    @override
+    def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
+        self._found.add(node.name)
+        self._generic_visit(node)
+
+
+class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
+    __slots__ = ("_found",)
+
+    def __init__(self) -> None:
+        self._found: set[str] = set()
+
+    def visit(self, node: ast.Module) -> set[str]:
+        self._traverse_body(node.body)
+        return self._found
+
+    @override
+    def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
+        if node.name.startswith("_") and not node.name.endswith("__"):
+            self._found.add(node.name)
+
+        self._generic_visit(node)

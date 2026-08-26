@@ -11,6 +11,15 @@ class AstVisitorBase(AstVisitorBaseProtocol):
 
     __slots__ = ()
 
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._handle_function(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._handle_function(node)
+
+    def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
+        self._generic_visit(node)
+
     def _visit(self, node: ast.AST) -> None:
         """Visits `node`."""
         method = "visit_" + node.__class__.__name__

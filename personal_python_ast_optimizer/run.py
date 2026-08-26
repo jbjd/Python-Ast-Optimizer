@@ -6,6 +6,7 @@ from personal_python_ast_optimizer._optimize.transformers import (
     FirstPassOptimizer,
     LastPassOptimizer,
     OptimizationPass,
+    Uglifier,
 )
 from personal_python_ast_optimizer._optimize.utils import TokensTracker
 from personal_python_ast_optimizer.config import (
@@ -14,6 +15,7 @@ from personal_python_ast_optimizer.config import (
     PerfOptimizationsConfig,
     TokensToSkipConfig,
     TokenTypesToSkipConfig,
+    UglifyConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
 from personal_python_ast_optimizer.typing import Unparser
@@ -38,6 +40,7 @@ def optimize_module(
     tokens_to_skip: TokensToSkipConfig = optimize_config.tokens_to_skip
     token_types_to_skip: TokenTypesToSkipConfig = optimize_config.token_types_to_skip
     perf_optimizations: PerfOptimizationsConfig = optimize_config.perf_optimizations
+    uglify: UglifyConfig = optimize_config.uglify
 
     tokens_to_skip_tracker = TokensTracker(
         tokens_to_skip.assignments_to_skip,
@@ -85,6 +88,8 @@ def optimize_module(
         code_to_skip.skip_unused_imports,
         code_to_skip.unused_imports_to_preserve,
     ).visit(module)
+
+    Uglifier(uglify.shorten_private_functions).visit(module)
 
 
 def optimize_source(

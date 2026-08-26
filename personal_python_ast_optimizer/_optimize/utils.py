@@ -1,6 +1,8 @@
 """Utilities for AST optimization."""
 
 import ast
+import itertools
+import string
 from collections.abc import Iterator
 from enum import Enum
 from typing import Any, override
@@ -16,6 +18,53 @@ class NodeContext(Enum):
     NONE = 0
     CLASS = 1
     FUNCTION = 2
+
+
+class UglyNameGenerator:
+    """Tracks and generates shortened names."""
+
+    __slots__ = ("_cached_name", "_generator", "_length", "excludes", "prefix")
+
+    def __init__(
+        self, prefix: str | None = None, excludes: set[str] | None = None
+    ) -> None:
+        self.prefix: str | None = prefix
+        self.excludes: set[str] = excludes or set()
+        self._cached_name: str | None = None
+        self._length: int = 1
+        self._generator = self._get_generator()
+
+    def get_ugly_name(self, max_len: int | None = None) -> str | None:
+        possible_name: str
+        if self._cached_name is None:
+            possible_name = self._get_generated_name()
+        else:
+            possible_name = self._cached_name
+            self._cached_name = None
+
+        while possible_name in self.excludes:
+            possible_name = self._get_generated_name()
+
+        if max_len is not None and len(possible_name) > max_len:
+            self._cached_name = possible_name
+            return None
+
+        return possible_name
+
+    def _get_generated_name(self) -> str:
+        permutation: tuple[str, ...]
+        try:
+            permutation = next(self._generator)
+        except StopIteration:
+            self._length += 1
+            self._generator = self._get_generator()
+            permutation = next(self._generator)
+
+        generated_name: str = "".join(permutation)
+        return generated_name if self.prefix is None else self.prefix + generated_name
+
+    def _get_generator(self) -> itertools.product:
+        return itertools.product(string.ascii_letters, repeat=self._length)
 
 
 def returns_literal_none(node: ast.Return) -> bool:
@@ -103,8 +152,8 @@ class _TokensToSkipVisitCounter[T]:
             if v == 0:
                 yield str(k)
 
-    def add(self, key: T, already_visitied: bool) -> None:
-        self._tokens_to_skip[key] = already_visitied
+    def add(self, key: T, already_visited: bool) -> None:
+        self._tokens_to_skip[key] = already_visited
 
     def has(self, key: object) -> bool:
         if key in self._tokens_to_skip:
@@ -124,7 +173,7 @@ class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter[str]):
         )
 
     @override
-    def add(self, key: str, already_visitied: bool) -> None:
+    def add(self, key: str, already_visited: bool) -> None:
         raise NotImplementedError  # pragma: no cover
 
     def get(self, key: str) -> FoldableConstant:

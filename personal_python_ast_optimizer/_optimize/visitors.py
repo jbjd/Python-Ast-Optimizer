@@ -5,7 +5,10 @@ from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
-from personal_python_ast_optimizer._optimize.utils import get_name_or_full_attribute_id
+from personal_python_ast_optimizer._optimize.utils import (
+    NodeContext,
+    get_name_or_full_attribute_id,
+)
 
 
 class CallAggregator(AstVisitorBase, AstVisitorProtocol):
@@ -141,19 +144,51 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
         self._generic_visit(node)
 
 
-class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
+class PrivateGlobalsAggregator(AstVisitorBase, AstVisitorProtocol):
     __slots__ = ("_found",)
 
     def __init__(self) -> None:
         self._found: set[str] = set()
 
     def visit(self, node: ast.Module) -> set[str]:
+        for n in node.body:
+            match n:
+                # case ast.FunctionDef():
+                #     self._found.add(n.name)
+                # case ast.AsyncFunctionDef():
+                #     self._found.add(n.name)
+                case ast.ClassDef():
+                    self._found.add(n.name)
+
+        return self._found
+
+
+class PrivateClassFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
+    __slots__ = ("_found", "_node_context")
+
+    def __init__(self) -> None:
+        self._found: set[str] = set()
+        self._node_context: NodeContext = NodeContext.NONE
+
+    def visit(self, node: ast.Module) -> set[str]:
         self._traverse_body(node.body)
         return self._found
 
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        previous_value: NodeContext = self._node_context
+        self._node_context = NodeContext.CLASS
+        try:
+            return self._generic_visit(node)
+        finally:
+            self._node_context = previous_value
+
     @override
     def _handle_function(self, node: ast.AsyncFunctionDef | ast.FunctionDef) -> None:
-        if node.name.startswith("_") and not node.name.endswith("__"):
+        if (
+            self._node_context == NodeContext.CLASS
+            and node.name.startswith("_")
+            and not node.name.endswith("__")
+        ):
             self._found.add(node.name)
 
         self._generic_visit(node)

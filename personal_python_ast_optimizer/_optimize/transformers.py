@@ -24,7 +24,8 @@ from personal_python_ast_optimizer._optimize.visitors import (
     CallAggregator,
     FunctionFoldableLocalsAggregator,
     NameAggregator,
-    PrivateFunctionAggregator,
+    PrivateClassFunctionAggregator,
+    PrivateGlobalsAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
 from personal_python_ast_optimizer.typing import FoldableConstant
@@ -888,7 +889,8 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
     """Compresses certain tokens."""
 
     __slots__ = (
-        "_private_functions_map",
+        "_private_class_functions_map",
+        "_private_globals_map",
         "shorten_private_functions",
     )
 
@@ -900,26 +902,38 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
             return
 
         names: set[str] = NameAggregator().visit(node)
-        name_generator = UglyNameGenerator("_", names)
 
-        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
-        self._private_functions_map: dict[str, str] = {
+        globals_name_generator = UglyNameGenerator("_", names)
+        private_globals: set[str] = PrivateGlobalsAggregator().visit(node)
+        self._private_globals_map: dict[str, str] = {
             old_name: new_name
-            for old_name in private_functions
-            if (new_name := name_generator.get_ugly_name(len(old_name) - 1)) is not None
+            for old_name in private_globals
+            if (new_name := globals_name_generator.get_ugly_name(len(old_name) - 1))
+            is not None
+        }
+
+        class_name_generator = UglyNameGenerator("_", names)
+        private_class_functions: set[str] = PrivateClassFunctionAggregator().visit(node)
+        self._private_class_functions_map: dict[str, str] = {
+            old_name: new_name
+            for old_name in private_class_functions
+            if (new_name := class_name_generator.get_ugly_name(len(old_name) - 1))
+            is not None
         }
 
         self._generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        if node.attr in self._private_functions_map:
-            node.attr = self._private_functions_map[node.attr]
+        # TODO: class if in class else global
+        if node.attr in self._private_class_functions_map:
+            node.attr = self._private_class_functions_map[node.attr]
 
         return node
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
-        if node.id in self._private_functions_map:
-            node.id = self._private_functions_map[node.id]
+        # TODO: class if in class else global
+        if node.id in self._private_class_functions_map:
+            node.id = self._private_class_functions_map[node.id]
 
         return node
 
@@ -932,7 +946,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
     def _handle_function(
         self, node: ast.AsyncFunctionDef | ast.FunctionDef
     ) -> ast.AST | None:
-        if node.name in self._private_functions_map:
-            node.name = self._private_functions_map[node.name]
+        if node.name in self._private_class_functions_map:
+            node.name = self._private_class_functions_map[node.name]
 
         return self._generic_visit(node)

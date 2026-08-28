@@ -88,7 +88,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     def visit(self, node: ast.AST) -> str:
         """Outputs a source code string that, if converted back to an ast
         (using ast.parse) will generate an AST equivalent to *node*"""
-        self.traverse(node)
+        self._traverse_node(node)
         return "".join(self._source)
 
     def fill(self, text: str = "", splitter: Literal["", "\n", ";"] = "\n") -> None:
@@ -312,9 +312,10 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
 
-        with self.delimit_if("(", ")", condition=node.bases or node.keywords):
-            self._traverse_comma_delimitated_body(node.bases)
-            self._traverse_comma_delimitated_body(node.keywords)
+        if node.bases or node.keywords:
+            with self.delimit("(", ")"):
+                self._traverse_comma_delimitated_body(node.bases)
+                self._traverse_comma_delimitated_body(node.keywords)
 
         with self.block():
             self._write_docstring_and_traverse_body(node)
@@ -345,7 +346,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     ) -> None:
         for deco in node.decorator_list:
             self.fill_literal_new_line("@")
-            self.traverse(deco)
+            self._traverse_node(deco)
 
     def visit_TypeAlias(self, node: ast.TypeAlias) -> None:
         self.fill("type ")

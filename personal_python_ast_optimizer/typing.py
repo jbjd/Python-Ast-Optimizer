@@ -4,7 +4,8 @@ import ast
 from types import EllipsisType
 from typing import Protocol
 
-type FoldableConstant = str | bytes | bool | int | float | complex | EllipsisType | None
+type Constant = str | bytes | bool | int | float | complex | EllipsisType | None
+type FoldableConstant = Constant | tuple[Constant, ...]
 
 
 class Unparser(Protocol):

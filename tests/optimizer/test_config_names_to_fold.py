@@ -42,6 +42,10 @@ FAVORITE_NUMBER=a=6
             "a=6",
         ),
         (
+            """some_tuple = (1,2);print(some_tuple)""",
+            "print((1,2))",
+        ),
+        (
             "if __name__=='__main__':print()",
             "print()",
         ),
@@ -73,6 +77,7 @@ def test_fold_names(source: str, expected: str):
             name_or_attr_to_fold=TokensToFold(
                 {
                     "FAVORITE_NUMBER": 6,
+                    "some_tuple": (1, 2),
                     "TEST": "test",
                     "__name__": "__main__",
                     "os.name": "nt",

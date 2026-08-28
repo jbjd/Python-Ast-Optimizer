@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [10.1.1] - 2026-08-27
+
+- [Improvement] Allow constant tuples to be folded
+
 ## [10.1.0] - 2026-08-24
 
 - [Improvement] Config to shorten private functions by uglifying their name

@@ -19,10 +19,11 @@ select = ["ALL"]
 # PTH: Use Pathlib (Wants slower API used)
 # S101: Assert
 # SLF001: Private member access
+# TC001: Type Checking Block
 # TD002: TODO author
 # TD003: TODO issue link
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["C420", "COM812", "CPY", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PLR0917", "PTH", "S101", "SLF001", "TD002", "TD003", "TRY003"]
+ignore = ["C420", "COM812", "CPY", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PLR0917", "PTH", "S101", "SLF001", "TC001", "TD002", "TD003", "TRY003"]
 
 [lint.extend-per-file-ignores]
 

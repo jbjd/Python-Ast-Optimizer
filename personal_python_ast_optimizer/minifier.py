@@ -276,9 +276,10 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         self.fill_splitter()
-        if node.simple == 0 and isinstance(node.target, ast.Name):
-            with self.delimit("(", ")"):
-                self.traverse(node.target)
+        with self.delimit_if(
+            "(", ")", not node.simple and isinstance(node.target, ast.Name)
+        ):
+            self.traverse(node.target)
 
         self._source.append(":")
         self.traverse(node.annotation)

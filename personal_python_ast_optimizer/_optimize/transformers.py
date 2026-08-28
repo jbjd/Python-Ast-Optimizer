@@ -700,8 +700,9 @@ class FirstPassOptimizer(OptimizationPass):
 
         return node
 
+    @staticmethod
     def _build_constant(
-        self, counter: TokensToFoldVisitCounter, node_id: str
+        counter: TokensToFoldVisitCounter, node_id: str
     ) -> ast.Tuple | ast.Constant:
         constant: FoldableConstant = counter.get(node_id)
 

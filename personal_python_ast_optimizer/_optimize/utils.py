@@ -126,7 +126,7 @@ _UNVISITED = 0
 _VISITED = 1
 
 
-class _TokensToSkipVisitCounter[T]:
+class TokensToSkipVisitCounter[T]:
     __slots__ = ("_tokens_to_skip",)
 
     def __init__(
@@ -163,7 +163,7 @@ class _TokensToSkipVisitCounter[T]:
         return False
 
 
-class _TokensToFoldVisitCounter(_TokensToSkipVisitCounter[str]):
+class TokensToFoldVisitCounter(TokensToSkipVisitCounter[str]):
     def __init__(
         self, tokens_to_fold: TokensToFold[str, FoldableConstant] | None
     ) -> None:
@@ -203,18 +203,18 @@ class TokensTracker:
         calls_to_fold: TokensToFold[str, FoldableConstant] | None,
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None,
     ) -> None:
-        self.assignments_to_skip = _TokensToSkipVisitCounter(assignments_to_skip)
-        self.classes_to_skip = _TokensToSkipVisitCounter(classes_to_skip)
-        self.decorators_to_skip = _TokensToSkipVisitCounter(decorators_to_skip)
-        self.from_imports_to_skip = _TokensToSkipVisitCounter(from_imports_to_skip)
-        self.functions_to_skip = _TokensToSkipVisitCounter(functions_to_skip)
-        self.module_imports_to_skip = _TokensToSkipVisitCounter(module_imports_to_skip)
-        self.calls_to_fold = _TokensToFoldVisitCounter(calls_to_fold)
-        self.name_or_attr_to_fold = _TokensToFoldVisitCounter(name_or_attr_to_fold)
+        self.assignments_to_skip = TokensToSkipVisitCounter(assignments_to_skip)
+        self.classes_to_skip = TokensToSkipVisitCounter(classes_to_skip)
+        self.decorators_to_skip = TokensToSkipVisitCounter(decorators_to_skip)
+        self.from_imports_to_skip = TokensToSkipVisitCounter(from_imports_to_skip)
+        self.functions_to_skip = TokensToSkipVisitCounter(functions_to_skip)
+        self.module_imports_to_skip = TokensToSkipVisitCounter(module_imports_to_skip)
+        self.calls_to_fold = TokensToFoldVisitCounter(calls_to_fold)
+        self.name_or_attr_to_fold = TokensToFoldVisitCounter(name_or_attr_to_fold)
 
     def warn_not_found_skips(self, file_name: str) -> None:
         for attribute in self.__slots__:
-            access_counter: _TokensToSkipVisitCounter = getattr(self, attribute)
+            access_counter: TokensToSkipVisitCounter = getattr(self, attribute)
             not_found: str = ", ".join(access_counter.get_unvisited_tokens())
 
             if not_found != "":

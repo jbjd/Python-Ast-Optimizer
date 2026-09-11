@@ -5,13 +5,14 @@ from tests.utils import optimize_and_assert_correctness
 
 
 @pytest.mark.parametrize(
-    ("source", "expected"),
+    ("source", "expected", "remapper"),
     [
         (
             """def _asdf():print(1)
 a = _asdf()""",
             """def _a():print(1)
 a=_a()""",
+            None,
         ),
         (
             """class A:
@@ -19,9 +20,10 @@ a=_a()""",
     def _asdf(self):print(1)
 a = A()._asdf()""",
             """class A:
-\tdef __init__(self):self.a=1
-\tdef _a(self):print(1)
-a=A()._a()""",
+\tdef __init__(_a):_a.a=1
+\tdef _b(_a):print(1)
+a=A()._b()""",
+            {"self": "_a"},
         ),
         (
             """import _a
@@ -32,18 +34,24 @@ a = _asdf()""",
 def _b():print(1)
 def _f():print(1)
 a=_b()""",
+            None,
         ),
         (
             """def _a():print(1)
 def _abc():print(1)""",
             """def _a():print(1)
 def _b():print(1)""",
+            None,
         ),
     ],
 )
-def test_shorten_private_functions(source: str, expected: str):
+def test_shorten_private_functions(
+    source: str, expected: str, remapper: dict[str, str] | None
+):
     """Should shorten private functions without causing global name conflicts."""
 
     optimize_and_assert_correctness(
-        source, expected, uglify=UglifyConfig(shorten_private_functions=True)
+        source,
+        expected,
+        uglify=UglifyConfig(name_remapper=remapper, shorten_private_functions=True),
     )

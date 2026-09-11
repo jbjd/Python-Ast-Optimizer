@@ -888,38 +888,56 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
     """Compresses certain tokens."""
 
     __slots__ = (
-        "_private_functions_map",
+        "_name_remapper",
         "shorten_private_functions",
+        "user_name_remapper",
     )
 
-    def __init__(self, shorten_private_functions: bool) -> None:
+    def __init__(
+        self,
+        user_name_remapper: dict[str, str],
+        shorten_private_functions: bool,
+    ) -> None:
+        self.user_name_remapper: dict[str, str] = user_name_remapper
         self.shorten_private_functions: bool = shorten_private_functions
 
     def visit(self, node: ast.Module) -> None:
-        if not self.shorten_private_functions:
+        if not self.user_name_remapper and not self.shorten_private_functions:
             return
 
-        names: set[str] = NameAggregator().visit(node)
+        user_provided_names = self.user_name_remapper.values()
+        names: set[str] = NameAggregator(user_provided_names).visit(node)
         name_generator = UglyNameGenerator("_", names)
 
-        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
-        self._private_functions_map: dict[str, str] = {
+        private_functions: set[str] = PrivateFunctionAggregator(
+            user_provided_names
+        ).visit(node)
+        private_functions_map: dict[str, str] = {
             old_name: new_name
             for old_name in private_functions
             if (new_name := name_generator.get_ugly_name(len(old_name) - 1)) is not None
         }
+        self._name_remapper = self.user_name_remapper | private_functions_map
 
         self._generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        if node.attr in self._private_functions_map:
-            node.attr = self._private_functions_map[node.attr]
+        parsed_node: ast.Attribute = self._generic_visit(node)
+
+        if parsed_node.attr in self._name_remapper:
+            parsed_node.attr = self._name_remapper[parsed_node.attr]
+
+        return parsed_node
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        if node.id in self._name_remapper:
+            node.id = self._name_remapper[node.id]
 
         return node
 
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        if node.id in self._private_functions_map:
-            node.id = self._private_functions_map[node.id]
+    def visit_arg(self, node: ast.arg) -> ast.arg:
+        if node.arg in self._name_remapper:
+            node.arg = self._name_remapper[node.arg]
 
         return node
 
@@ -932,7 +950,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
     def _handle_function(
         self, node: ast.AsyncFunctionDef | ast.FunctionDef
     ) -> ast.AST | None:
-        if node.name in self._private_functions_map:
-            node.name = self._private_functions_map[node.name]
+        if node.name in self._name_remapper:
+            node.name = self._name_remapper[node.name]
 
         return self._generic_visit(node)

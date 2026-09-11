@@ -1,6 +1,7 @@
 """Visitor classes to help optimize Python ASTs."""
 
 import ast
+from collections.abc import Iterable
 from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
@@ -110,8 +111,8 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
 
     __slots__ = ("_found",)
 
-    def __init__(self) -> None:
-        self._found: set[str] = set()
+    def __init__(self, excludes: Iterable[str] | None = None) -> None:
+        self._found: set[str] = set() if excludes is None else set(excludes)
 
     def visit(self, node: ast.Module) -> set[str]:
         self._traverse_body(node.body)
@@ -144,8 +145,8 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
 class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
     __slots__ = ("_found",)
 
-    def __init__(self) -> None:
-        self._found: set[str] = set()
+    def __init__(self, excludes: Iterable[str]) -> None:
+        self._found: set[str] = set() if excludes is None else set(excludes)
 
     def visit(self, node: ast.Module) -> set[str]:
         self._traverse_body(node.body)

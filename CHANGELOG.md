@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [10.2.0] - 2026-09-10
+
+- [Improvement] Option to uglify arbitrary names
+
 ## [10.1.1] - 2026-08-27
 
 - [Improvement] Allow constant tuples to be folded

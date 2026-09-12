@@ -89,7 +89,7 @@ def optimize_module(
         code_to_skip.unused_imports_to_preserve,
     ).visit(module)
 
-    Uglifier(uglify.shorten_private_functions).visit(module)
+    Uglifier(uglify.names_to_uglify, uglify.shorten_private_functions).visit(module)
 
 
 def optimize_source(

@@ -908,7 +908,9 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         names: set[str] = NameAggregator().visit(node)
         name_generator = UglyNameGenerator(excludes=names)
         self._name_remapper = {
-            n: name_generator.get_ugly_name(len(n) - 1) for n in self.names_to_uglify
+            n: new_name
+            for n in self.names_to_uglify
+            if (new_name := name_generator.get_ugly_name(len(n) - 1)) is not None
         }
 
         if self.shorten_private_functions:
@@ -926,7 +928,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         self._generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        parsed_node: ast.Attribute = self._generic_visit(node)
+        parsed_node: ast.Attribute = self._generic_visit(node)  # type: ignore[assignment]
 
         if parsed_node.attr in self._name_remapper:
             parsed_node.attr = self._name_remapper[parsed_node.attr]

@@ -907,18 +907,21 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
 
         names: set[str] = NameAggregator().visit(node)
         name_generator = UglyNameGenerator(excludes=names)
-        private_name_generator = UglyNameGenerator("_", names)
-
-        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
-        private_functions_map: dict[str, str] = {
-            old_name: new_name
-            for old_name in private_functions
-            if (new_name := private_name_generator.get_ugly_name(len(old_name) - 1))
-            is not None
-        }
         self._name_remapper = {
             n: name_generator.get_ugly_name(len(n) - 1) for n in self.names_to_uglify
-        } | private_functions_map
+        }
+
+        if self.shorten_private_functions:
+            private_name_generator = UglyNameGenerator("_", names)
+
+            private_functions: set[str] = PrivateFunctionAggregator().visit(node)
+            private_functions_map: dict[str, str] = {
+                old_name: new_name
+                for old_name in private_functions
+                if (new_name := private_name_generator.get_ugly_name(len(old_name) - 1))
+                is not None
+            }
+            self._name_remapper |= private_functions_map
 
         self._generic_visit(node)
 

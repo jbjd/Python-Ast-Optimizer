@@ -889,35 +889,36 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
 
     __slots__ = (
         "_name_remapper",
+        "names_to_uglify",
         "shorten_private_functions",
-        "user_name_remapper",
     )
 
     def __init__(
         self,
-        user_name_remapper: dict[str, str],
+        names_to_uglify: Iterable[str],
         shorten_private_functions: bool,
     ) -> None:
-        self.user_name_remapper: dict[str, str] = user_name_remapper
+        self.names_to_uglify: Iterable[str] = names_to_uglify
         self.shorten_private_functions: bool = shorten_private_functions
 
     def visit(self, node: ast.Module) -> None:
-        if not self.user_name_remapper and not self.shorten_private_functions:
+        if not self.names_to_uglify and not self.shorten_private_functions:
             return
 
-        user_provided_names = self.user_name_remapper.values()
-        names: set[str] = NameAggregator(user_provided_names).visit(node)
-        name_generator = UglyNameGenerator("_", names)
+        names: set[str] = NameAggregator().visit(node)
+        name_generator = UglyNameGenerator(excludes=names)
+        private_name_generator = UglyNameGenerator("_", names)
 
-        private_functions: set[str] = PrivateFunctionAggregator(
-            user_provided_names
-        ).visit(node)
+        private_functions: set[str] = PrivateFunctionAggregator().visit(node)
         private_functions_map: dict[str, str] = {
             old_name: new_name
             for old_name in private_functions
-            if (new_name := name_generator.get_ugly_name(len(old_name) - 1)) is not None
+            if (new_name := private_name_generator.get_ugly_name(len(old_name) - 1))
+            is not None
         }
-        self._name_remapper = self.user_name_remapper | private_functions_map
+        self._name_remapper = {
+            n: name_generator.get_ugly_name(len(n) - 1) for n in self.names_to_uglify
+        } | private_functions_map
 
         self._generic_visit(node)
 

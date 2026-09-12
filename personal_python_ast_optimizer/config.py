@@ -187,16 +187,16 @@ class PerfOptimizationsConfig:
 
 
 class UglifyConfig:
-    __slots__ = ("name_remapper", "shorten_private_functions")
+    __slots__ = ("names_to_uglify", "shorten_private_functions")
 
     def __init__(
         self,
         *,
-        name_remapper: dict[str, str] | None = None,
+        names_to_uglify: Iterable[str] | None = None,
         shorten_private_functions: bool = False,
     ) -> None:
-        self.name_remapper: dict[str, str] = (
-            {} if name_remapper is None else name_remapper
+        self.names_to_uglify: Iterable[str] = (
+            [] if names_to_uglify is None else names_to_uglify
         )
         self.shorten_private_functions: bool = shorten_private_functions
 

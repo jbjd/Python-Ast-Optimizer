@@ -145,8 +145,8 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
 class PrivateFunctionAggregator(AstVisitorBase, AstVisitorProtocol):
     __slots__ = ("_found",)
 
-    def __init__(self, excludes: Iterable[str]) -> None:
-        self._found: set[str] = set() if excludes is None else set(excludes)
+    def __init__(self) -> None:
+        self._found: set[str] = set()
 
     def visit(self, node: ast.Module) -> set[str]:
         self._traverse_body(node.body)

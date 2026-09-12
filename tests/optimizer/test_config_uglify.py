@@ -20,9 +20,9 @@ a=_a()""",
     def _asdf(self):print(1)
 a = A()._asdf()""",
             """class A:
-\tdef __init__(_a):_a.a=1
-\tdef _b(_a):print(1)
-a=A()._b()""",
+\tdef __init__(b):b.a=1
+\tdef _a(b):print(1)
+a=A()._a()""",
             {"self": "_a"},
         ),
         (
@@ -53,5 +53,5 @@ def test_shorten_private_functions(
     optimize_and_assert_correctness(
         source,
         expected,
-        uglify=UglifyConfig(name_remapper=remapper, shorten_private_functions=True),
+        uglify=UglifyConfig(names_to_uglify=remapper, shorten_private_functions=True),
     )

@@ -33,25 +33,25 @@ class MinifyUnparser(Unparser):
 
         return "".join(self._source)
 
-    def traverse(self, node: list[ast.stmt] | ast.AST) -> None:
-        if isinstance(node, list):
-            self.can_write_body_in_one_line = (
-                all(self._node_inlineable(sub_node) for sub_node in node)
-                or len(node) == 1
-            )
-            self.previous_node_in_body = None
+    def traverse(self, node: list[ast.stmt]) -> None:
+        self.can_write_body_in_one_line = (
+            all(self._node_inlineable(sub_node) for sub_node in node) or len(node) == 1
+        )
+        self.previous_node_in_body = None
 
-            for sub_node in node:
-                self._visit_node(sub_node)
-                self.can_write_body_in_one_line = False
-                self.previous_node_in_body = sub_node
-        else:
-            self._visit_node(node)
+        for sub_node in node:
+            self._visit_node(sub_node)
+            self.can_write_body_in_one_line = False
+            self.previous_node_in_body = sub_node
 
     def _visit_node(self, node: ast.AST) -> None:
         method: str = "visit_" + node.__class__.__name__
         visitor: Callable = getattr(self, method)  # type: ignore[assignment]
         return visitor(node)
+
+    def maybe_newline(self) -> None:
+        if self._source:
+            self._source("\n")
 
     def _write_many_asts(self, asts: Iterable[ast.AST], delimitor: str) -> None:
         for i, node in enumerate(asts):
@@ -92,6 +92,14 @@ class MinifyUnparser(Unparser):
         return "\n"
 
     @contextmanager
+    def block(self) -> Generator[None, None, None]:
+        self._source.append(":")
+
+        self._indent += 1
+        yield
+        self._indent -= 1
+
+    @contextmanager
     def _surround(self, start: str, end: str) -> Generator[None, None, None]:
         self._source.append(start)
         yield
@@ -100,7 +108,7 @@ class MinifyUnparser(Unparser):
     def visit_Expr(self, node: ast.Expr) -> None:
         self._fill_literal_new_line()
         # TODO: Precedence
-        self.traverse(node.value)
+        self._visit_node(node.value)
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
         # TODO: Precedence
@@ -130,6 +138,29 @@ class MinifyUnparser(Unparser):
                 self._source.append("u")
             self._source.append(str(value))
 
+    def visit_arg(self, node: ast.arg) -> None:
+        self._source.append(node.arg)
+
+        if node.annotation is not None:
+            self._source.append(":")
+            self._visit_node(node.annotation)
+
+    def visit_arguments(self, node: ast.arguments) -> None:
+        first: bool = True
+
+        positional_args: list[ast.arg] = node.posonlyargs + node.args
+        # TODO: Defaults
+
+        for arg in positional_args:
+            if first:
+                first = False
+            else:
+                self._source.append(",")
+
+            self._visit_node(arg)
+
+        # TODO: KW args
+
     def visit_List(self, node: ast.List) -> None:
         with self._surround("[", "]"):
             self._write_many_asts(node.elts, ",")
@@ -150,6 +181,13 @@ class MinifyUnparser(Unparser):
 
     def visit_Pass(self, _: ast.Pass) -> None:
         self._fill_literal("pass")
+
+    def visit_Return(self, node: ast.Return) -> None:
+        self._fill_literal("return")
+
+        if node.value is not None:
+            self._source.append(" ")
+            self._visit_node(node.value)
 
     def visit_Delete(self, node: ast.Delete) -> None:
         self._fill_literal("del ")
@@ -203,6 +241,39 @@ class MinifyUnparser(Unparser):
 
         self._source.append("=")
         self._visit_node(node.value)
+
+    def _write_decorators(
+        self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        for decorator in node.decorator_list:
+            self._fill_literal_new_line("@")
+            self._visit_node(decorator)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._function_helper(node, "def")
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._function_helper(node, "async def")
+
+    def _function_helper(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, suffix: str
+    ) -> None:
+        self._write_decorators(node)
+        self._fill_literal_new_line(suffix + " " + node.name)
+
+        if hasattr(node, "type_params"):
+            self._write_type_params(node.type_params)
+
+        with self._surround("(", ")"):
+            self._visit_node(node.args)
+
+        if node.returns:
+            self._source.append("->")
+            self._visit_node(node.returns)
+
+        with self.block():
+            # TODO: doc string
+            self.traverse(node.body)
 
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:

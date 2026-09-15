@@ -1,7 +1,8 @@
 """Minifier for Python ASTs."""
 
 import ast
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal, LiteralString
 
 from personal_python_ast_optimizer.typing import Unparser
@@ -52,14 +53,11 @@ class MinifyUnparser(Unparser):
         visitor: Callable = getattr(self, method)  # type: ignore[assignment]
         return visitor(node)
 
-    def _write_iterable(self, body: Iterable[str], deliminator: LiteralString) -> None:
-        for i, b in enumerate(body):
+    def _write_many_asts(self, asts: Iterable[ast.AST], delimitor: str) -> None:
+        for i, node in enumerate(asts):
             if i > 0:
-                self._source.append(deliminator)
-            self._source.append(b)
-
-    def _write_alias(self, aliases: list[ast.alias]) -> Iterator[str]:
-        self._write_iterable(iter(n.name for n in aliases), ",")
+                self._source.append(delimitor)
+            self._visit_node(node)
 
     def _fill_literal(self, text: LiteralString) -> None:
         match self._get_line_splitter():
@@ -71,9 +69,12 @@ class MinifyUnparser(Unparser):
                 self._source.append(";")
                 self._source.append(text)
 
-    def _fill_literal_new_line(self, text: LiteralString) -> None:
+    def _fill_literal_new_line(self, text: LiteralString | None = None) -> None:
         self._source.append("\n")
-        self._source.append("\t" * self._indent + text)
+        self._source.append("\t" * self._indent)
+
+        if text is not None:
+            self._source.append(text)
 
     def _get_line_splitter(self) -> Literal["", "\n", ";"]:
         if not self._source or (
@@ -90,6 +91,57 @@ class MinifyUnparser(Unparser):
 
         return "\n"
 
+    @contextmanager
+    def _surround(self, start: str, end: str) -> Generator[None, None, None]:
+        self._source.append(start)
+        yield
+        self._source.append(end)
+
+    def visit_Expr(self, node: ast.Expr) -> None:
+        self._fill_literal_new_line()
+        # TODO: Precedence
+        self.traverse(node.value)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        # TODO: Precedence
+        self._visit_node(node.value)
+
+        # ```1.__abs__()``` is invalid but ```1 .__abs__()``` is valid
+        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, int):
+            self._source.append(" ")
+
+        self._source.append(".")
+        self._source.append(node.attr)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        self._source.append(node.id)
+
+    def visit_Constant(self, node: ast.Constant) -> None:
+
+        value = node.value
+
+        if isinstance(value, str):
+            raise NotImplementedError
+
+        if value is ...:
+            self._source.append("...")
+        else:
+            if node.kind == "u":
+                self._source.append("u")
+            self._source.append(str(value))
+
+    def visit_List(self, node: ast.List) -> None:
+        with self._surround("[", "]"):
+            self._write_many_asts(node.elts, ",")
+
+    def visit_Set(self, node: ast.Set) -> None:
+        if node.elts:
+            with self._surround("{", "}"):
+                self._write_many_asts(node.elts, ",")
+        else:
+            # ```{}``` is a dict, this is a hacky way to make a set
+            self._source.append("{*()}")
+
     def visit_Break(self, _: ast.Break) -> None:
         self._fill_literal("break")
 
@@ -99,9 +151,21 @@ class MinifyUnparser(Unparser):
     def visit_Pass(self, _: ast.Pass) -> None:
         self._fill_literal("pass")
 
+    def visit_Delete(self, node: ast.Delete) -> None:
+        self._fill_literal("del ")
+        self._write_many_asts(node.targets, ",")
+
+    def visit_Assert(self, node: ast.Assert) -> None:
+        self._fill_literal("assert ")
+        self._visit_node(node.test)
+
+        if node.msg is not None:
+            self._source.append(",")
+            self._visit_node(node.msg)
+
     def visit_Import(self, node: ast.Import) -> None:
         self._fill_literal("import ")
-        self._write_alias(node.names)
+        self._write_many_asts(node.names, ",")
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         self._fill_literal("from ")
@@ -110,7 +174,35 @@ class MinifyUnparser(Unparser):
         if node.module:
             self._source.append(node.module)
         self._source.append(" import ")
-        self._write_alias(node.names)
+        self._write_many_asts(node.names, ",")
+
+    def visit_alias(self, node: ast.alias) -> None:
+        self._source.append(node.name)
+
+        if node.asname:
+            self._source.append(" as ")
+            self._source.append(node.asname)
+
+    def _write_type_params(self, type_params: list[ast.type_param]) -> None:
+        if type_params:
+            with self._surround("[", "]"):
+                self._write_many_asts(type_params, ",")
+
+    def visit_TypeVar(self, node: ast.TypeVar) -> None:
+        self._source.append(node.name)
+
+        if node.bound is not None:
+            self._source.append(":")
+            self._visit_node(node.bound)
+
+    def visit_TypeAlias(self, node: ast.TypeAlias) -> None:
+        self._fill_literal("type ")
+        self.visit_Name(node.name)
+
+        self._write_type_params(node.type_params)
+
+        self._source.append("=")
+        self._visit_node(node.value)
 
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:

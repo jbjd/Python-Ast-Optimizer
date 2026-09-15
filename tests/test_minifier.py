@@ -15,6 +15,9 @@ class File:
     def __init__(self, name: FileName) -> None:
         self.name: FileName = name
 
+    def todo(self):
+        ...
+
 if __name__ == "__main__":
     files = [ File(str(n)) for n in range(10) ]
     print(files)
@@ -24,6 +27,7 @@ class File:
 \t\"\"\"a file\"\"\"
 \tKB:int
 \tdef __init__(self,name:FileName)->None:self.name:FileName=name
+\tdef todo(self):...
 if __name__=='__main__':files=[File(str(n))for n in range(10)];print(files)"""
 
     minify_and_assert_correctness(before, after)

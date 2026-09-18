@@ -2,13 +2,25 @@
 
 import ast
 from collections.abc import Generator, Iterable
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Literal, LiteralString
 
-from personal_python_ast_optimizer.typing import Unparser
+from personal_python_ast_optimizer.typing_extensions import Unparser
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+_chars_that_dont_need_whitespace: list[str] = [
+    "'",
+    '"',
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    "*",
+]
 
 
 class MinifyUnparser(Unparser):
@@ -33,7 +45,7 @@ class MinifyUnparser(Unparser):
 
         return "".join(self._source)
 
-    def traverse(self, node: list[ast.stmt]) -> None:
+    def _traverse(self, node: list[ast.stmt]) -> None:
         self.can_write_body_in_one_line = (
             all(self._node_inlineable(sub_node) for sub_node in node) or len(node) == 1
         )
@@ -49,15 +61,43 @@ class MinifyUnparser(Unparser):
         visitor: Callable = getattr(self, method)  # type: ignore[assignment]
         return visitor(node)
 
-    def maybe_newline(self) -> None:
+    def _maybe_newline(self) -> None:
         if self._source:
             self._source("\n")
+
+    def _write_maybe_lpad(self, to_write: str) -> None:
+        if (
+            self._source
+            and self._source[-1][-1:] not in _chars_that_dont_need_whitespace
+        ):
+            self._source.append(" ")
+
+        self._source.append(to_write)
+
+    def _write_many(self, *args: tuple[str, ...]) -> None:
+        self._source += args
 
     def _write_many_asts(self, asts: Iterable[ast.AST], delimitor: str) -> None:
         for i, node in enumerate(asts):
             if i > 0:
                 self._source.append(delimitor)
             self._visit_node(node)
+
+    def _maybe_write_annotation(self, annotation: ast.expr | None) -> None:
+        if annotation is not None:
+            self._write_annotation(annotation)
+
+    def _write_annotation(self, annotation: ast.expr) -> None:
+        self._source.append(":")
+        self._visit_node(annotation)
+
+    def _maybe_write_assign(self, assignment: ast.expr | None) -> None:
+        if assignment is not None:
+            self._write_assign(assignment)
+
+    def _write_assign(self, assignment: ast.expr) -> None:
+        self._source.append("=")
+        self._visit_node(assignment)
 
     def _fill_literal(self, text: LiteralString) -> None:
         match self._get_line_splitter():
@@ -105,13 +145,21 @@ class MinifyUnparser(Unparser):
         yield
         self._source.append(end)
 
+    def _surround_if(
+        self, start: str, end: str, condition: bool
+    ) -> Generator[None, None, None]:
+        if condition:
+            return self._surround(start, end)
+
+        return nullcontext()
+
     def visit_Expr(self, node: ast.Expr) -> None:
         self._fill_literal_new_line()
-        # TODO: Precedence
+        # TODO: Precedence YIELD
         self._visit_node(node.value)
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
-        # TODO: Precedence
+        # TODO: Precedence ATOM
         self._visit_node(node.value)
 
         # ```1.__abs__()``` is invalid but ```1 .__abs__()``` is valid
@@ -138,28 +186,93 @@ class MinifyUnparser(Unparser):
                 self._source.append("u")
             self._source.append(str(value))
 
+    def visit_Assign(self, node: ast.Assign) -> None:
+        self._fill_literal_new_line()
+
+        for target in node.targets:
+            # TODO: Precedence tuple
+            self._visit_node(target)
+            self._source.append("=")
+
+        self._visit_node(node.value)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self._fill_literal_new_line()
+
+        with self._surround_if(
+            "(", ")", not node.simple and isinstance(node.target, ast.Name)
+        ):
+            self._visit_node(node.target)
+
+        self._write_annotation(node.annotation)
+        self._maybe_write_assign(node.value)
+
     def visit_arg(self, node: ast.arg) -> None:
         self._source.append(node.arg)
-
-        if node.annotation is not None:
-            self._source.append(":")
-            self._visit_node(node.annotation)
+        self._maybe_write_annotation(node.annotation)
 
     def visit_arguments(self, node: ast.arguments) -> None:
         first: bool = True
 
-        positional_args: list[ast.arg] = node.posonlyargs + node.args
-        # TODO: Defaults
-
-        for arg in positional_args:
+        def __maybe_comma() -> None:
+            nonlocal first
             if first:
                 first = False
             else:
                 self._source.append(",")
 
+        positional_args: list[ast.arg] = node.posonlyargs + node.args
+        positional_arg_defaults: list[ast.expr | None] = [None] * (
+            len(positional_args) - len(node.defaults)
+        ) + node.defaults
+
+        index_to_forward_slash: int = len(node.posonlyargs) - 1
+
+        for index, arg in enumerate(positional_args):
+            __maybe_comma()
             self._visit_node(arg)
 
-        # TODO: KW args
+            default: ast.expr | None = positional_arg_defaults[index]
+            self._maybe_write_assign(default)
+
+            if index == index_to_forward_slash:
+                self._source.append(",/")
+
+        if node.vararg or node.kwonlyargs:
+            __maybe_comma()
+            self._source.append("*")
+
+            if node.vararg is not None:
+                self._source.append(node.vararg.arg)
+                self._maybe_write_annotation(node.vararg.annotation)
+
+            if node.kwonlyargs:
+                for arg, default in zip(node.kwonlyargs, node.kw_defaults, strict=True):
+                    self._source.append(",")
+                    self._visit_node(arg)
+
+                    self._maybe_write_assign(default)
+
+        if node.kwarg:
+            __maybe_comma()
+            self._write_many("**", node.kwarg.arg)
+            self._maybe_write_annotation(node.kwarg.annotation)
+
+    def visit_comprehension(self, node: ast.comprehension) -> None:
+        self._source.append(" async for " if node.is_async else " for ")
+
+        # TODO: Precedence tuple
+
+        self._visit_node(node.target)
+        self._source.append(" in ")
+
+        # TODO: Precedence test
+
+        self._visit_node(node.iter)
+
+        for if_clause in node.ifs:
+            self._write_maybe_lpad("if ")
+            self._visit_node(if_clause)
 
     def visit_List(self, node: ast.List) -> None:
         with self._surround("[", "]"):
@@ -172,6 +285,12 @@ class MinifyUnparser(Unparser):
         else:
             # ```{}``` is a dict, this is a hacky way to make a set
             self._source.append("{*()}")
+
+    def visit_SetComp(self, node: ast.SetComp) -> None:
+        with self._surround("{", "}"):
+            self._visit_node(node.elt)
+            for gen in node.generators:
+                self._visit_node(gen)
 
     def visit_Break(self, _: ast.Break) -> None:
         self._fill_literal("break")
@@ -228,10 +347,7 @@ class MinifyUnparser(Unparser):
 
     def visit_TypeVar(self, node: ast.TypeVar) -> None:
         self._source.append(node.name)
-
-        if node.bound is not None:
-            self._source.append(":")
-            self._visit_node(node.bound)
+        self._maybe_write_annotation(node.bound)
 
     def visit_TypeAlias(self, node: ast.TypeAlias) -> None:
         self._fill_literal("type ")
@@ -239,8 +355,7 @@ class MinifyUnparser(Unparser):
 
         self._write_type_params(node.type_params)
 
-        self._source.append("=")
-        self._visit_node(node.value)
+        self._write_assign(node.value)
 
     def _write_decorators(
         self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
@@ -273,7 +388,7 @@ class MinifyUnparser(Unparser):
 
         with self.block():
             # TODO: doc string
-            self.traverse(node.body)
+            self._traverse(node.body)
 
     @staticmethod
     def _node_inlineable(node: ast.AST) -> bool:

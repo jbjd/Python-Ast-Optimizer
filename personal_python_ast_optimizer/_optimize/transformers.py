@@ -27,7 +27,7 @@ from personal_python_ast_optimizer._optimize.visitors import (
     PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing_extensionsimport FoldableConstant
 
 
 class OptimizationPass(AstTransformerBase, AstVisitorProtocol):

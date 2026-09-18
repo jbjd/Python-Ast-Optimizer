@@ -18,7 +18,7 @@ from personal_python_ast_optimizer.config import (
     UglifyConfig,
 )
 from personal_python_ast_optimizer.minifier import MinifyUnparser
-from personal_python_ast_optimizer.typing import Unparser
+from personal_python_ast_optimizer.typing_extensions import Unparser
 
 
 def optimize_module(

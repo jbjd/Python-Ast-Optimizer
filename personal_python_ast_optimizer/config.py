@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Literal
 
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing_extensions import FoldableConstant
 
 
 class TypeHintsToSkip(Enum):

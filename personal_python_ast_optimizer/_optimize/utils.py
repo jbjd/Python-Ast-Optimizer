@@ -9,7 +9,7 @@ from typing import Any, override
 
 from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer.config import TokensToFold, TokensToSkip
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing_extensionsimport FoldableConstant
 
 _logger = get_logger()
 

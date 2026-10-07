@@ -27,7 +27,7 @@ from personal_python_ast_optimizer._optimize.visitors import (
     PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
-from personal_python_ast_optimizer.typing_extensionsimport FoldableConstant
+from personal_python_ast_optimizer.typing_extensions import FoldableConstant
 
 
 class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
@@ -589,7 +589,7 @@ class FirstPassOptimizer(OptimizationPass):
             and not self.tokens_tracker.assignments_to_skip.has(t_name)
         ]
 
-        return self._generic_visit(node) if node.targets else None
+        return super().visit_Assign(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         node_name: str | None = get_name_or_full_attribute_id(node.target)

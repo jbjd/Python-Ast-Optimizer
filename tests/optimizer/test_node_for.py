@@ -18,8 +18,11 @@ for a in range(7):
             "",
         ),
         (
-            "for a in some_func():pass",
-            "some_func()",
+            """
+for a in some_func():pass
+for a in some_func2():pass
+""",
+            "some_func()\nsome_func2()",
         ),
     ],
 )

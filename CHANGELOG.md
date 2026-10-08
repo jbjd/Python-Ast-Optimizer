@@ -5,7 +5,7 @@
 ## [10.3.0] - 2026-10-07
 
 - [Improvement] Remove dead for loops
-- [Improvement] Remove redundant assigments ```fp = fp```
+- [Improvement] Remove redundant assignments ```fp = fp```
 
 ## [10.2.0] - 2026-09-10
 

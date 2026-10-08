@@ -132,7 +132,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
         return parsed_node
 
-    def visit_For(self, node: ast.For) -> ast.AST | None:
+    def visit_For(self, node: ast.For) -> ast.AST | list[ast.stmt] | None:
 
         parsed_node: ast.AST = self._generic_visit(node)
 
@@ -269,7 +269,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
         return parsed_node
 
-    def _get_exprs_in_conditional_node(self, expr: ast.expr) -> None:
+    def _get_exprs_in_conditional_node(self, expr: ast.expr) -> list[ast.stmt]:
         """Gets ast.Expr() nodes inside the If/For parent node.
 
         :param node: The conditional node to check."""

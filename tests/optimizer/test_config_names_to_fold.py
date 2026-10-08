@@ -60,20 +60,24 @@ def get_cpu_count():
 """,
             "def get_cpu_count():return 12",
         ),
+        (
+            "a = add_one(2)\nb = add_one(some_func())",
+            "a='3'\nb=add_one(some_func())",
+        ),
     ],
 )
 def test_fold_names(source: str, expected: str):
     """Should replace occurrences of name with provided constant."""
+
+    def _const_exr(a: int) -> str:
+        return str(a + 1)
+
     optimize_and_assert_correctness(
         source,
         expected,
         code_to_skip=CodeToSkipConfig(skip_unused_imports=True),
         perf_optimizations=PerfOptimizationsConfig(
-            calls_to_fold=TokensToFold(
-                {
-                    "os.cpu_count": 12,
-                }
-            ),
+            calls_to_fold=TokensToFold({"os.cpu_count": 12, "add_one": _const_exr}),
             name_or_attr_to_fold=TokensToFold(
                 {
                     "FAVORITE_NUMBER": 6,

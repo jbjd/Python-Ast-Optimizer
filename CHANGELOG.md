@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [10.4.0] - 2026-10-08
+
+- [Improvement] Expand calls_to_fold config to accept callables that are constant at compile time.
+
 ## [10.3.0] - 2026-10-07
 
 - [Improvement] Remove dead for loops

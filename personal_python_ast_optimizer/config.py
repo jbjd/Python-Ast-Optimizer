@@ -140,6 +140,7 @@ _default_functions_safe_to_exclude_in_test_expr: set[str] = {
     "isinstance",
     "getattr",
     "hasattr",
+    "zip",
 }
 
 

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [10.3.0] - 2026-10-07
+
+- [Improvement] Remove dead for loops
+- [Improvement] Remove redundant assignments ```fp = fp```
+
 ## [10.2.0] - 2026-09-10
 
 - [Improvement] Option to uglify arbitrary names

@@ -19,6 +19,7 @@ class CallAggregator(AstVisitorBase, AstVisitorProtocol):
         self._calls: list[ast.Call] = []
 
     def visit(self, node: ast.expr) -> list[ast.Call]:
+        self._calls.clear()
         self._visit(node)
         return self._calls
 

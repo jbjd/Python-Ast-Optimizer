@@ -35,10 +35,10 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
     like constant folding or dead code elimination."""
 
     __slots__ = (
+        "_call_finder",
         "additional_pass_needed",
         "fold_constants",
         "fold_simple_function_locals",
-        "functions_safe_to_exclude_in_test_expr",
     )
 
     def __init__(
@@ -47,11 +47,9 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
     ) -> None:
+        self._call_finder = CallAggregator(functions_safe_to_exclude_in_test_expr)
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
-        self.functions_safe_to_exclude_in_test_expr: set[str] = (
-            functions_safe_to_exclude_in_test_expr
-        )
         self.additional_pass_needed: bool = False
 
     def visit(self, node: ast.Module) -> None:
@@ -113,12 +111,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
             if not parsed_node.orelse:
                 if self._body_is_only_pass(parsed_node.body):
-                    call_finder = CallAggregator(
-                        self.functions_safe_to_exclude_in_test_expr
-                    )
-                    return [
-                        ast.Expr(expr) for expr in call_finder.visit(parsed_node.test)
-                    ]
+                    return self._get_exprs_in_conditional_node(parsed_node.test)
 
                 if (
                     len(parsed_node.body) == 1
@@ -136,6 +129,35 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
                         )
 
                     parsed_node.body = parsed_node.body[0].body
+
+        return parsed_node
+
+    def visit_For(self, node: ast.For) -> ast.AST | None:
+
+        parsed_node: ast.AST = self._generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.For)
+            and not parsed_node.orelse
+            and self._body_is_only_pass(parsed_node.body)
+        ):
+            return self._get_exprs_in_conditional_node(parsed_node.iter)
+
+        return parsed_node
+
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
+
+        parsed_node = self._generic_visit(node)
+
+        # Remove redundant assignments like ```fp = fp```
+        if (
+            isinstance(parsed_node, ast.Assign)
+            and len(parsed_node.targets) == 1
+            and isinstance(parsed_node.targets[0], ast.Name)
+            and isinstance(parsed_node.value, ast.Name)
+            and parsed_node.targets[0].id == parsed_node.value.id
+        ):
+            return None
 
         return parsed_node
 
@@ -246,6 +268,13 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
             )
 
         return parsed_node
+
+    def _get_exprs_in_conditional_node(self, expr: ast.expr) -> None:
+        """Gets ast.Expr() nodes inside the If/For parent node.
+
+        :param node: The conditional node to check."""
+
+        return [ast.Expr(expr) for expr in self._call_finder.visit(expr)]
 
     @staticmethod
     def _ast_constants_operation(  # noqa: C901, PLR0912
@@ -589,7 +618,7 @@ class FirstPassOptimizer(OptimizationPass):
             and not self.tokens_tracker.assignments_to_skip.has(t_name)
         ]
 
-        return self._generic_visit(node) if node.targets else None
+        return super().visit_Assign(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         node_name: str | None = get_name_or_full_attribute_id(node.target)

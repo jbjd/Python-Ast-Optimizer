@@ -945,6 +945,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         if self.shorten_private_functions:
             private_name_generator = UglyNameGenerator("_", names)
 
+            # TODO: Deterministic toggle
             private_functions: set[str] = PrivateFunctionAggregator().visit(node)
             private_functions_map: dict[str, str] = {
                 old_name: new_name

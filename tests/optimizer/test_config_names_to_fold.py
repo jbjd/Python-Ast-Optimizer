@@ -61,8 +61,12 @@ def get_cpu_count():
             "def get_cpu_count():return 12",
         ),
         (
-            "a = add_one(2)\nb = add_one(some_func())",
-            "a='3'\nb=add_one(some_func())",
+            "a = add_one(FAVORITE_NUMBER)\nb = add_one(some_func())",
+            "a='7'\nb=add_one(some_func())",
+        ),
+        (
+            "a = add_one(a=2)",
+            "a=add_one(a=2)",
         ),
     ],
 )

@@ -605,6 +605,11 @@ class FirstPassOptimizer(OptimizationPass):
         ):
             return self._generic_visit(node.args[1])
 
+        parsed_node = self._generic_visit(node)
+
+        if not isinstance(parsed_node, ast.Call):
+            return parsed_node
+
         node_id: str | None = get_name_or_full_attribute_id(node.func)
         if node_id is not None and self.tokens_tracker.calls_to_fold.has(node_id):
             constant_or_callable: FoldableConstant | ConstantCall = (
@@ -612,7 +617,10 @@ class FirstPassOptimizer(OptimizationPass):
             )
 
             if callable(constant_or_callable):
-                if all(isinstance(n, ast.Constant) for n in node.args):
+                if (
+                    all(isinstance(n, ast.Constant) for n in node.args)
+                    and not node.keywords
+                ):
                     args: list[FoldableConstant] = [n.value for n in node.args]  # type: ignore[attr-defined]
                     try:
                         const_eval: FoldableConstant = constant_or_callable(*args)
@@ -627,7 +635,7 @@ class FirstPassOptimizer(OptimizationPass):
             else:
                 return build_constant(constant_or_callable)
 
-        return self._generic_visit(node)
+        return parsed_node
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         node.targets = [

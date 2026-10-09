@@ -6,15 +6,16 @@ from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import assert_never, override
 
+from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer._optimize.base import (
     AstTransformerBase,
 )
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
-    TokensToFoldVisitCounter,
     TokensTracker,
     UglyNameGenerator,
+    build_constant,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     returns_constant,
@@ -27,7 +28,9 @@ from personal_python_ast_optimizer._optimize.visitors import (
     PrivateFunctionAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
+
+_logger = get_logger()
 
 
 class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
@@ -604,7 +607,25 @@ class FirstPassOptimizer(OptimizationPass):
 
         node_id: str | None = get_name_or_full_attribute_id(node.func)
         if node_id is not None and self.tokens_tracker.calls_to_fold.has(node_id):
-            return self._build_constant(self.tokens_tracker.calls_to_fold, node_id)
+            constant_or_callable: FoldableConstant | ConstantCall = (
+                self.tokens_tracker.calls_to_fold.get(node_id)
+            )
+
+            if callable(constant_or_callable):
+                if all(isinstance(n, ast.Constant) for n in node.args):
+                    args: list[FoldableConstant] = [n.value for n in node.args]  # type: ignore[attr-defined]
+                    try:
+                        const_eval: FoldableConstant = constant_or_callable(*args)
+                    except Exception:
+                        _logger.warning(
+                            "Failed to call %s to get fold value",
+                            node_id,
+                            exc_info=True,
+                        )
+                    else:
+                        return build_constant(const_eval)
+            else:
+                return build_constant(constant_or_callable)
 
         return self._generic_visit(node)
 
@@ -709,8 +730,8 @@ class FirstPassOptimizer(OptimizationPass):
             and full_attr_id is not None
             and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id)
         ):
-            return self._build_constant(
-                self.tokens_tracker.name_or_attr_to_fold, full_attr_id
+            return build_constant(
+                self.tokens_tracker.name_or_attr_to_fold.get(full_attr_id)
             )
 
         if isinstance(node.value, (ast.Attribute, ast.Name)):
@@ -723,22 +744,9 @@ class FirstPassOptimizer(OptimizationPass):
         if not hasattr(
             node, "no_check_fold"
         ) and self.tokens_tracker.name_or_attr_to_fold.has(node.id):
-            return self._build_constant(
-                self.tokens_tracker.name_or_attr_to_fold, node.id
-            )
+            return build_constant(self.tokens_tracker.name_or_attr_to_fold.get(node.id))
 
         return node
-
-    @staticmethod
-    def _build_constant(
-        counter: TokensToFoldVisitCounter, node_id: str
-    ) -> ast.Tuple | ast.Constant:
-        constant: FoldableConstant = counter.get(node_id)
-
-        if isinstance(constant, tuple):
-            return ast.Tuple([ast.Constant(c) for c in constant])
-
-        return ast.Constant(constant)
 
     def _visit_with_context[P, R](
         self, node: P, context: NodeContext, visitor: Callable[[P], R]

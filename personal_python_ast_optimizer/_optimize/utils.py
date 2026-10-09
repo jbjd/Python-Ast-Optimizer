@@ -9,7 +9,7 @@ from typing import Any, override
 
 from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer.config import TokensToFold, TokensToSkip
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
 
 _logger = get_logger()
 
@@ -65,6 +65,17 @@ class UglyNameGenerator:
 
     def _get_generator(self) -> itertools.product:
         return itertools.product(string.ascii_letters, repeat=self._length)
+
+
+def build_constant(constant: FoldableConstant) -> ast.Tuple | ast.Constant:
+    """Returns constant as an ast.Constant or ast.Tuple.
+
+    :param constant: Python constant to turn into an ast"""
+
+    if isinstance(constant, tuple):
+        return ast.Tuple([ast.Constant(c) for c in constant])
+
+    return ast.Constant(constant)
 
 
 def returns_literal_none(node: ast.Return) -> bool:
@@ -163,20 +174,16 @@ class TokensToSkipVisitCounter[T]:
         return False
 
 
-class TokensToFoldVisitCounter(TokensToSkipVisitCounter[str]):
-    def __init__(
-        self, tokens_to_fold: TokensToFold[str, FoldableConstant] | None
-    ) -> None:
+class TokensToFoldVisitCounter[T](TokensToSkipVisitCounter[str]):
+    def __init__(self, tokens_to_fold: TokensToFold[str, T] | None) -> None:
         super().__init__(tokens_to_fold)
-        self.map: dict[str, FoldableConstant] = (
-            {} if tokens_to_fold is None else tokens_to_fold.tokens
-        )
+        self.map: dict[str, T] = {} if tokens_to_fold is None else tokens_to_fold.tokens
 
     @override
     def add(self, key: str, already_visited: bool) -> None:
         raise NotImplementedError  # pragma: no cover
 
-    def get(self, key: str) -> FoldableConstant:
+    def get(self, key: str) -> T:
         return self.map[key]
 
 
@@ -200,7 +207,7 @@ class TokensTracker:
         from_imports_to_skip: TokensToSkip[tuple[str, str]] | None,
         functions_to_skip: TokensToSkip[str] | None,
         module_imports_to_skip: TokensToSkip[str] | None,
-        calls_to_fold: TokensToFold[str, FoldableConstant] | None,
+        calls_to_fold: TokensToFold[str, FoldableConstant | ConstantCall] | None,
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None,
     ) -> None:
         self.assignments_to_skip = TokensToSkipVisitCounter(assignments_to_skip)

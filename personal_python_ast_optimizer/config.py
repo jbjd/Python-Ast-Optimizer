@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Literal
 
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
 
 
 class TypeHintsToSkip(Enum):
@@ -161,7 +161,7 @@ class PerfOptimizationsConfig:
         *,
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
-        calls_to_fold: TokensToFold[str, FoldableConstant] | None = None,
+        calls_to_fold: TokensToFold[str, FoldableConstant | ConstantCall] | None = None,
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
@@ -171,7 +171,9 @@ class PerfOptimizationsConfig:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
-        self.calls_to_fold: TokensToFold[str, FoldableConstant] | None = calls_to_fold
+        self.calls_to_fold: (
+            TokensToFold[str, FoldableConstant | ConstantCall] | None
+        ) = calls_to_fold
         self.name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = (
             name_or_attr_to_fold
         )

@@ -1,10 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [10.4.1] - 2026-10-16
+
+- [Fix] Don't double log
 
 ## [10.4.0] - 2026-10-08
 
-- [Improvement] Expand calls_to_fold config to accept callables that are constant at compile time.
+- [Improvement] Expand calls_to_fold config to accept callables that are constant at compile time
 
 ## [10.3.0] - 2026-10-07
 

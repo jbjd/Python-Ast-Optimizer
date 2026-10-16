@@ -2,6 +2,7 @@
 
 ## [10.4.1] - 2026-10-16
 
+- [Fix] Incorrect minifier output for classes with both a base and keyword base
 - [Fix] Don't double log
 
 ## [10.4.0] - 2026-10-08

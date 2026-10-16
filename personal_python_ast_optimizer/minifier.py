@@ -314,8 +314,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
         if node.bases or node.keywords:
             with self.delimit("(", ")"):
-                self._traverse_comma_delimitated_body(node.bases)
-                self._traverse_comma_delimitated_body(node.keywords)
+                self._traverse_comma_delimitated_body(node.bases + node.keywords)
 
         with self.block():
             self._write_docstring_and_traverse_body(node)

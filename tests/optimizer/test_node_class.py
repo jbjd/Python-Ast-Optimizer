@@ -2,8 +2,8 @@ from personal_python_ast_optimizer.config import TokenTypesToSkipConfig, TypeHin
 from tests.utils import optimize_and_assert_correctness
 
 
-def test_not_simple_ann_assign():
-    """Should wrap AnnAssign in parenthesis."""
+def test_class_with_bases():
+    """Should correctly unparse classes with different types of bases."""
     optimize_and_assert_correctness(
         "class ImageFile(Image.Image, metaclass=abc.ABCMeta):pass",
         "class ImageFile(Image.Image,metaclass=abc.ABCMeta):pass",

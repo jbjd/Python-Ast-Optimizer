@@ -1,5 +1,9 @@
 # Changelog
 
+## [10.5.0] - 2026-10-17
+
+- [Improvement] Allow classes_to_skip to handle keyword base classes
+
 ## [10.4.1] - 2026-10-16
 
 - [Fix] Incorrect minifier output for classes with both a base and keyword base

@@ -527,6 +527,13 @@ class FirstPassOptimizer(OptimizationPass):
                     get_name_or_full_attribute_id(base)
                 )
             ]
+            node.keywords = [
+                kw
+                for kw in node.keywords
+                if not self.tokens_tracker.classes_to_skip.has(
+                    get_name_or_full_attribute_id(kw.value)
+                )
+            ]
 
         self._skip_decorators(node)
 

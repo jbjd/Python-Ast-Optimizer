@@ -14,17 +14,19 @@ def test_exclude_classes():
     """Should remove class definitions and use as base class."""
 
     source: str = """
-class A(ABC):
-    pass
+class A(ABC):pass
 
-class B:
-    pass
+class B:pass
+
+class C(metaclass=abc.ABCMeta):pass
 """
-    expected: str = "class A:pass"
+    expected: str = "class A:pass\nclass C:pass"
     optimize_and_assert_correctness(
         source,
         expected,
-        tokens_to_skip=TokensToSkipConfig(classes_to_skip=TokensToSkip({"ABC", "B"})),
+        tokens_to_skip=TokensToSkipConfig(
+            classes_to_skip=TokensToSkip({"ABC", "B", "abc.ABCMeta"})
+        ),
     )
 
 

@@ -1,6 +1,26 @@
 # Changelog
 
-## [Unreleased]
+## [10.5.0] - 2026-10-17
+
+- [Improvement] Allow classes_to_skip to handle keyword base classes
+
+## [10.4.1] - 2026-10-16
+
+- [Fix] Incorrect minifier output for classes with both a base and keyword base
+- [Fix] Don't double log
+
+## [10.4.0] - 2026-10-08
+
+- [Improvement] Expand calls_to_fold config to accept callables that are constant at compile time
+
+## [10.3.0] - 2026-10-07
+
+- [Improvement] Remove dead for loops
+- [Improvement] Remove redundant assignments ```fp = fp```
+
+## [10.2.0] - 2026-09-10
+
+- [Improvement] Option to uglify arbitrary names
 
 ## [10.1.1] - 2026-08-27
 

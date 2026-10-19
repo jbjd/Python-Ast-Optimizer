@@ -1,6 +1,7 @@
 """Visitor classes to help optimize Python ASTs."""
 
 import ast
+from collections.abc import Iterable
 from typing import override
 
 from personal_python_ast_optimizer._optimize.base import AstVisitorBase
@@ -21,6 +22,7 @@ class CallAggregator(AstVisitorBase, AstVisitorProtocol):
         self._calls: list[ast.Call] = []
 
     def visit(self, node: ast.expr) -> list[ast.Call]:
+        self._calls.clear()
         self._visit(node)
         return self._calls
 
@@ -113,8 +115,8 @@ class NameAggregator(AstVisitorBase, AstVisitorProtocol):
 
     __slots__ = ("_found",)
 
-    def __init__(self) -> None:
-        self._found: set[str] = set()
+    def __init__(self, excludes: Iterable[str] | None = None) -> None:
+        self._found: set[str] = set() if excludes is None else set(excludes)
 
     def visit(self, node: ast.Module) -> set[str]:
         self._traverse_body(node.body)

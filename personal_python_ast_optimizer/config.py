@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Literal
 
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
 
 
 class TypeHintsToSkip(Enum):
@@ -140,6 +140,7 @@ _default_functions_safe_to_exclude_in_test_expr: set[str] = {
     "isinstance",
     "getattr",
     "hasattr",
+    "zip",
 }
 
 
@@ -160,7 +161,7 @@ class PerfOptimizationsConfig:
         *,
         fold_constants: bool = False,
         fold_simple_function_locals: bool = False,
-        calls_to_fold: TokensToFold[str, FoldableConstant] | None = None,
+        calls_to_fold: TokensToFold[str, FoldableConstant | ConstantCall] | None = None,
         name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = None,
         functions_safe_to_exclude_in_test_expr: set[str] | None = None,
         collection_concat_to_unpack: bool = False,
@@ -170,7 +171,9 @@ class PerfOptimizationsConfig:
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
 
-        self.calls_to_fold: TokensToFold[str, FoldableConstant] | None = calls_to_fold
+        self.calls_to_fold: (
+            TokensToFold[str, FoldableConstant | ConstantCall] | None
+        ) = calls_to_fold
         self.name_or_attr_to_fold: TokensToFold[str, FoldableConstant] | None = (
             name_or_attr_to_fold
         )
@@ -187,9 +190,17 @@ class PerfOptimizationsConfig:
 
 
 class UglifyConfig:
-    __slots__ = ("shorten_private_functions",)
+    __slots__ = ("names_to_uglify", "shorten_private_functions")
 
-    def __init__(self, *, shorten_private_functions: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        names_to_uglify: Iterable[str] | None = None,
+        shorten_private_functions: bool = False,
+    ) -> None:
+        self.names_to_uglify: Iterable[str] = (
+            [] if names_to_uglify is None else names_to_uglify
+        )
         self.shorten_private_functions: bool = shorten_private_functions
 
 

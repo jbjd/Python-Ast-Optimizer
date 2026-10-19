@@ -5,6 +5,7 @@ _EXAMPLE_TYPING_CAST: str = """
 from typing import cast
 
 a = cast(str, 1)
+b = cast(int, b)
 """
 
 
@@ -23,7 +24,7 @@ def test_skip_typing_cast():
 def test_no_skip_typing_cast():
     """Should remove no cast calls."""
 
-    expected: str = "from typing import cast\na=cast(str,1)"
+    expected: str = "from typing import cast\na=cast(str,1)\nb=cast(int,b)"
 
     optimize_and_assert_correctness(
         _EXAMPLE_TYPING_CAST,

@@ -6,15 +6,16 @@ from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import assert_never, override
 
+from personal_python_ast_optimizer._log import get_logger
 from personal_python_ast_optimizer._optimize.base import (
     AstTransformerBase,
 )
 from personal_python_ast_optimizer._optimize.typing import AstVisitorProtocol
 from personal_python_ast_optimizer._optimize.utils import (
     NodeContext,
-    TokensToFoldVisitCounter,
     TokensTracker,
     UglyNameGenerator,
+    build_constant,
     get_full_attribute_id,
     get_name_or_full_attribute_id,
     returns_constant,
@@ -28,7 +29,9 @@ from personal_python_ast_optimizer._optimize.visitors import (
     PrivateGlobalsAggregator,
 )
 from personal_python_ast_optimizer.config import TypeHintsToSkip
-from personal_python_ast_optimizer.typing import FoldableConstant
+from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
+
+_logger = get_logger()
 
 
 class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
@@ -36,10 +39,10 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
     like constant folding or dead code elimination."""
 
     __slots__ = (
+        "_call_finder",
         "additional_pass_needed",
         "fold_constants",
         "fold_simple_function_locals",
-        "functions_safe_to_exclude_in_test_expr",
     )
 
     def __init__(
@@ -48,11 +51,9 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         fold_simple_function_locals: bool,
         functions_safe_to_exclude_in_test_expr: set[str],
     ) -> None:
+        self._call_finder = CallAggregator(functions_safe_to_exclude_in_test_expr)
         self.fold_constants: bool = fold_constants
         self.fold_simple_function_locals: bool = fold_simple_function_locals
-        self.functions_safe_to_exclude_in_test_expr: set[str] = (
-            functions_safe_to_exclude_in_test_expr
-        )
         self.additional_pass_needed: bool = False
 
     def visit(self, node: ast.Module) -> None:
@@ -114,12 +115,7 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
 
             if not parsed_node.orelse:
                 if self._body_is_only_pass(parsed_node.body):
-                    call_finder = CallAggregator(
-                        self.functions_safe_to_exclude_in_test_expr
-                    )
-                    return [
-                        ast.Expr(expr) for expr in call_finder.visit(parsed_node.test)
-                    ]
+                    return self._get_exprs_in_conditional_node(parsed_node.test)
 
                 if (
                     len(parsed_node.body) == 1
@@ -137,6 +133,35 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
                         )
 
                     parsed_node.body = parsed_node.body[0].body
+
+        return parsed_node
+
+    def visit_For(self, node: ast.For) -> ast.AST | list[ast.stmt] | None:
+
+        parsed_node: ast.AST = self._generic_visit(node)
+
+        if (
+            isinstance(parsed_node, ast.For)
+            and not parsed_node.orelse
+            and self._body_is_only_pass(parsed_node.body)
+        ):
+            return self._get_exprs_in_conditional_node(parsed_node.iter)
+
+        return parsed_node
+
+    def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
+
+        parsed_node = self._generic_visit(node)
+
+        # Remove redundant assignments like ```fp = fp```
+        if (
+            isinstance(parsed_node, ast.Assign)
+            and len(parsed_node.targets) == 1
+            and isinstance(parsed_node.targets[0], ast.Name)
+            and isinstance(parsed_node.value, ast.Name)
+            and parsed_node.targets[0].id == parsed_node.value.id
+        ):
+            return None
 
         return parsed_node
 
@@ -247,6 +272,13 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
             )
 
         return parsed_node
+
+    def _get_exprs_in_conditional_node(self, expr: ast.expr) -> list[ast.stmt]:
+        """Gets ast.Expr() nodes inside the If/For parent node.
+
+        :param node: The conditional node to check."""
+
+        return [ast.Expr(expr) for expr in self._call_finder.visit(expr)]
 
     @staticmethod
     def _ast_constants_operation(  # noqa: C901, PLR0912
@@ -496,6 +528,13 @@ class FirstPassOptimizer(OptimizationPass):
                     get_name_or_full_attribute_id(base)
                 )
             ]
+            node.keywords = [
+                kw
+                for kw in node.keywords
+                if not self.tokens_tracker.classes_to_skip.has(
+                    get_name_or_full_attribute_id(kw.value)
+                )
+            ]
 
         self._skip_decorators(node)
 
@@ -574,11 +613,37 @@ class FirstPassOptimizer(OptimizationPass):
         ):
             return self._generic_visit(node.args[1])
 
+        parsed_node = self._generic_visit(node)
+
+        if not isinstance(parsed_node, ast.Call):
+            return parsed_node
+
         node_id: str | None = get_name_or_full_attribute_id(node.func)
         if node_id is not None and self.tokens_tracker.calls_to_fold.has(node_id):
-            return self._build_constant(self.tokens_tracker.calls_to_fold, node_id)
+            constant_or_callable: FoldableConstant | ConstantCall = (
+                self.tokens_tracker.calls_to_fold.get(node_id)
+            )
 
-        return self._generic_visit(node)
+            if callable(constant_or_callable):
+                if (
+                    all(isinstance(n, ast.Constant) for n in node.args)
+                    and not node.keywords
+                ):
+                    args: list[FoldableConstant] = [n.value for n in node.args]  # type: ignore[attr-defined]
+                    try:
+                        const_eval: FoldableConstant = constant_or_callable(*args)
+                    except Exception:
+                        _logger.warning(
+                            "Failed to call %s to get fold value",
+                            node_id,
+                            exc_info=True,
+                        )
+                    else:
+                        return build_constant(const_eval)
+            else:
+                return build_constant(constant_or_callable)
+
+        return parsed_node
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST | None:
         node.targets = [
@@ -590,7 +655,7 @@ class FirstPassOptimizer(OptimizationPass):
             and not self.tokens_tracker.assignments_to_skip.has(t_name)
         ]
 
-        return self._generic_visit(node) if node.targets else None
+        return super().visit_Assign(node) if node.targets else None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST | None:
         node_name: str | None = get_name_or_full_attribute_id(node.target)
@@ -681,8 +746,8 @@ class FirstPassOptimizer(OptimizationPass):
             and full_attr_id is not None
             and self.tokens_tracker.name_or_attr_to_fold.has(full_attr_id)
         ):
-            return self._build_constant(
-                self.tokens_tracker.name_or_attr_to_fold, full_attr_id
+            return build_constant(
+                self.tokens_tracker.name_or_attr_to_fold.get(full_attr_id)
             )
 
         if isinstance(node.value, (ast.Attribute, ast.Name)):
@@ -695,22 +760,9 @@ class FirstPassOptimizer(OptimizationPass):
         if not hasattr(
             node, "no_check_fold"
         ) and self.tokens_tracker.name_or_attr_to_fold.has(node.id):
-            return self._build_constant(
-                self.tokens_tracker.name_or_attr_to_fold, node.id
-            )
+            return build_constant(self.tokens_tracker.name_or_attr_to_fold.get(node.id))
 
         return node
-
-    @staticmethod
-    def _build_constant(
-        counter: TokensToFoldVisitCounter, node_id: str
-    ) -> ast.Tuple | ast.Constant:
-        constant: FoldableConstant = counter.get(node_id)
-
-        if isinstance(constant, tuple):
-            return ast.Tuple([ast.Constant(c) for c in constant])
-
-        return ast.Constant(constant)
 
     def _visit_with_context[P, R](
         self, node: P, context: NodeContext, visitor: Callable[[P], R]
@@ -894,46 +946,58 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
         "shorten_private_functions",
     )
 
-    def __init__(self, shorten_private_functions: bool) -> None:
+    def __init__(
+        self,
+        names_to_uglify: Iterable[str],
+        shorten_private_functions: bool,
+    ) -> None:
+        self.names_to_uglify: Iterable[str] = names_to_uglify
         self.shorten_private_functions: bool = shorten_private_functions
 
     def visit(self, node: ast.Module) -> None:
-        if not self.shorten_private_functions:
+        if not self.names_to_uglify and not self.shorten_private_functions:
             return
 
         names: set[str] = NameAggregator().visit(node)
-
-        globals_name_generator = UglyNameGenerator("_", names)
-        private_globals: set[str] = PrivateGlobalsAggregator().visit(node)
-        self._private_globals_map: dict[str, str] = {
-            old_name: new_name
-            for old_name in private_globals
-            if (new_name := globals_name_generator.get_ugly_name(len(old_name) - 1))
-            is not None
+        name_generator = UglyNameGenerator(excludes=names)
+        self._name_remapper = {
+            n: new_name
+            for n in self.names_to_uglify
+            if (new_name := name_generator.get_ugly_name(len(n) - 1)) is not None
         }
 
-        class_name_generator = UglyNameGenerator("_", names)
-        private_class_functions: set[str] = PrivateClassFunctionAggregator().visit(node)
-        self._private_class_functions_map: dict[str, str] = {
-            old_name: new_name
-            for old_name in private_class_functions
-            if (new_name := class_name_generator.get_ugly_name(len(old_name) - 1))
-            is not None
-        }
+        if self.shorten_private_functions:
+            private_name_generator = UglyNameGenerator("_", names)
+
+            # TODO: Deterministic toggle
+            private_functions: set[str] = PrivateClassFunctionAggregator().visit(node)
+            private_functions_map: dict[str, str] = {
+                old_name: new_name
+                for old_name in private_functions
+                if (new_name := private_name_generator.get_ugly_name(len(old_name) - 1))
+                is not None
+            }
+            self._name_remapper |= private_functions_map
 
         self._generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        # TODO: class if in class else global
-        if node.attr in self._private_class_functions_map:
-            node.attr = self._private_class_functions_map[node.attr]
+        parsed_node: ast.Attribute = self._generic_visit(node)  # type: ignore[assignment]
+
+        if parsed_node.attr in self._name_remapper:
+            parsed_node.attr = self._name_remapper[parsed_node.attr]
+
+        return parsed_node
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        if node.id in self._name_remapper:
+            node.id = self._name_remapper[node.id]
 
         return node
 
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        # TODO: class if in class else global
-        if node.id in self._private_class_functions_map:
-            node.id = self._private_class_functions_map[node.id]
+    def visit_arg(self, node: ast.arg) -> ast.arg:
+        if node.arg in self._name_remapper:
+            node.arg = self._name_remapper[node.arg]
 
         return node
 
@@ -946,7 +1010,7 @@ class Uglifier(AstTransformerBase, AstVisitorProtocol):
     def _handle_function(
         self, node: ast.AsyncFunctionDef | ast.FunctionDef
     ) -> ast.AST | None:
-        if node.name in self._private_class_functions_map:
-            node.name = self._private_class_functions_map[node.name]
+        if node.name in self._name_remapper:
+            node.name = self._name_remapper[node.name]
 
         return self._generic_visit(node)

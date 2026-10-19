@@ -2,7 +2,7 @@
 
 import ast
 from ast import _Precedence  # type: ignore[attr-defined]
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Literal, LiteralString
 
@@ -314,8 +314,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
 
         if node.bases or node.keywords:
             with self.delimit("(", ")"):
-                self._traverse_comma_delimitated_body(node.bases)
-                self._traverse_comma_delimitated_body(node.keywords)
+                self._traverse_comma_delimitated_body(node.bases + node.keywords)  # type: ignore [operator]
 
         with self.block():
             self._write_docstring_and_traverse_body(node)
@@ -375,7 +374,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
                 self.traverse(comparator)
 
     def _traverse_comma_delimitated_body(
-        self, body: list[ast.alias] | list[ast.expr] | list[ast.keyword]
+        self, body: Sequence[ast.alias | ast.expr | ast.keyword]
     ) -> None:
         """Writes ast expr objects with comma delimitation"""
         self.interleave(lambda: self._source.append(","), self.traverse, body)

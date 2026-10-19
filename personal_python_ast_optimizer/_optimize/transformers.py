@@ -59,6 +59,29 @@ class OptimizationPass(AstTransformerBase, AstVisitorProtocol):
         self.additional_pass_needed = False
         self._generic_visit(node)
 
+    def visit_JoinedStr(self, node: ast.JoinedStr) -> ast.AST | None:
+        parsed_node = self._generic_visit(node)
+
+        if isinstance(parsed_node, ast.JoinedStr) and all(
+            isinstance(n, ast.Constant) for n in parsed_node.values
+        ):
+            return ast.Constant("".join(v.value for v in parsed_node.values))  # type: ignore[attr-defined]
+
+        return parsed_node
+
+    def visit_FormattedValue(self, node: ast.FormattedValue) -> ast.AST | None:
+        parsed_node = self._generic_visit(node)
+
+        if (
+            isinstance(node, ast.FormattedValue)
+            and isinstance(node.value, ast.Constant)
+            and node.format_spec is None
+        ):
+            node.value.value = str(node.value.value)
+            return self._generic_visit(node.value)
+
+        return parsed_node
+
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | None:
         return self._handle_function(node)
 

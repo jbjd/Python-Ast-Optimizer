@@ -1,5 +1,10 @@
 # Changelog
 
+## [10.5.1] - 2026-10-19
+
+- [Improvement] Allow folding constants within f-strings
+- [Improvement] Allow folding one-length strings
+
 ## [10.5.0] - 2026-10-17
 
 - [Improvement] Allow classes_to_skip to handle keyword base classes

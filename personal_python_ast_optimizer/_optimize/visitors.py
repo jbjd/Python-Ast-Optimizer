@@ -100,7 +100,11 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
             value is not None
             and node_id not in self._excludes
             and isinstance(value, ast.Constant)
-            and (value.value is None or isinstance(value.value, int))
+            and (
+                value.value is None
+                or isinstance(value.value, int)
+                or (isinstance(value.value, str) and len(value.value) == 1)
+            )
         ):
             self._foldable[node_id] = value
 

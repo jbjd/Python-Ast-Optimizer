@@ -121,4 +121,5 @@ def optimize_source_and_minify(
     :param optimize_config: Config for what is allowed to be optimized
     :param file_name: Optionally used for `ast.parse` and logging
     :returns: Optimized python code"""
+
     return optimize_source(source, MinifyUnparser(), optimize_config, file_name)

@@ -5,7 +5,7 @@ from tests.utils import optimize_and_assert_correctness
 
 
 def test_uglify_name():
-    """Should uglify name without touching private function"""
+    """Should uglify name without touching private function."""
     source: str = """
 class A:
     def _asdf(self):print(1)"""

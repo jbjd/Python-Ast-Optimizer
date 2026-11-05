@@ -10,6 +10,17 @@ select = ["ALL"]
 # COM812: Trailing Comma (Only covers single line trailing commas, seems out of place)
 # CPY: Copyright
 # D: Doc style
+# D101: TODO remove and fix
+# D102: TODO remove and fix
+# D103: TODO remove and fix
+# D105: Undocumented magic method
+# D107: Undocumented public __init__
+# D203: Blank line before class (Incompatible with D211)
+# D205: Missing blank line after summary (Needless whitespace)
+# D209: Missing blank line after last paragraph (Needless whitespace)
+# D213: Multi-line summary second line (Incompatible with D212)
+# D401: First line of docstring should be in imperative mood
+# D415: Redundant with D400
 # EM: Error messages
 # FBT: Boolean Trap (Slower)
 # FIX002: Resolve TODO
@@ -23,14 +34,20 @@ select = ["ALL"]
 # TD002: TODO author
 # TD003: TODO issue link
 # TRY003: Avoid specifying long messages outside the exception class (Slower and less clear)
-ignore = ["C420", "COM812", "CPY", "D", "EM", "FBT", "FIX002", "N802", "PLR0913", "PLR0917", "PTH", "S101", "SLF001", "TC001", "TD002", "TD003", "TRY003"]
+ignore = [
+    "C420", "COM812", "CPY", "D101", "D102", "D103", "D105", "D107", "D202", "D203", "D205", "D209", "D213", "D401", "D415", "EM", "FBT",
+    "FIX002", "N802", "PLR0913", "PLR0917", "PTH", "S101", "SLF001", "TC001", "TD002", "TD003", "TRY003"
+]
 
 [lint.extend-per-file-ignores]
 
 # ANN201: Missing return type
+# D100: Missing docstring in public module
+# D101: Missing docstring in public class
+# D104: Missing docstring in public package
 # PLR2004: Magic Numbers
 # S101: Assert
-"tests/*" = ["ANN201", "PLR2004", "S101"]
+"tests/*" = ["ANN201", "D100", "D101", "D104", "PLR2004", "S101"]
 
 [format]
 quote-style = "double"

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Iterator
 
 
 class RegexReplacement:
-    """Represents arguments to a regex replacement call like re.sub"""
+    """Represents arguments to a regex replacement call like re.sub."""
 
     __slots__ = ("count", "flags", "pattern", "replacement")
 
@@ -25,7 +25,7 @@ class RegexReplacement:
 
 
 class RegexNoMatchError(Exception):
-    pass
+    """Thrown when the provided regex wasn't found."""
 
 
 def re_replace(

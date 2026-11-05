@@ -86,8 +86,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
             self._is_buffered = previous_value
 
     def visit(self, node: ast.AST) -> str:
-        """Outputs a source code string that, if converted back to an ast
-        (using ast.parse) will generate an AST equivalent to *node*"""
+        """Turns `node` into valid python source code."""
         self._traverse_node(node)
         return "".join(self._source)
 
@@ -144,7 +143,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         return "\n"
 
     def write(self, *text: str) -> None:
-        """Write text, with some mapping replacements"""
+        """Write text, with some mapping replacements."""
         text = tuple(self._yield_updated_text(text))
 
         if not text:
@@ -161,8 +160,8 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
         self._source.extend(text)
 
     def _yield_updated_text(self, text_iter: Iterable[str]) -> Iterator[str]:
-        """Give text to be written, replace some specific occurrences
-        and yield new results if not empty strings"""
+        """Given text to be written, replace some specific occurrences
+        and yield new results if any."""
         for text in text_iter:
             if text in _ast_operators_to_strip:
                 yield text.strip()
@@ -376,7 +375,7 @@ class MinifyUnparser(ast._Unparser):  # type: ignore[misc, name-defined]
     def _traverse_comma_delimitated_body(
         self, body: Sequence[ast.alias | ast.expr | ast.keyword]
     ) -> None:
-        """Writes ast expr objects with comma delimitation"""
+        """Writes ast expr objects with comma delimitation."""
         self.interleave(lambda: self._source.append(","), self.traverse, body)
 
     @staticmethod

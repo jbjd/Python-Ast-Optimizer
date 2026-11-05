@@ -112,7 +112,7 @@ class FunctionFoldableLocalsAggregator(AstVisitorBase, AstVisitorProtocol):
 
 
 class NameAggregator(AstVisitorBase, AstVisitorProtocol):
-    """Aggregates all Names, Attributes, alias, and function/class names"""
+    """Aggregates all Names, Attributes, alias, and function/class names."""
 
     __slots__ = ("_found",)
 

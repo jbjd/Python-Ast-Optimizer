@@ -8,6 +8,8 @@ from personal_python_ast_optimizer.typing import ConstantCall, FoldableConstant
 
 
 class TypeHintsToSkip(Enum):
+    """Represents how the optimizer should handle skipping type hints."""
+
     NONE = 0
     # ALL might be unsafe, NamedTuple for example
     ALL = 1
